@@ -1,0 +1,127 @@
+import { useState } from "react";
+import { Plus, Minus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  category: string;
+  sizes: string[];
+  colors: string[];
+}
+
+interface ProductCardProps {
+  product: Product;
+  onAddToCart: (product: Product, quantity: number, size: string, color: string) => void;
+}
+
+const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
+  const [selectedSize, setSelectedSize] = useState(product.sizes[0]);
+  const [selectedColor, setSelectedColor] = useState(product.colors[0]);
+  const [quantity, setQuantity] = useState(1);
+
+  const handleAddToCart = () => {
+    onAddToCart(product, quantity, selectedSize, selectedColor);
+  };
+
+  return (
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+      <div className="relative overflow-hidden">
+        <img
+          src={product.image}
+          alt={product.name}
+          className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+      
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-xl font-semibold text-foreground">{product.name}</h3>
+            <p className="text-sm text-muted-foreground">{product.category}</p>
+            <p className="text-2xl font-bold text-brand-beige mt-2">${product.price}</p>
+          </div>
+
+          {/* Size Selection */}
+          <div>
+            <label className="text-sm font-medium text-foreground block mb-2">Size</label>
+            <div className="flex gap-2">
+              {product.sizes.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  className={`px-3 py-1 border rounded text-sm transition-colors ${
+                    selectedSize === size
+                      ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
+                      : "border-border hover:border-brand-beige"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Selection */}
+          <div>
+            <label className="text-sm font-medium text-foreground block mb-2">Color</label>
+            <div className="flex gap-2">
+              {product.colors.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setSelectedColor(color)}
+                  className={`px-3 py-1 border rounded text-sm transition-colors capitalize ${
+                    selectedColor === color
+                      ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
+                      : "border-border hover:border-brand-beige"
+                  }`}
+                >
+                  {color}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <label className="text-sm font-medium text-foreground block mb-2">Quantity</label>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="h-8 w-8"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="text-lg font-medium w-8 text-center">{quantity}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setQuantity(quantity + 1)}
+                className="h-8 w-8"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <Button 
+            onClick={handleAddToCart}
+            className="w-full"
+            variant="brand"
+            size="lg"
+          >
+            Add to Cart
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ProductCard;
