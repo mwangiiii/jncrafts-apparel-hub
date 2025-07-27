@@ -2,19 +2,31 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ProductsSection from "@/components/ProductsSection";
+import DiscountsSection from "@/components/DiscountsSection";
 import AboutSection from "@/components/AboutSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import Cart, { CartItem } from "@/components/Cart";
 import { Product } from "@/components/ProductCard";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleAddToCart = (product: Product, quantity: number, size: string, color: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please log in to add items to your cart",
+      });
+      return;
+    }
+
     const cartItem: CartItem = {
       id: `${product.id}-${size}-${color}`,
       name: product.name,
@@ -72,6 +84,7 @@ const Index = () => {
         onCartClick={() => setIsCartOpen(true)} 
       />
       <Hero />
+      <DiscountsSection />
       <ProductsSection onAddToCart={handleAddToCart} />
       <AboutSection />
       <ContactSection />

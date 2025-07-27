@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ShoppingBag, Menu, X, User, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   cartItems: number;
@@ -9,6 +12,8 @@ interface HeaderProps {
 
 const Header = ({ cartItems, onCartClick }: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const navigation = [
     { name: "Home", href: "#home" },
@@ -39,23 +44,61 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
                 {item.name}
               </a>
             ))}
+            {isAdmin && (
+              <Link to="/admin" className="text-foreground hover:text-brand-beige transition-colors duration-300">
+                Admin
+              </Link>
+            )}
           </nav>
 
-          {/* Cart Button */}
+          {/* Cart, User Menu and Mobile Menu */}
           <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onCartClick}
-              className="relative"
-            >
-              <ShoppingBag className="h-5 w-5" />
-              {cartItems > 0 && (
-                <span className="absolute -top-2 -right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItems}
-                </span>
-              )}
-            </Button>
+            {user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onCartClick}
+                className="relative"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {cartItems > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItems}
+                  </span>
+                )}
+              </Button>
+            )}
+
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate('/admin')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button size="sm" onClick={() => navigate('/auth')}>
+                Sign In
+              </Button>
+            )}
 
             {/* Mobile menu button */}
             <Button
@@ -87,6 +130,15 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
                   {item.name}
                 </a>
               ))}
+              {isAdmin && (
+                <Link 
+                  to="/admin" 
+                  className="block px-4 py-2 text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
             </nav>
           </div>
         )}
