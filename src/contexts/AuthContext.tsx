@@ -72,20 +72,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      // Create user with email confirmation required
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/auth/confirm`
         }
       });
       
-      // If email confirmation is disabled in Supabase, user will be automatically signed in
-      // If enabled, they'll need to check email - but we'll let them know
-      if (data.user && !data.user.email_confirmed_at) {
-        console.log('User created, awaiting email confirmation');
+      // If user created but needs confirmation, send custom verification email
+      if (data.user && !data.user.email_confirmed_at && !error) {
+        try {
+          // Call our custom email function
+          const { error: emailError } = await supabase.functions.invoke('send-verification-email', {
+            body: {
+              email: email,
+              fullName: fullName,
+              token: 'verification-token', // This would be replaced with actual token in production
+              confirmUrl: `${window.location.origin}/auth/confirm?token=verification-token`
+            }
+          });
+          
+          if (emailError) {
+            console.error('Failed to send verification email:', emailError);
+          }
+        } catch (emailErr) {
+          console.error('Email service error:', emailErr);
+        }
       }
       
       return { error };

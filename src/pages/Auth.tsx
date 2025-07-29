@@ -60,12 +60,9 @@ const Auth = () => {
       });
     } else {
       toast({
-        title: "Account created successfully!",
-        description: "You can now sign in with your credentials.",
+        title: "Account created!",
+        description: "Please check your email to verify your account. Check spam folder if you don't see it.",
       });
-      // Switch to sign in tab
-      const signInTab = document.querySelector('[value="signin"]') as HTMLButtonElement;
-      if (signInTab) signInTab.click();
     }
 
     setIsLoading(false);
