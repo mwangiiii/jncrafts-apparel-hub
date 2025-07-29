@@ -71,20 +71,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName
+          }
         }
+      });
+      
+      // If email confirmation is disabled in Supabase, user will be automatically signed in
+      // If enabled, they'll need to check email - but we'll let them know
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('User created, awaiting email confirmation');
       }
-    });
-    
-    return { error };
+      
+      return { error };
+    } catch (err: any) {
+      return { error: err };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
