@@ -295,8 +295,8 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
   return (
     <div>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-lg">
-          <SheetHeader>
+        <SheetContent className="w-full sm:max-w-lg flex flex-col">
+          <SheetHeader className="flex-shrink-0">
             <SheetTitle className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" />
               Shopping Cart ({items.length})
@@ -306,7 +306,7 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
             </SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="flex-1 px-6">
+          <ScrollArea className="flex-1 px-6 pb-6">
             {!user && (
               <div className="bg-accent/10 border border-accent rounded-lg p-4 mb-6">
                 <div className="flex items-center gap-2 text-accent mb-2">
@@ -374,44 +374,20 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
 
             {items.length > 0 && (
               <>
-                {/* Discount Code */}
-                <div className="space-y-4 border-t pt-6">
-                  <h3 className="text-lg font-semibold">Discount Code</h3>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter discount code"
-                      value={discountCode}
-                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                      disabled={!!appliedDiscount}
-                    />
-                    {appliedDiscount ? (
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setAppliedDiscount(null);
-                          setDiscountCode("");
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    ) : (
-                      <Button onClick={applyDiscount} disabled={loadingDiscount}>
-                        {loadingDiscount ? "Applying..." : "Apply"}
-                      </Button>
-                    )}
-                  </div>
-                  {appliedDiscount && (
+                {/* Discount applied by manager will show here */}
+                {appliedDiscount && (
+                  <div className="space-y-4 border-t pt-6">
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                       <p className="text-sm text-green-700">
-                        ✓ {appliedDiscount.code} applied! 
+                        ✓ {appliedDiscount.code} discount applied! 
                         {appliedDiscount.type === 'percentage' 
                           ? ` ${appliedDiscount.amount}% off`
                           : ` $${appliedDiscount.amount} off`
                         }
                       </p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Checkout Form */}
                 {user && (
