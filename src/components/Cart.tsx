@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Minus, Plus, Trash2, ShoppingBag, MapPin, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -305,7 +306,7 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-6">
+          <ScrollArea className="flex-1 px-6">
             {!user && (
               <div className="bg-accent/10 border border-accent rounded-lg p-4 mb-6">
                 <div className="flex items-center gap-2 text-accent mb-2">
@@ -544,7 +545,7 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
                 )}
               </>
             )}
-          </div>
+          </ScrollArea>
         </SheetContent>
       </Sheet>
       
