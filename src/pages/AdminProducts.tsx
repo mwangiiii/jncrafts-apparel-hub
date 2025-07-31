@@ -1,0 +1,414 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Product } from '@/types/database';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Edit2, Trash2, Upload, Eye, EyeOff } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+const AdminProducts = () => {
+  const { user, isAdmin, loading } = useAuth();
+  const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    price: '',
+    description: '',
+    category: '',
+    images: [] as string[],
+    sizes: [] as string[],
+    colors: [] as string[],
+    stock_quantity: '',
+    is_active: true
+  });
+
+  const categories = ['t-shirts', 'hoodies', 'jackets', 'pants', 'outerwear'];
+  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const availableColors = ['Black', 'White', 'Gray', 'Navy', 'Red', 'Blue', 'Green', 'Brown', 'Olive'];
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchProducts();
+    }
+  }, [user, isAdmin]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!user || !isAdmin) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch products",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      price: '',
+      description: '',
+      category: '',
+      images: [],
+      sizes: [],
+      colors: [],
+      stock_quantity: '',
+      is_active: true
+    });
+    setEditingProduct(null);
+  };
+
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      price: product.price.toString(),
+      description: product.description || '',
+      category: product.category,
+      images: product.images,
+      sizes: product.sizes,
+      colors: product.colors,
+      stock_quantity: product.stock_quantity.toString(),
+      is_active: product.is_active
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const productData = {
+        name: formData.name,
+        price: parseFloat(formData.price),
+        description: formData.description,
+        category: formData.category,
+        images: formData.images,
+        sizes: formData.sizes,
+        colors: formData.colors,
+        stock_quantity: parseInt(formData.stock_quantity),
+        is_active: formData.is_active
+      };
+
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Product updated successfully",
+        });
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .insert(productData);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Product created successfully",
+        });
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+      fetchProducts();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save product",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleProductStatus = async (product: Product) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: !product.is_active })
+        .eq('id', product.id);
+
+      if (error) throw error;
+      
+      fetchProducts();
+      toast({
+        title: "Success",
+        description: `Product ${product.is_active ? 'hidden' : 'activated'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling product status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update product status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId);
+
+      if (error) throw error;
+      
+      fetchProducts();
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete product",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addSize = (size: string) => {
+    if (!formData.sizes.includes(size)) {
+      setFormData(prev => ({ ...prev, sizes: [...prev.sizes, size] }));
+    }
+  };
+
+  const removeSize = (size: string) => {
+    setFormData(prev => ({ ...prev, sizes: prev.sizes.filter(s => s !== size) }));
+  };
+
+  const addColor = (color: string) => {
+    if (!formData.colors.includes(color)) {
+      setFormData(prev => ({ ...prev, colors: [...prev.colors, color] }));
+    }
+  };
+
+  const removeColor = (color: string) => {
+    setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }));
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Product Management</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingProduct ? 'Edit Product' : 'Add New Product'}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Product Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="price">Price</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="stock">Stock Quantity</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    value={formData.stock_quantity}
+                    onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Sizes */}
+              <div>
+                <Label>Available Sizes</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {availableSizes.map(size => (
+                    <Badge
+                      key={size}
+                      variant={formData.sizes.includes(size) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => formData.sizes.includes(size) ? removeSize(size) : addSize(size)}
+                    >
+                      {size}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div>
+                <Label>Available Colors</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {availableColors.map(color => (
+                    <Badge
+                      key={color}
+                      variant={formData.colors.includes(color) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => formData.colors.includes(color) ? removeColor(color) : addColor(color)}
+                    >
+                      {color}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editingProduct ? 'Update Product' : 'Create Product'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {loadingProducts ? (
+        <div className="text-center py-8">Loading products...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {products.map(product => (
+            <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''}`}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg">{product.name}</CardTitle>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleProductStatus(product)}
+                    >
+                      {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEditDialog(product)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => deleteProduct(product.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="text-2xl font-bold text-primary">${product.price}</p>
+                  <p className="text-sm text-muted-foreground">{product.description}</p>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="secondary">{product.category}</Badge>
+                    <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
+                    {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
+                    <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminProducts;

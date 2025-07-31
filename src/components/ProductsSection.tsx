@@ -1,5 +1,7 @@
-import { useState } from "react";
-import ProductCard, { Product } from "./ProductCard";
+import { useState, useEffect } from "react";
+import ProductCard from "./ProductCard";
+import { supabase } from '@/integrations/supabase/client';
+import { Product } from '@/types/database';
 
 interface ProductsSectionProps {
   onAddToCart: (product: Product, quantity: number, size: string, color: string) => void;
@@ -7,47 +9,31 @@ interface ProductsSectionProps {
 
 const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const products: Product[] = [
-    {
-      id: "1",
-      name: "CRAFTS Tracksuit Set",
-      price: 120,
-      image: "/lovable-uploads/a2ce0daa-c431-4475-ac89-c6733ffa83fe.png",
-      category: "Tracksuits",
-      sizes: ["S", "M", "L", "XL", "XXL"],
-      colors: ["beige", "black"]
-    },
-    {
-      id: "2",
-      name: "CRAFTS Black Tracksuit",
-      price: 120,
-      image: "/lovable-uploads/3c5c8112-9c97-4462-b4fc-e96501860ac9.png",
-      category: "Tracksuits",
-      sizes: ["S", "M", "L", "XL", "XXL"],
-      colors: ["black"]
-    },
-    {
-      id: "3",
-      name: "CRAFTS Hoodie",
-      price: 65,
-      image: "/lovable-uploads/03ccd29e-8d26-4668-abf7-5c007566ba43.png",
-      category: "Hoodies",
-      sizes: ["S", "M", "L", "XL", "XXL"],
-      colors: ["beige", "black"]
-    },
-    {
-      id: "4",
-      name: "CRAFTS Sweatpants",
-      price: 55,
-      image: "/lovable-uploads/f2aaa537-d5a0-4855-aeff-970b2b00983b.png",
-      category: "Pants",
-      sizes: ["S", "M", "L", "XL", "XXL"],
-      colors: ["beige", "black"]
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const categories = ["all", "Tracksuits", "Hoodies", "Pants", "Shirts"];
+  const categories = ["all", ...Array.from(new Set(products.map(product => product.category)))];
   
   const filteredProducts = selectedCategory === "all" 
     ? products 
@@ -86,15 +72,19 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAddToCart={onAddToCart}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-8">Loading products...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={onAddToCart}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

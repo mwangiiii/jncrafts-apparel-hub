@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingBag, Menu, X, User, Settings, LogOut } from "lucide-react";
+import { ShoppingBag, Menu, X, User, Settings, LogOut, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -54,20 +54,26 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
           {/* Cart, User Menu and Mobile Menu */}
           <div className="flex items-center space-x-4">
             {user && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onCartClick}
-                className="relative"
-              >
-                <ShoppingBag className="h-5 w-5" />
-                {cartItems > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartItems}
-                  </span>
-                )}
-              </Button>
+              <Link to="/wishlist">
+                <Button variant="ghost" size="icon">
+                  <Heart className="h-5 w-5" />
+                </Button>
+              </Link>
             )}
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onCartClick}
+              className="relative"
+            >
+              <ShoppingBag className="h-5 w-5" />
+              {cartItems > 0 && (
+                <span className="absolute -top-2 -right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItems}
+                </span>
+              )}
+            </Button>
 
             {user ? (
               <DropdownMenu>
@@ -82,10 +88,16 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
                     Profile
                   </DropdownMenuItem>
                   {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate('/admin')}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      Admin Dashboard
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/admin/products')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Manage Products
+                      </DropdownMenuItem>
+                    </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>
