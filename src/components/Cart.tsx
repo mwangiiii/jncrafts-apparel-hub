@@ -16,13 +16,13 @@ import { CartItem } from "@/types/database";
 interface CartProps {
   isOpen: boolean;
   onClose: () => void;
-  items: CartItem[];
+  items: CartItem[] | undefined;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveItem: (id: string) => void;
   onClearCart: () => void;
 }
 
-const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearCart }: CartProps) => {
+const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onClearCart }: CartProps) => {
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
     email: "",
@@ -46,7 +46,7 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = (items || []).reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = appliedDiscount 
     ? appliedDiscount.type === 'percentage' 
       ? (total * appliedDiscount.amount) / 100
