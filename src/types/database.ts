@@ -35,3 +35,24 @@ export interface WishlistItem {
   created_at: string;
   product?: Product;
 }
+
+export interface Conversation {
+  id: string;
+  user_id: string;
+  product_id?: string;
+  subject: string;
+  status: 'active' | 'closed' | 'pending';
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  sender_type: 'user' | 'admin';
+  content: string;
+  message_type: 'text' | 'system';
+  created_at: string;
+}

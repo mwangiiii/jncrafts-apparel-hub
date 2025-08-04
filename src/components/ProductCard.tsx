@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Product } from '@/types/database';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useAuth } from '@/contexts/AuthContext';
+import ChatWidget from './ChatWidget';
 
 interface ProductCardProps {
   product: Product;
@@ -139,6 +140,16 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </Button>
         </div>
       </CardContent>
+      
+      {/* Chat Widget for logged-in users */}
+      {user && (
+        <div className="absolute bottom-2 right-2">
+          <ChatWidget 
+            productId={product.id} 
+            productName={product.name}
+          />
+        </div>
+      )}
     </Card>
   );
 };
