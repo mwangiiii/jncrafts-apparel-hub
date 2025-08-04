@@ -11,15 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import OrderConfirmationDialog from "./OrderConfirmationDialog";
 
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  quantity: number;
-  size: string;
-  color: string;
-}
+import { CartItem } from "@/types/database";
 
 interface CartProps {
   isOpen: boolean;
@@ -237,8 +229,8 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
       // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
-        product_name: item.name,
-        product_image: item.image,
+        product_name: item.product_name,
+        product_image: item.product_image,
         price: item.price,
         quantity: item.quantity,
         size: item.size,
@@ -323,12 +315,12 @@ const Cart = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onClearC
               {items.map((item) => (
                 <div key={item.id} className="flex items-center gap-4 border-b pb-4">
                   <img 
-                    src={item.image} 
-                    alt={item.name}
+                    src={item.product_image || '/placeholder.svg'} 
+                    alt={item.product_name}
                     className="w-16 h-16 object-cover rounded-lg"
                   />
                   <div className="flex-1">
-                    <h4 className="font-medium">{item.name}</h4>
+                    <h4 className="font-medium">{item.product_name}</h4>
                     <p className="text-sm text-muted-foreground">
                       {item.size} • {item.color}
                     </p>

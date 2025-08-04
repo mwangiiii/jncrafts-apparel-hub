@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CartItem } from './Cart';
+import { CartItem } from '@/types/database';
 import { MapPin, User, CreditCard, Tag } from 'lucide-react';
 
 interface OrderConfirmationDialogProps {
@@ -63,12 +63,12 @@ const OrderConfirmationDialog = ({
               {items.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 p-3 bg-accent/5 rounded-lg">
                   <img
-                    src={item.image}
-                    alt={item.name}
+                    src={item.product_image || '/placeholder.svg'}
+                    alt={item.product_name}
                     className="w-12 h-12 object-cover rounded"
                   />
                   <div className="flex-1">
-                    <h4 className="font-medium text-sm">{item.name}</h4>
+                    <h4 className="font-medium text-sm">{item.product_name}</h4>
                     <p className="text-xs text-muted-foreground">
                       {item.size} • {item.color} • Qty: {item.quantity}
                     </p>

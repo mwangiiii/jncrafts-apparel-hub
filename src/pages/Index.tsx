@@ -16,7 +16,7 @@ const Index = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { cartItems, addToCart, migrateGuestCart } = usePersistentCart();
+  const { cartItems, addToCart, updateQuantity, removeItem, clearCart, migrateGuestCart } = usePersistentCart();
 
   useEffect(() => {
     if (user && user.id) {
@@ -46,6 +46,10 @@ const Index = () => {
       <Cart
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
+        items={cartItems}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeItem}
+        onClearCart={clearCart}
       />
     </div>
   );
