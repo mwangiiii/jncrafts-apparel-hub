@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,7 +13,6 @@ import { formatDistanceToNow } from "date-fns";
 
 interface WhatsAppChatWindowProps {
   userId: string;
-  userName: string;
   conversations: Conversation[];
   onBack: () => void;
   onShowProfile: () => void;
@@ -20,7 +20,6 @@ interface WhatsAppChatWindowProps {
 
 export const WhatsAppChatWindow = ({ 
   userId, 
-  userName, 
   conversations, 
   onBack, 
   onShowProfile 
@@ -29,9 +28,31 @@ export const WhatsAppChatWindow = ({
   const [selectedConversation, setSelectedConversation] = useState<string>(
     conversations[0]?.id || ""
   );
+  const [userName, setUserName] = useState<string>(`User ${userId.slice(0, 8)}`);
   
   const { user } = useAuth();
   const { messages, sendMessage, updateConversationStatus } = useMessaging();
+
+  // Load user profile
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', userId)
+          .single();
+
+        if (data?.full_name) {
+          setUserName(data.full_name);
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    };
+
+    loadUserProfile();
+  }, [userId]);
 
   useEffect(() => {
     if (conversations.length > 0 && !selectedConversation) {

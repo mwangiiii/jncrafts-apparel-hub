@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Product } from '@/types/database';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import ChatWidget from './ChatWidget';
 
 interface ProductCardProps {
@@ -18,6 +19,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const [quantity, setQuantity] = useState(1);
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { formatPrice } = useCurrency();
 
   const handleAddToCart = () => {
     if (!selectedSize || !selectedColor) {
@@ -63,7 +65,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           <div>
             <h3 className="text-xl font-semibold text-foreground">{product.name}</h3>
             <p className="text-sm text-muted-foreground">{product.category}</p>
-            <p className="text-2xl font-bold text-brand-beige mt-2">${product.price}</p>
+            <p className="text-2xl font-bold text-brand-beige mt-2">{formatPrice(product.price)}</p>
           </div>
 
           {/* Size Selection */}

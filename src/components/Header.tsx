@@ -4,6 +4,7 @@ import { ShoppingBag, Menu, X, User, Settings, LogOut, Heart } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CurrencySelector } from "./CurrencySelector";
 
 interface HeaderProps {
   cartItems: number;
@@ -51,8 +52,9 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
             )}
           </nav>
 
-          {/* Cart, User Menu and Mobile Menu */}
+          {/* Currency, Cart, User Menu and Mobile Menu */}
           <div className="flex items-center space-x-4">
+            <CurrencySelector />
             {user && (
               <Link to="/wishlist">
                 <Button variant="ghost" size="icon">

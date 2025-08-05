@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { Conversation } from "@/types/database";
+
+interface UserProfile {
+  user_id: string;
+  full_name?: string;
+}
 
 interface UserConversation {
   userId: string;
@@ -26,6 +32,36 @@ export const WhatsAppChatList = ({
   onSelectUser, 
   selectedUserId 
 }: WhatsAppChatListProps) => {
+  const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
+
+  // Load user profiles
+  useEffect(() => {
+    const loadUserProfiles = async () => {
+      const userIds = [...new Set(conversations.map(c => c.user_id))];
+      if (userIds.length === 0) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+
+        if (error) throw error;
+        setUserProfiles(data || []);
+      } catch (error) {
+        console.error('Error loading user profiles:', error);
+      }
+    };
+
+    loadUserProfiles();
+  }, [conversations]);
+
+  // Get user name from profiles
+  const getUserName = (userId: string) => {
+    const profile = userProfiles.find(p => p.user_id === userId);
+    return profile?.full_name || `User ${userId.slice(0, 8)}`;
+  };
+
   // Group conversations by user
   const userConversations: UserConversation[] = Object.values(
     conversations.reduce((acc, conv) => {
@@ -33,7 +69,7 @@ export const WhatsAppChatList = ({
       if (!acc[userId]) {
         acc[userId] = {
           userId,
-          userName: `User ${userId.slice(0, 8)}`, // We'll improve this when we get profiles
+          userName: getUserName(userId),
           lastMessage: '',
           lastMessageTime: conv.updated_at,
           unreadCount: 0,

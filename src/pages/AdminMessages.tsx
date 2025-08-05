@@ -43,9 +43,6 @@ const AdminMessages = () => {
     setShowProfile(false);
   };
 
-  const getUserName = (userId: string) => {
-    return `User ${userId.slice(0, 8)}`;
-  };
 
   if (isLoading) {
     return (
@@ -123,7 +120,6 @@ const AdminMessages = () => {
         ) : selectedUserId ? (
           <WhatsAppChatWindow
             userId={selectedUserId}
-            userName={getUserName(selectedUserId)}
             conversations={selectedUserConversations}
             onBack={handleBack}
             onShowProfile={handleShowProfile}
