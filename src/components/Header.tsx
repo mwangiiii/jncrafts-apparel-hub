@@ -97,7 +97,17 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
                         <Settings className="mr-2 h-4 w-4" />
                         Manage Products
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/admin/messages')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin Messages
+                      </DropdownMenuItem>
                     </>
+                  )}
+                  {!isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate('/messages')}>
+                      <User className="mr-2 h-4 w-4" />
+                      My Messages
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>

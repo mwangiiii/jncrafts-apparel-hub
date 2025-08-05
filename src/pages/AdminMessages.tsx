@@ -1,48 +1,50 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { MessageCircle, Users, Clock, CheckCircle } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { useMessaging } from "@/hooks/useMessaging";
-import { ChatWindow } from "@/components/ChatWindow";
+import { WhatsAppChatList } from "@/components/WhatsAppChatList";
+import { WhatsAppChatWindow } from "@/components/WhatsAppChatWindow";
+import { UserProfileView } from "@/components/UserProfileView";
+import { Conversation } from "@/types/database";
 
 const AdminMessages = () => {
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserConversations, setSelectedUserConversations] = useState<Conversation[]>([]);
+  const [showProfile, setShowProfile] = useState(false);
   const {
     conversations,
     isLoading,
-    updateConversationStatus,
   } = useMessaging();
 
   const activeConversations = conversations.filter(c => c.status === 'active');
   const pendingConversations = conversations.filter(c => c.status === 'pending');
   const closedConversations = conversations.filter(c => c.status === 'closed');
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <MessageCircle className="w-4 h-4" />;
-      case 'pending':
-        return <Clock className="w-4 h-4" />;
-      case 'closed':
-        return <CheckCircle className="w-4 h-4" />;
-      default:
-        return <MessageCircle className="w-4 h-4" />;
-    }
+  // Get unique users count
+  const uniqueUsers = new Set(conversations.map(c => c.user_id)).size;
+
+  const handleSelectUser = (userId: string, userConversations: Conversation[]) => {
+    setSelectedUserId(userId);
+    setSelectedUserConversations(userConversations);
+    setShowProfile(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'default';
-      case 'pending':
-        return 'secondary';
-      case 'closed':
-        return 'outline';
-      default:
-        return 'default';
-    }
+  const handleBack = () => {
+    setSelectedUserId(null);
+    setSelectedUserConversations([]);
+    setShowProfile(false);
+  };
+
+  const handleShowProfile = () => {
+    setShowProfile(true);
+  };
+
+  const handleBackFromProfile = () => {
+    setShowProfile(false);
+  };
+
+  const getUserName = (userId: string) => {
+    return `User ${userId.slice(0, 8)}`;
   };
 
   if (isLoading) {
@@ -59,141 +61,94 @@ const AdminMessages = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Customer Messages</h1>
-        <p className="text-muted-foreground">
-          Manage customer inquiries and product discussions
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <MessageCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeConversations.length}</p>
-                <p className="text-sm text-muted-foreground">Active Conversations</p>
-              </div>
+    <div className="flex h-screen bg-background">
+      {/* Sidebar with chat list or back button when showing profile */}
+      <div className="w-1/3 border-r">
+        {selectedUserId && !showProfile ? (
+          <div className="p-4 border-b">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={handleBack}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
+              >
+                ←
+              </button>
+              <h2 className="text-lg font-semibold">Back to Chats</h2>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pendingConversations.length}</p>
-                <p className="text-sm text-muted-foreground">Pending Responses</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-gray-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{closedConversations.length}</p>
-                <p className="text-sm text-muted-foreground">Resolved</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Conversations List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            All Conversations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {conversations.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No conversations yet</h3>
-              <p className="text-muted-foreground">
-                Customer conversations will appear here when they start chatting about products.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {conversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(conversation.status)}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium">{conversation.subject}</h4>
-                      {conversation.product && (
-                        <p className="text-sm text-muted-foreground">
-                          Product: {conversation.product.name}
-                        </p>
-                      )}
-                      <p className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(conversation.updated_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Badge variant={getStatusColor(conversation.status) as any}>
-                      {conversation.status}
-                    </Badge>
-
-                    <div className="flex gap-2">
-                      {conversation.status !== 'closed' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateConversationStatus(conversation.id, 'closed')}
-                        >
-                          Close
-                        </Button>
-                      )}
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => setSelectedConversation(conversation.id)}
-                      >
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Chat Window Modal */}
-      {selectedConversation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="w-full max-w-md">
-            <ChatWindow
-              onClose={() => setSelectedConversation(null)}
-            />
           </div>
-        </div>
-      )}
+        ) : !showProfile ? (
+          <>
+            {/* Stats Header */}
+            <div className="p-4 border-b space-y-4">
+              <div>
+                <h1 className="text-2xl font-bold">Messages</h1>
+                <p className="text-muted-foreground">
+                  WhatsApp-style admin chat
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-green-600">{activeConversations.length}</div>
+                  <div className="text-xs text-muted-foreground">Active</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-yellow-600">{pendingConversations.length}</div>
+                  <div className="text-xs text-muted-foreground">Pending</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-gray-600">{uniqueUsers}</div>
+                  <div className="text-xs text-muted-foreground">Users</div>
+                </div>
+              </div>
+            </div>
+
+            <WhatsAppChatList
+              conversations={conversations}
+              onSelectUser={handleSelectUser}
+              selectedUserId={selectedUserId}
+            />
+          </>
+        ) : null}
+      </div>
+
+      {/* Main content area */}
+      <div className="flex-1">
+        {selectedUserId && showProfile ? (
+          <UserProfileView
+            userId={selectedUserId}
+            conversations={selectedUserConversations}
+            onBack={handleBackFromProfile}
+          />
+        ) : selectedUserId ? (
+          <WhatsAppChatWindow
+            userId={selectedUserId}
+            userName={getUserName(selectedUserId)}
+            conversations={selectedUserConversations}
+            onBack={handleBack}
+            onShowProfile={handleShowProfile}
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto" />
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Select a conversation</h3>
+                <p className="text-muted-foreground max-w-md">
+                  Choose a customer from the list to start viewing and managing their messages in WhatsApp-style interface.
+                </p>
+              </div>
+              {conversations.length === 0 && (
+                <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    No customer conversations yet. Messages will appear here when customers start chatting about products.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
