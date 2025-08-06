@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -29,17 +34,54 @@ interface Stats {
   totalCustomers: number;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  category: string;
+  images: string[];
+  sizes: string[];
+  colors: string[];
+  stock_quantity: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 const AdminDashboard = () => {
   const { user, isAdmin, loading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats>({ totalOrders: 0, totalRevenue: 0, pendingOrders: 0, totalCustomers: 0 });
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
+
+  // Product form state
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    price: '',
+    description: '',
+    category: '',
+    images: [] as string[],
+    sizes: [] as string[],
+    colors: [] as string[],
+    stock_quantity: '',
+    is_active: true
+  });
+
+  const categories = ['t-shirts', 'hoodies', 'jackets', 'pants', 'outerwear'];
+  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const availableColors = ['Black', 'White', 'Gray', 'Navy', 'Red', 'Blue', 'Green', 'Brown', 'Olive'];
 
   useEffect(() => {
     if (user && isAdmin) {
       fetchOrders();
       fetchStats();
+      fetchProducts();
     }
   }, [user, isAdmin]);
 
@@ -192,6 +234,183 @@ const AdminDashboard = () => {
     return actions;
   };
 
+  // Product management functions
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch products",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const resetProductForm = () => {
+    setProductFormData({
+      name: '',
+      price: '',
+      description: '',
+      category: '',
+      images: [],
+      sizes: [],
+      colors: [],
+      stock_quantity: '',
+      is_active: true
+    });
+    setEditingProduct(null);
+  };
+
+  const openEditProductDialog = (product: Product) => {
+    setEditingProduct(product);
+    setProductFormData({
+      name: product.name,
+      price: product.price.toString(),
+      description: product.description || '',
+      category: product.category,
+      images: product.images,
+      sizes: product.sizes,
+      colors: product.colors,
+      stock_quantity: product.stock_quantity.toString(),
+      is_active: product.is_active
+    });
+    setIsProductDialogOpen(true);
+  };
+
+  const handleProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const productData = {
+        name: productFormData.name,
+        price: parseFloat(productFormData.price),
+        description: productFormData.description,
+        category: productFormData.category,
+        images: productFormData.images,
+        sizes: productFormData.sizes,
+        colors: productFormData.colors,
+        stock_quantity: parseInt(productFormData.stock_quantity),
+        is_active: productFormData.is_active
+      };
+
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Product updated successfully",
+        });
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .insert(productData);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Product created successfully",
+        });
+      }
+
+      setIsProductDialogOpen(false);
+      resetProductForm();
+      fetchProducts();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save product",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleProductStatus = async (product: Product) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: !product.is_active })
+        .eq('id', product.id);
+
+      if (error) throw error;
+      
+      fetchProducts();
+      toast({
+        title: "Success",
+        description: `Product ${product.is_active ? 'hidden' : 'activated'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling product status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update product status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId);
+
+      if (error) throw error;
+      
+      fetchProducts();
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete product",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const addSize = (size: string) => {
+    if (!productFormData.sizes.includes(size)) {
+      setProductFormData(prev => ({ ...prev, sizes: [...prev.sizes, size] }));
+    }
+  };
+
+  const removeSize = (size: string) => {
+    setProductFormData(prev => ({ ...prev, sizes: prev.sizes.filter(s => s !== size) }));
+  };
+
+  const addColor = (color: string) => {
+    if (!productFormData.colors.includes(color)) {
+      setProductFormData(prev => ({ ...prev, colors: [...prev.colors, color] }));
+    }
+  };
+
+  const removeColor = (color: string) => {
+    setProductFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -243,54 +462,250 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Orders Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Order Management</CardTitle>
-            <CardDescription>View and manage all customer orders</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loadingData ? (
-              <div className="text-center py-8">Loading orders...</div>
-            ) : orders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No orders found</div>
-            ) : (
-              <div className="space-y-4">
-                {orders.map((order) => (
-                  <Card key={order.id} className="border">
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-semibold">{order.order_number}</span>
-                            <Badge className={`${getStatusColor(order.status)} text-white`}>
-                              {order.status.toUpperCase()}
-                            </Badge>
+        {/* Management Tabs */}
+        <Tabs defaultValue="orders" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="orders">Order Management</TabsTrigger>
+            <TabsTrigger value="products">Product Management</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="orders">
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Management</CardTitle>
+                <CardDescription>View and manage all customer orders</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingData ? (
+                  <div className="text-center py-8">Loading orders...</div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No orders found</div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <Card key={order.id} className="border">
+                        <CardContent className="pt-6">
+                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-semibold">{order.order_number}</span>
+                                <Badge className={`${getStatusColor(order.status)} text-white`}>
+                                  {order.status.toUpperCase()}
+                                </Badge>
+                              </div>
+                              
+                              <div className="text-sm text-muted-foreground">
+                                <p><strong>Customer:</strong> {order.customer_info?.fullName}</p>
+                                <p><strong>Email:</strong> {order.customer_info?.email}</p>
+                                <p><strong>Total:</strong> ${order.total_amount}</p>
+                                {order.discount_code && (
+                                  <p><strong>Discount:</strong> {order.discount_code} (-${order.discount_amount})</p>
+                                )}
+                                <p><strong>Items:</strong> {order.order_items?.length || 0} item(s)</p>
+                                <p><strong>Date:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2">
+                              {getStatusActions(order)}
+                            </div>
                           </div>
-                          
-                          <div className="text-sm text-muted-foreground">
-                            <p><strong>Customer:</strong> {order.customer_info?.fullName}</p>
-                            <p><strong>Email:</strong> {order.customer_info?.email}</p>
-                            <p><strong>Total:</strong> ${order.total_amount}</p>
-                            {order.discount_code && (
-                              <p><strong>Discount:</strong> {order.discount_code} (-${order.discount_amount})</p>
-                            )}
-                            <p><strong>Items:</strong> {order.order_items?.length || 0} item(s)</p>
-                            <p><strong>Date:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="products">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Product Management</CardTitle>
+                    <CardDescription>Add, edit, and manage products in your store</CardDescription>
+                  </div>
+                  <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={resetProductForm}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Product
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingProduct ? 'Edit Product' : 'Add New Product'}
+                        </DialogTitle>
+                      </DialogHeader>
+                      
+                      <form onSubmit={handleProductSubmit} className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="name">Product Name</Label>
+                            <Input
+                              id="name"
+                              value={productFormData.name}
+                              onChange={(e) => setProductFormData(prev => ({ ...prev, name: e.target.value }))}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="price">Price</Label>
+                            <Input
+                              id="price"
+                              type="number"
+                              step="0.01"
+                              value={productFormData.price}
+                              onChange={(e) => setProductFormData(prev => ({ ...prev, price: e.target.value }))}
+                              required
+                            />
                           </div>
                         </div>
-                        
-                        <div className="flex flex-wrap gap-2">
-                          {getStatusActions(order)}
+
+                        <div>
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea
+                            id="description"
+                            value={productFormData.description}
+                            onChange={(e) => setProductFormData(prev => ({ ...prev, description: e.target.value }))}
+                            rows={3}
+                          />
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="category">Category</Label>
+                            <Select value={productFormData.category} onValueChange={(value) => setProductFormData(prev => ({ ...prev, category: value }))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map(cat => (
+                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="stock">Stock Quantity</Label>
+                            <Input
+                              id="stock"
+                              type="number"
+                              value={productFormData.stock_quantity}
+                              onChange={(e) => setProductFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {/* Sizes */}
+                        <div>
+                          <Label>Available Sizes</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {availableSizes.map(size => (
+                              <Badge
+                                key={size}
+                                variant={productFormData.sizes.includes(size) ? "default" : "outline"}
+                                className="cursor-pointer"
+                                onClick={() => productFormData.sizes.includes(size) ? removeSize(size) : addSize(size)}
+                              >
+                                {size}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Colors */}
+                        <div>
+                          <Label>Available Colors</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {availableColors.map(color => (
+                              <Badge
+                                key={color}
+                                variant={productFormData.colors.includes(color) ? "default" : "outline"}
+                                className="cursor-pointer"
+                                onClick={() => productFormData.colors.includes(color) ? removeColor(color) : addColor(color)}
+                              >
+                                {color}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-4">
+                          <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit">
+                            {editingProduct ? 'Update Product' : 'Create Product'}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingProducts ? (
+                  <div className="text-center py-8">Loading products...</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {products.map(product => (
+                      <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''}`}>
+                        <CardHeader>
+                          <div className="flex justify-between items-start">
+                            <CardTitle className="text-lg">{product.name}</CardTitle>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => toggleProductStatus(product)}
+                              >
+                                {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditProductDialog(product)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => deleteProduct(product.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <p className="text-2xl font-bold text-primary">${product.price}</p>
+                            <p className="text-sm text-muted-foreground">{product.description}</p>
+                            <div className="flex flex-wrap gap-1">
+                              <Badge variant="secondary">{product.category}</Badge>
+                              <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
+                              {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
+                              <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
