@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff } from 'lucide-react';
+import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -58,6 +58,7 @@ const AdminDashboard = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [newImageUrl, setNewImageUrl] = useState('');
   const { toast } = useToast();
 
   // Product form state
@@ -269,6 +270,7 @@ const AdminDashboard = () => {
       is_active: true
     });
     setEditingProduct(null);
+    setNewImageUrl('');
   };
 
   const openEditProductDialog = (product: Product) => {
@@ -409,6 +411,40 @@ const AdminDashboard = () => {
 
   const removeColor = (color: string) => {
     setProductFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }));
+  };
+
+  // Image management functions
+  const addImageUrl = () => {
+    if (newImageUrl.trim() && !productFormData.images.includes(newImageUrl.trim())) {
+      setProductFormData(prev => ({ 
+        ...prev, 
+        images: [...prev.images, newImageUrl.trim()] 
+      }));
+      setNewImageUrl('');
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setProductFormData(prev => ({ 
+      ...prev, 
+      images: prev.images.filter((_, i) => i !== index) 
+    }));
+  };
+
+  const moveImageUp = (index: number) => {
+    if (index > 0) {
+      const newImages = [...productFormData.images];
+      [newImages[index], newImages[index - 1]] = [newImages[index - 1], newImages[index]];
+      setProductFormData(prev => ({ ...prev, images: newImages }));
+    }
+  };
+
+  const moveImageDown = (index: number) => {
+    if (index < productFormData.images.length - 1) {
+      const newImages = [...productFormData.images];
+      [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+      setProductFormData(prev => ({ ...prev, images: newImages }));
+    }
   };
 
   return (
@@ -573,6 +609,76 @@ const AdminDashboard = () => {
                             onChange={(e) => setProductFormData(prev => ({ ...prev, description: e.target.value }))}
                             rows={3}
                           />
+                        </div>
+
+                        {/* Product Images */}
+                        <div>
+                          <Label>Product Images</Label>
+                          <div className="space-y-4">
+                            {/* Add new image URL */}
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="Enter image URL"
+                                value={newImageUrl}
+                                onChange={(e) => setNewImageUrl(e.target.value)}
+                              />
+                              <Button 
+                                type="button" 
+                                onClick={addImageUrl}
+                                variant="outline"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            
+                            {/* Current images with reorder functionality */}
+                            {productFormData.images.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">Current Images (drag to reorder):</p>
+                                {productFormData.images.map((image, index) => (
+                                  <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                                    <img 
+                                      src={image} 
+                                      alt={`Product ${index + 1}`} 
+                                      className="w-16 h-16 object-cover rounded"
+                                    />
+                                    <div className="flex-1 truncate">
+                                      <p className="text-sm">{image}</p>
+                                      <p className="text-xs text-muted-foreground">Position {index + 1}</p>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => moveImageUp(index)}
+                                        disabled={index === 0}
+                                      >
+                                        <ArrowUp className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => moveImageDown(index)}
+                                        disabled={index === productFormData.images.length - 1}
+                                      >
+                                        <ArrowDown className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => removeImage(index)}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

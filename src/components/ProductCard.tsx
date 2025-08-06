@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Plus, Minus, Heart } from "lucide-react";
+import { Plus, Minus, Heart, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Product } from '@/types/database';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useNavigate } from 'react-router-dom';
 import ChatWidget from './ChatWidget';
 
 interface ProductCardProps {
@@ -20,6 +22,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
+  const navigate = useNavigate();
 
   const handleAddToCart = () => {
     if (!selectedSize || !selectedColor) {
@@ -37,26 +40,66 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     }
   };
 
+  const getStockStatus = () => {
+    if (product.stock_quantity === 0) {
+      return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
+    } else if (product.stock_quantity <= 5) {
+      return { status: 'low', message: `Only ${product.stock_quantity} left`, variant: 'secondary' as const };
+    }
+    return null;
+  };
+
+  const stockStatus = getStockStatus();
+
   return (
     <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
       <div className="relative overflow-hidden">
-        <img
-          src={product.images[0] || '/placeholder.svg'}
-          alt={product.name}
-          className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-110"
-        />
+        <div 
+          className="cursor-pointer"
+          onClick={() => navigate(`/product/${product.id}`)}
+        >
+          <img
+            src={product.images[0] || '/placeholder.svg'}
+            alt={product.name}
+            className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        {user && (
+        
+        {/* Action buttons overlay */}
+        <div className="absolute top-2 right-2 flex flex-col gap-2">
           <Button
             size="sm"
             variant="outline"
-            className="absolute top-2 right-2 p-2"
-            onClick={handleWishlistToggle}
+            className="p-2 bg-background/80 backdrop-blur-sm"
+            onClick={() => navigate(`/product/${product.id}`)}
           >
-            <Heart 
-              className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
-            />
+            <Eye className="h-4 w-4" />
           </Button>
+          {user && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="p-2 bg-background/80 backdrop-blur-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleWishlistToggle();
+              }}
+            >
+              <Heart 
+                className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
+              />
+            </Button>
+          )}
+        </div>
+
+        {/* Stock status badge */}
+        {stockStatus && (
+          <div className="absolute bottom-2 left-2">
+            <Badge variant={stockStatus.variant} className="text-xs">
+              {stockStatus.message}
+            </Badge>
+          </div>
         )}
       </div>
       

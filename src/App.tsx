@@ -10,6 +10,7 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminMessages from "./pages/AdminMessages";
 import UserMessages from "./pages/UserMessages";
 import Wishlist from "./pages/Wishlist";
+import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -25,6 +26,7 @@ const App = () => (
       <Route path="/admin/messages" element={<AdminMessages />} />
       <Route path="/messages" element={<UserMessages />} />
       <Route path="/wishlist" element={<Wishlist />} />
+      <Route path="/product/:id" element={<ProductDetail />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
