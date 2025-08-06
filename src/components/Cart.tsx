@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Minus, Plus, Trash2, ShoppingBag, MapPin, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/integrations/supabase/client";
 import OrderConfirmationDialog from "./OrderConfirmationDialog";
 
@@ -44,6 +45,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const { user } = useAuth();
+  const { formatPrice } = useCurrency();
   const { toast } = useToast();
 
   const total = (items || []).reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -136,7 +138,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         toast({
           variant: "destructive",
           title: "Minimum Order Required",
-          description: `This discount requires a minimum order of $${data.min_order_amount}.`,
+          description: `This discount requires a minimum order of ${formatPrice(data.min_order_amount)}.`,
         });
         return;
       }
@@ -158,7 +160,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
       toast({
         title: "Discount Applied!",
-        description: `${data.name} - ${data.discount_type === 'percentage' ? `${data.discount_value}%` : `$${data.discount_value}`} off`,
+        description: `${data.name} - ${data.discount_type === 'percentage' ? `${data.discount_value}%` : `${formatPrice(data.discount_value)}`} off`,
       });
     } catch (error) {
       console.error('Error applying discount:', error);
@@ -324,7 +326,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     <p className="text-sm text-muted-foreground">
                       {item.size} • {item.color}
                     </p>
-                    <p className="font-semibold">${item.price}</p>
+                    <p className="font-semibold">{formatPrice(item.price)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -374,7 +376,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                         ✓ {appliedDiscount.code} discount applied! 
                         {appliedDiscount.type === 'percentage' 
                           ? ` ${appliedDiscount.amount}% off`
-                          : ` $${appliedDiscount.amount} off`
+                          : ` ${formatPrice(appliedDiscount.amount)} off`
                         }
                       </p>
                     </div>
@@ -489,21 +491,21 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     <Separator />
                     
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-base">Subtotal:</span>
-                        <span className="text-base">${total.toFixed(2)}</span>
-                      </div>
-                      {appliedDiscount && discountAmount > 0 && (
-                        <div className="flex items-center justify-between text-green-600">
-                          <span className="text-base">Discount ({appliedDiscount.code}):</span>
-                          <span className="text-base">-${discountAmount.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <Separator />
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold">Total:</span>
-                        <span className="text-lg font-bold">${finalTotal.toFixed(2)}</span>
-                      </div>
+                       <div className="flex items-center justify-between">
+                         <span className="text-base">Subtotal:</span>
+                         <span className="text-base">{formatPrice(total)}</span>
+                       </div>
+                       {appliedDiscount && discountAmount > 0 && (
+                         <div className="flex items-center justify-between text-green-600">
+                           <span className="text-base">Discount ({appliedDiscount.code}):</span>
+                           <span className="text-base">-{formatPrice(discountAmount)}</span>
+                         </div>
+                       )}
+                       <Separator />
+                       <div className="flex items-center justify-between">
+                         <span className="text-lg font-bold">Total:</span>
+                         <span className="text-lg font-bold">{formatPrice(finalTotal)}</span>
+                       </div>
                     </div>
                     
                     <Button onClick={handleCheckout} className="w-full" size="lg">
