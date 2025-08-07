@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, Upload, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Eye, EyeOff, Image, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const AdminProducts = () => {
@@ -229,6 +229,40 @@ const AdminProducts = () => {
     setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }));
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData(prev => ({ 
+          ...prev, 
+          images: [...prev.images, base64String] 
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      images: prev.images.filter((_, i) => i !== index) 
+    }));
+  };
+
+  const moveImage = (index: number, direction: 'up' | 'down') => {
+    const newImages = [...formData.images];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (newIndex >= 0 && newIndex < newImages.length) {
+      [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
+      setFormData(prev => ({ ...prev, images: newImages }));
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -341,6 +375,101 @@ const AdminProducts = () => {
                 </div>
               </div>
 
+              {/* Product Images */}
+              <div>
+                <Label>Product Images</Label>
+                <div className="space-y-4 mt-2">
+                  {/* Upload Button */}
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                      className="flex items-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Add Images
+                    </Button>
+                    <input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {formData.images.length} image(s) selected
+                    </span>
+                  </div>
+
+                  {/* Image Preview and Management */}
+                  {formData.images.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {formData.images.map((image, index) => (
+                        <div
+                          key={index}
+                          className="relative group border border-border rounded-lg overflow-hidden bg-muted"
+                        >
+                          <div className="aspect-square">
+                            <img
+                              src={image}
+                              alt={`Product image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          
+                          {/* Image Controls */}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            {/* Move Up */}
+                            {index > 0 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => moveImage(index, 'up')}
+                                className="h-8 w-8 p-0"
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                            )}
+                            
+                            {/* Move Down */}
+                            {index < formData.images.length - 1 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => moveImage(index, 'down')}
+                                className="h-8 w-8 p-0"
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            )}
+                            
+                            {/* Remove */}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => removeImage(index)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          {/* Image Position Indicator */}
+                          <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium">
+                            {index + 1}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-4">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -389,17 +518,40 @@ const AdminProducts = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <p className="text-2xl font-bold text-primary">${product.price}</p>
-                  <p className="text-sm text-muted-foreground">{product.description}</p>
-                  <div className="flex flex-wrap gap-1">
-                    <Badge variant="secondary">{product.category}</Badge>
-                    <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
-                    {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
-                    <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
+                <div className="space-y-3">
+                  {/* Product Image Preview */}
+                  {product.images && product.images.length > 0 ? (
+                    <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                      {product.images.length > 1 && (
+                        <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-medium">
+                          +{product.images.length - 1} more
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
+                      <Image className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <p className="text-2xl font-bold text-primary">${product.price}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="secondary">{product.category}</Badge>
+                      <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
+                      {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
+                      <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
+                      <p className="text-xs font-medium">Images: {product.images?.length || 0}</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
