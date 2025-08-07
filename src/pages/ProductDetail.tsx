@@ -109,8 +109,23 @@ const ProductDetail = () => {
     if (!email || !product) return;
 
     try {
-      // Here you would typically call an edge function to handle the stock alert subscription
-      // For now, we'll just show a success message
+      const response = await fetch('https://ppljsayhwtlogficifar.supabase.co/functions/v1/stock-alerts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user ? { 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` } : {})
+        },
+        body: JSON.stringify({
+          email,
+          productId: product.id,
+          productName: product.name
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to set stock alert');
+      }
+
       toast({
         title: "Alert Set",
         description: "You'll be notified when this item is back in stock",
