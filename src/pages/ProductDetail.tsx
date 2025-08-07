@@ -109,22 +109,15 @@ const ProductDetail = () => {
     if (!email || !product) return;
 
     try {
-      const response = await fetch('https://ppljsayhwtlogficifar.supabase.co/functions/v1/stock-alerts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(user ? { 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` } : {})
-        },
-        body: JSON.stringify({
-          email,
-          productId: product.id,
-          productName: product.name
-        })
-      });
+      const { error } = await supabase
+        .from('stock_alerts')
+        .insert({
+          user_id: user?.id || null,
+          email: email,
+          product_id: product.id
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to set stock alert');
-      }
+      if (error) throw error;
 
       toast({
         title: "Alert Set",
@@ -132,12 +125,20 @@ const ProductDetail = () => {
       });
       setIsStockAlertDialogOpen(false);
       setEmail('');
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to set stock alert",
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      if (error.code === '23505') {
+        toast({
+          title: "Already Subscribed",
+          description: "You're already subscribed to alerts for this product",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error", 
+          description: "Failed to set stock alert",
+          variant: "destructive"
+        });
+      }
     }
   };
 
