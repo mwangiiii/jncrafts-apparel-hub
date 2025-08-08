@@ -86,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "jnCrafts <noreply@jncrafts.com>",
+      from: "jnCrafts <onboarding@resend.dev>",
       to: [email],
       subject: "Verify Your jnCrafts Account",
       html: emailHtml,
