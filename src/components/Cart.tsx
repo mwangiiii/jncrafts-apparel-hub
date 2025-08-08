@@ -261,6 +261,30 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         }
       }
 
+      // Send order confirmation email
+      try {
+        await supabase.functions.invoke('send-order-email', {
+          body: {
+            email: customerInfo.email,
+            orderNumber: orderNumber,
+            customerName: customerInfo.fullName,
+            orderStatus: 'pending',
+            items: items.map(item => ({
+              product_name: item.product_name,
+              quantity: item.quantity,
+              size: item.size,
+              color: item.color,
+              price: item.price
+            })),
+            totalAmount: finalTotal,
+            discountAmount: discountAmount,
+            shippingAddress: shippingAddress
+          }
+        });
+      } catch (emailError) {
+        console.error('Error sending order confirmation email:', emailError);
+      }
+
       toast({
         title: "Order Placed Successfully!",
         description: `Your order ${orderNumber} has been placed. We'll send you updates via email.`,

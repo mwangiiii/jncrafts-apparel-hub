@@ -152,13 +152,41 @@ const AdminDashboard = () => {
 
       if (error) throw error;
 
+      // Find the order to get customer details for email
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        // Send status update email
+        try {
+          await supabase.functions.invoke('send-order-email', {
+            body: {
+              email: order.customer_info.email,
+              orderNumber: order.order_number,
+              customerName: order.customer_info.fullName,
+              orderStatus: newStatus,
+              items: order.order_items.map((item: any) => ({
+                product_name: item.product_name,
+                quantity: item.quantity,
+                size: item.size,
+                color: item.color,
+                price: item.price
+              })),
+              totalAmount: order.total_amount,
+              discountAmount: order.discount_amount,
+              shippingAddress: order.shipping_address
+            }
+          });
+        } catch (emailError) {
+          console.error('Error sending status update email:', emailError);
+        }
+      }
+
       setOrders(orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus } : order
       ));
 
       toast({
         title: "Order Updated",
-        description: `Order status changed to ${newStatus}`
+        description: `Order status changed to ${newStatus}. Customer has been notified via email.`
       });
 
       fetchStats(); // Refresh stats
