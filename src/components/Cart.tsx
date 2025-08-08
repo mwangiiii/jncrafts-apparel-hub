@@ -45,7 +45,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const { user } = useAuth();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, selectedCurrency } = useCurrency();
   const { toast } = useToast();
 
   const total = (items || []).reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -278,7 +278,11 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
             })),
             totalAmount: finalTotal,
             discountAmount: discountAmount,
-            shippingAddress: shippingAddress
+            shippingAddress: shippingAddress,
+            currency: {
+              code: selectedCurrency.code,
+              symbol: selectedCurrency.symbol
+            }
           }
         });
       } catch (emailError) {

@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useWishlist } from '@/hooks/useWishlist';
 import { usePersistentCart } from '@/hooks/usePersistentCart';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ const Wishlist = () => {
   const { user, loading } = useAuth();
   const { wishlistItems, isLoading, removeFromWishlist } = useWishlist();
   const { addToCart } = usePersistentCart();
+  const { formatPrice } = useCurrency();
   const [selectedItems, setSelectedItems] = useState<{[key: string]: {size: string, color: string}}>({});
 
   if (loading || isLoading) {
@@ -86,13 +88,13 @@ const Wishlist = () => {
                   />
                 )}
                 
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <p className="text-2xl font-bold text-primary">
-                      ${item.product?.price}
-                    </p>
-                    <Badge variant="secondary">{item.product?.category}</Badge>
-                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <p className="text-2xl font-bold text-primary">
+                        {formatPrice(item.product?.price || 0)}
+                      </p>
+                      <Badge variant="secondary">{item.product?.category}</Badge>
+                    </div>
 
                   <p className="text-sm text-muted-foreground">
                     {item.product?.description}

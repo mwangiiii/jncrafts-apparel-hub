@@ -172,7 +172,11 @@ const AdminDashboard = () => {
               })),
               totalAmount: order.total_amount,
               discountAmount: order.discount_amount,
-              shippingAddress: order.shipping_address
+              shippingAddress: order.shipping_address,
+              currency: {
+                code: 'KES',
+                symbol: 'KSh'
+              }
             }
           });
         } catch (emailError) {

@@ -28,6 +28,10 @@ interface OrderEmailRequest {
     city: string;
     postalCode: string;
   };
+  currency?: {
+    code: string;
+    symbol: string;
+  };
 }
 
 const getStatusMessage = (status: string) => {
@@ -90,18 +94,27 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const {
-      email,
-      orderNumber,
-      customerName,
-      orderStatus,
-      items,
-      totalAmount,
+    const { 
+      email, 
+      orderNumber, 
+      customerName, 
+      orderStatus, 
+      items, 
+      totalAmount, 
       discountAmount = 0,
-      shippingAddress
+      shippingAddress,
+      currency = { code: 'KES', symbol: 'KSh' }
     }: OrderEmailRequest = await req.json();
 
     const statusInfo = getStatusMessage(orderStatus);
+
+    const formatPrice = (price: number) => {
+      const formatter = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: currency.code === 'KES' ? 0 : 2,
+        maximumFractionDigits: currency.code === 'KES' ? 0 : 2,
+      });
+      return `${currency.symbol}${formatter.format(price)}`;
+    };
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -150,24 +163,24 @@ const handler = async (req: Request): Promise<Response> => {
                     Size: ${item.size} | Color: ${item.color}<br>
                     Quantity: ${item.quantity}
                   </div>
-                  <div>$${item.price.toFixed(2)}</div>
+                  <div>${formatPrice(item.price)}</div>
                 </div>
               `).join('')}
               
               <div class="total">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span><strong>Subtotal:</strong></span>
-                  <span>$${(totalAmount + discountAmount).toFixed(2)}</span>
+                  <span>${formatPrice(totalAmount + discountAmount)}</span>
                 </div>
                 ${discountAmount > 0 ? `
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                     <span><strong>Discount:</strong></span>
-                    <span>-$${discountAmount.toFixed(2)}</span>
+                    <span>-${formatPrice(discountAmount)}</span>
                   </div>
                 ` : ''}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3);">
                   <span><strong>Total:</strong></span>
-                  <span><strong>$${totalAmount.toFixed(2)}</strong></span>
+                  <span><strong>${formatPrice(totalAmount)}</strong></span>
                 </div>
               </div>
               
