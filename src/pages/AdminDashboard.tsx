@@ -206,13 +206,13 @@ const AdminDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-500';
-      case 'confirmed': return 'bg-blue-500';
-      case 'processing': return 'bg-orange-500';
-      case 'shipped': return 'bg-purple-500';
-      case 'delivered': return 'bg-green-500';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'pending': return 'bg-amber-500 hover:bg-amber-600';
+      case 'confirmed': return 'bg-blue-500 hover:bg-blue-600';
+      case 'processing': return 'bg-orange-500 hover:bg-orange-600';
+      case 'shipped': return 'bg-purple-500 hover:bg-purple-600';
+      case 'delivered': return 'bg-emerald-500 hover:bg-emerald-600';
+      case 'cancelled': return 'bg-red-500 hover:bg-red-600';
+      default: return 'bg-gray-500 hover:bg-gray-600';
     }
   };
 
@@ -480,391 +480,499 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header Section */}
-        <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-xl">
-          <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-primary-foreground/80 text-lg">Manage your jnCrafts business with ease</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
+        {/* Modern Header */}
+        <header className="mb-10">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-primary/90 to-admin-secondary text-white shadow-2xl">
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"2\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"}}></div>
+            </div>
+            
+            <div className="relative p-8 lg:p-12">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                      <Package className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">Admin Dashboard</h1>
+                      <p className="text-lg text-white/90 mt-1">Welcome back! Here&apos;s what&apos;s happening with your business today.</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm text-white/80">Last updated</p>
+                    <p className="text-lg font-semibold">{new Date().toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">Total Orders</CardTitle>
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <Package className="h-5 w-5 text-white" />
+        <section className="mb-12" aria-labelledby="stats-heading">
+          <h2 id="stats-heading" className="sr-only">Business Statistics</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <div className="group relative">
+              <div className="admin-card p-6 h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg group-hover:shadow-blue-500/25 transition-all duration-300">
+                    <Package className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-foreground">{stats.totalOrders}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Total Orders</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                  <span className="text-muted-foreground">All time orders</span>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-800">{stats.totalOrders}</div>
-              <p className="text-xs text-blue-600 mt-1">All time orders</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">Total Revenue</CardTitle>
-              <div className="p-2 bg-green-500 rounded-lg">
-                <DollarSign className="h-5 w-5 text-white" />
+            </div>
+
+            <div className="group relative">
+              <div className="admin-card p-6 h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg group-hover:shadow-emerald-500/25 transition-all duration-300">
+                    <DollarSign className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-foreground">KSh {stats.totalRevenue.toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Total Revenue</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+                  <span className="text-muted-foreground">Total earnings</span>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-800">KSh {stats.totalRevenue.toLocaleString()}</div>
-              <p className="text-xs text-green-600 mt-1">Total earnings</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-700">Pending Orders</CardTitle>
-              <div className="p-2 bg-orange-500 rounded-lg">
-                <Clock className="h-5 w-5 text-white" />
+            </div>
+
+            <div className="group relative">
+              <div className="admin-card p-6 h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg group-hover:shadow-amber-500/25 transition-all duration-300">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-foreground">{stats.pendingOrders}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Pending Orders</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                  <span className="text-muted-foreground">Requires attention</span>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-800">{stats.pendingOrders}</div>
-              <p className="text-xs text-orange-600 mt-1">Awaiting action</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Total Customers</CardTitle>
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <Users className="h-5 w-5 text-white" />
+            </div>
+
+            <div className="group relative">
+              <div className="admin-card p-6 h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-foreground">{stats.totalCustomers}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Total Customers</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-purple-500"></div>
+                  <span className="text-muted-foreground">Registered users</span>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-800">{stats.totalCustomers}</div>
-              <p className="text-xs text-purple-600 mt-1">Registered users</p>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </section>
 
         {/* Management Tabs */}
-        <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-muted/50 backdrop-blur-sm">
-            <TabsTrigger value="orders" className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
-              Order Management
-            </TabsTrigger>
-            <TabsTrigger value="products" className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
-              Product Management
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="orders">
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Management</CardTitle>
-                <CardDescription>View and manage all customer orders</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingData ? (
-                  <div className="text-center py-8">Loading orders...</div>
-                ) : orders.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No orders found</div>
-                ) : (
-                  <div className="space-y-4">
-                    {orders.map((order) => (
-                      <Card key={order.id} className="border">
-                        <CardContent className="pt-6">
-                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono font-semibold">{order.order_number}</span>
-                                <Badge className={`${getStatusColor(order.status)} text-white`}>
-                                  {order.status.toUpperCase()}
-                                </Badge>
+        <section className="space-y-8">
+          <Tabs defaultValue="orders" className="w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Business Management</h2>
+                <p className="text-muted-foreground">Manage orders and products efficiently</p>
+              </div>
+              <TabsList className="grid w-full sm:w-auto grid-cols-2 h-12 p-1 bg-muted/80 backdrop-blur-sm rounded-xl shadow-sm">
+                <TabsTrigger 
+                  value="orders" 
+                  className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-foreground transition-all duration-200 rounded-lg"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Orders
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="products" 
+                  className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-foreground transition-all duration-200 rounded-lg"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Products
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <TabsContent value="orders" className="space-y-6 animate-fade-in-up">
+              <Card className="admin-card border-0 shadow-xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-primary/10 rounded-xl">
+                      <Package className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-2xl font-bold text-foreground">Order Management</CardTitle>
+                      <CardDescription className="text-base text-muted-foreground mt-1">
+                        Track and manage customer orders with real-time status updates
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8">
+                  {loadingData ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground text-lg">Loading orders...</p>
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground text-lg">No orders found</p>
+                      <p className="text-sm text-muted-foreground mt-2">Orders will appear here when customers place them</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {orders.map((order) => (
+                        <Card key={order.id} className="border-l-4 border-l-primary shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-white to-muted/10">
+                          <CardContent className="p-6">
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                              <div className="space-y-4 flex-1">
+                                <div className="flex items-center gap-3">
+                                  <h3 className="font-bold text-xl text-primary">#{order.order_number}</h3>
+                                  <Badge className={`${getStatusColor(order.status)} text-white text-sm px-3 py-1 font-medium`}>
+                                    {order.status.toUpperCase()}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <Users className="h-4 w-4 text-muted-foreground" />
+                                      <span className="font-medium text-foreground">{order.customer_info?.fullName || 'N/A'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">📧 {order.customer_info?.email || 'N/A'}</span>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign className="h-4 w-4 text-emerald-600" />
+                                      <span className="font-bold text-emerald-700 text-lg">KSh {order.total_amount.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">📅 {new Date(order.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                               
-                              <div className="text-sm text-muted-foreground">
-                                <p><strong>Customer:</strong> {order.customer_info?.fullName}</p>
-                                <p><strong>Email:</strong> {order.customer_info?.email}</p>
-                                <p><strong>Total:</strong> ${order.total_amount}</p>
-                                {order.discount_code && (
-                                  <p><strong>Discount:</strong> {order.discount_code} (-${order.discount_amount})</p>
-                                )}
-                                <p><strong>Items:</strong> {order.order_items?.length || 0} item(s)</p>
-                                <p><strong>Date:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-2">
-                              {getStatusActions(order).map((action, index) => (
-                                <div key={index} className="transform transition-transform hover:scale-105">
-                                  {action}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="products">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Product Management</CardTitle>
-                    <CardDescription>Add, edit, and manage products in your store</CardDescription>
-                  </div>
-                  <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button onClick={resetProductForm}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Product
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>
-                          {editingProduct ? 'Edit Product' : 'Add New Product'}
-                        </DialogTitle>
-                      </DialogHeader>
-                      
-                      <form onSubmit={handleProductSubmit} className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="name">Product Name</Label>
-                            <Input
-                              id="name"
-                              value={productFormData.name}
-                              onChange={(e) => setProductFormData(prev => ({ ...prev, name: e.target.value }))}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="price">Price</Label>
-                            <Input
-                              id="price"
-                              type="number"
-                              step="0.01"
-                              value={productFormData.price}
-                              onChange={(e) => setProductFormData(prev => ({ ...prev, price: e.target.value }))}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            value={productFormData.description}
-                            onChange={(e) => setProductFormData(prev => ({ ...prev, description: e.target.value }))}
-                            rows={3}
-                          />
-                        </div>
-
-                        {/* Product Images */}
-                        <div>
-                          <Label>Product Images</Label>
-                          <div className="space-y-4">
-                            {/* Add new image URL */}
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Enter image URL"
-                                value={newImageUrl}
-                                onChange={(e) => setNewImageUrl(e.target.value)}
-                              />
-                              <Button 
-                                type="button" 
-                                onClick={addImageUrl}
-                                variant="outline"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            
-                            {/* Current images with reorder functionality */}
-                            {productFormData.images.length > 0 && (
-                              <div className="space-y-2">
-                                <p className="text-sm text-muted-foreground">Current Images (drag to reorder):</p>
-                                {productFormData.images.map((image, index) => (
-                                  <div key={index} className="flex items-center gap-2 p-2 border rounded">
-                                    <img 
-                                      src={image} 
-                                      alt={`Product ${index + 1}`} 
-                                      className="w-16 h-16 object-cover rounded"
-                                    />
-                                    <div className="flex-1 truncate">
-                                      <p className="text-sm">{image}</p>
-                                      <p className="text-xs text-muted-foreground">Position {index + 1}</p>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => moveImageUp(index)}
-                                        disabled={index === 0}
-                                      >
-                                        <ArrowUp className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => moveImageDown(index)}
-                                        disabled={index === productFormData.images.length - 1}
-                                      >
-                                        <ArrowDown className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="destructive"
-                                        onClick={() => removeImage(index)}
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
+                              <div className="flex flex-wrap gap-3">
+                                {getStatusActions(order).map((action, index) => (
+                                  <div key={index} className="transform transition-all duration-200 hover:scale-105">
+                                    {action}
                                   </div>
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="category">Category</Label>
-                            <Select value={productFormData.category} onValueChange={(value) => setProductFormData(prev => ({ ...prev, category: value }))}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories.map(cat => (
-                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+            <TabsContent value="products" className="space-y-6 animate-fade-in-up">
+              <Card className="admin-card border-0 shadow-xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-xl">
+                        <TrendingUp className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-2xl font-bold text-foreground">Product Management</CardTitle>
+                        <CardDescription className="text-base text-muted-foreground mt-1">Add, edit, and manage products in your store</CardDescription>
+                      </div>
+                    </div>
+                    <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button onClick={resetProductForm} className="btn-primary">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Product
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingProduct ? 'Edit Product' : 'Add New Product'}
+                          </DialogTitle>
+                        </DialogHeader>
+                        
+                        <form onSubmit={handleProductSubmit} className="space-y-6">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="name">Product Name</Label>
+                              <Input
+                                id="name"
+                                value={productFormData.name}
+                                onChange={(e) => setProductFormData(prev => ({ ...prev, name: e.target.value }))}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="price">Price</Label>
+                              <Input
+                                id="price"
+                                type="number"
+                                step="0.01"
+                                value={productFormData.price}
+                                onChange={(e) => setProductFormData(prev => ({ ...prev, price: e.target.value }))}
+                                required
+                              />
+                            </div>
                           </div>
+
                           <div>
-                            <Label htmlFor="stock">Stock Quantity</Label>
-                            <Input
-                              id="stock"
-                              type="number"
-                              value={productFormData.stock_quantity}
-                              onChange={(e) => setProductFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
-                              required
+                            <Label htmlFor="description">Description</Label>
+                            <Textarea
+                              id="description"
+                              value={productFormData.description}
+                              onChange={(e) => setProductFormData(prev => ({ ...prev, description: e.target.value }))}
+                              rows={3}
                             />
                           </div>
-                        </div>
 
-                        {/* Sizes */}
-                        <div>
-                          <Label>Available Sizes</Label>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {availableSizes.map(size => (
-                              <Badge
-                                key={size}
-                                variant={productFormData.sizes.includes(size) ? "default" : "outline"}
-                                className="cursor-pointer"
-                                onClick={() => productFormData.sizes.includes(size) ? removeSize(size) : addSize(size)}
-                              >
-                                {size}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Colors */}
-                        <div>
-                          <Label>Available Colors</Label>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {availableColors.map(color => (
-                              <Badge
-                                key={color}
-                                variant={productFormData.colors.includes(color) ? "default" : "outline"}
-                                className="cursor-pointer"
-                                onClick={() => productFormData.colors.includes(color) ? removeColor(color) : addColor(color)}
-                              >
-                                {color}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end gap-4">
-                          <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit">
-                            {editingProduct ? 'Update Product' : 'Create Product'}
-                          </Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingProducts ? (
-                  <div className="text-center py-8">Loading products...</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {products.map(product => (
-                      <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''}`}>
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-lg">{product.name}</CardTitle>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => toggleProductStatus(product)}
-                              >
-                                {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openEditProductDialog(product)}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => deleteProduct(product.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                          {/* Product Images */}
+                          <div>
+                            <Label>Product Images</Label>
+                            <div className="space-y-4">
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="Enter image URL"
+                                  value={newImageUrl}
+                                  onChange={(e) => setNewImageUrl(e.target.value)}
+                                />
+                                <Button 
+                                  type="button" 
+                                  onClick={addImageUrl}
+                                  variant="outline"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              {productFormData.images.length > 0 && (
+                                <div className="space-y-2">
+                                  <p className="text-sm text-muted-foreground">Current Images:</p>
+                                  {productFormData.images.map((image, index) => (
+                                    <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                                      <img 
+                                        src={image} 
+                                        alt={`Product ${index + 1}`} 
+                                        className="w-16 h-16 object-cover rounded"
+                                      />
+                                      <div className="flex-1 truncate">
+                                        <p className="text-sm">{image}</p>
+                                        <p className="text-xs text-muted-foreground">Position {index + 1}</p>
+                                      </div>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => moveImageUp(index)}
+                                          disabled={index === 0}
+                                        >
+                                          <ArrowUp className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => moveImageDown(index)}
+                                          disabled={index === productFormData.images.length - 1}
+                                        >
+                                          <ArrowDown className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => removeImage(index)}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
-                            <p className="text-2xl font-bold text-primary">${product.price}</p>
-                            <p className="text-sm text-muted-foreground">{product.description}</p>
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant="secondary">{product.category}</Badge>
-                              <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
-                              {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="category">Category</Label>
+                              <Select value={productFormData.category} onValueChange={(value) => setProductFormData(prev => ({ ...prev, category: value }))}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories.map(cat => (
+                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
-                              <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
+                            <div>
+                              <Label htmlFor="stock">Stock Quantity</Label>
+                              <Input
+                                id="stock"
+                                type="number"
+                                value={productFormData.stock_quantity}
+                                onChange={(e) => setProductFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
+                                required
+                              />
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+
+                          {/* Sizes */}
+                          <div>
+                            <Label>Available Sizes</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {availableSizes.map(size => (
+                                <Badge
+                                  key={size}
+                                  variant={productFormData.sizes.includes(size) ? "default" : "outline"}
+                                  className="cursor-pointer"
+                                  onClick={() => productFormData.sizes.includes(size) ? removeSize(size) : addSize(size)}
+                                >
+                                  {size}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Colors */}
+                          <div>
+                            <Label>Available Colors</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {availableColors.map(color => (
+                                <Badge
+                                  key={color}
+                                  variant={productFormData.colors.includes(color) ? "default" : "outline"}
+                                  className="cursor-pointer"
+                                  onClick={() => productFormData.colors.includes(color) ? removeColor(color) : addColor(color)}
+                                >
+                                  {color}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-4">
+                            <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit" className="btn-primary">
+                              {editingProduct ? 'Update Product' : 'Create Product'}
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </CardHeader>
+                <CardContent className="p-8">
+                  {loadingProducts ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground text-lg">Loading products...</p>
+                    </div>
+                  ) : products.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground text-lg">No products found</p>
+                      <p className="text-sm text-muted-foreground mt-2">Create your first product to get started</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {products.map(product => (
+                        <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''} admin-card border-0`}>
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <CardTitle className="text-lg font-bold">{product.name}</CardTitle>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => toggleProductStatus(product)}
+                                  className="hover:scale-105 transition-transform"
+                                >
+                                  {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openEditProductDialog(product)}
+                                  className="hover:scale-105 transition-transform"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => deleteProduct(product.id)}
+                                  className="hover:scale-105 transition-transform"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-3">
+                              <p className="text-2xl font-bold text-primary">KSh {product.price.toLocaleString()}</p>
+                              <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                              <div className="flex flex-wrap gap-1">
+                                <Badge variant="secondary">{product.category}</Badge>
+                                <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
+                                {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
+                                <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
+                                <p className="text-xs font-medium">Images: {product.images?.length || 0}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </section>
       </div>
     </div>
   );

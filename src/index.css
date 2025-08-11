@@ -6,73 +6,90 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 5%;
+    /* Neutral Base - Warm whites and grays for accessibility */
+    --background: 240 10% 98%;
+    --foreground: 222 15% 15%;
 
+    /* Cards and surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 5%;
+    --card-foreground: 222 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 5%;
+    --popover-foreground: 222 15% 15%;
 
-    /* Brand colors inspired by jnCrafts products */
-    --primary: 0 0% 8%;
-    --primary-foreground: 0 0% 98%;
+    /* Primary - Deep navy blue for professional look */
+    --primary: 220 60% 25%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 32 25% 75%;
-    --secondary-foreground: 0 0% 8%;
+    /* Secondary - Warm beige that complements jnCrafts products */
+    --secondary: 35 15% 88%;
+    --secondary-foreground: 222 15% 25%;
 
-    --brand-beige: 32 25% 75%;
-    --brand-beige-foreground: 0 0% 8%;
+    /* Brand colors - More sophisticated palette */
+    --brand-beige: 35 15% 88%;
+    --brand-beige-foreground: 222 15% 25%;
 
-    --brand-black: 0 0% 8%;
-    --brand-black-foreground: 0 0% 98%;
+    --brand-black: 222 15% 15%;
+    --brand-black-foreground: 210 40% 98%;
 
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 40%;
+    /* Accent - Subtle teal for interactive elements */
+    --accent: 180 25% 70%;
+    --accent-foreground: 222 15% 15%;
 
-    --accent: 32 25% 75%;
-    --accent-foreground: 0 0% 8%;
+    /* Muted tones for better readability */
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 10% 45%;
 
-    --destructive: 0 84% 60%;
+    /* System colors */
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 95%;
-    --ring: 0 0% 8%;
+    --border: 220 13% 91%;
+    --input: 220 13% 95%;
+    --ring: 220 60% 25%;
 
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(var(--brand-beige)), hsl(var(--brand-black)));
-    --gradient-card: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
-    --gradient-admin: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
-    --gradient-stats: linear-gradient(145deg, hsl(var(--card)), hsl(var(--muted) / 0.5));
+    /* Status colors - accessible and distinctive */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 15% 15%;
+    
+    --info: 200 98% 39%;
+    --info-foreground: 0 0% 100%;
 
-    /* Shadows */
-    --shadow-elegant: 0 20px 40px -10px hsl(var(--brand-black) / 0.1);
-    --shadow-product: 0 10px 30px -5px hsl(var(--brand-black) / 0.15);
-    --shadow-admin: 0 8px 25px -5px hsl(var(--primary) / 0.15);
-    --shadow-card: 0 4px 15px -3px hsl(var(--foreground) / 0.1);
+    /* Admin-specific colors */
+    --admin-primary: 220 60% 25%;
+    --admin-secondary: 180 25% 70%;
+    --admin-accent: 35 15% 88%;
+
+    /* Gradients - More sophisticated and professional */
+    --gradient-hero: linear-gradient(135deg, hsl(220 60% 25%) 0%, hsl(180 25% 70%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(220 13% 95%) 100%);
+    --gradient-admin: linear-gradient(135deg, hsl(220 60% 25%) 0%, hsl(220 50% 35%) 50%, hsl(180 25% 70%) 100%);
+    --gradient-stats: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(220 13% 98%) 100%);
+
+    /* Shadows - Softer, more natural */
+    --shadow-elegant: 0 20px 40px -10px hsl(220 60% 25% / 0.15);
+    --shadow-product: 0 10px 30px -5px hsl(220 60% 25% / 0.1);
+    --shadow-admin: 0 8px 25px -5px hsl(220 60% 25% / 0.12);
+    --shadow-card: 0 4px 15px -3px hsl(220 60% 25% / 0.08);
+    --shadow-button: 0 2px 8px -2px hsl(220 60% 25% / 0.15);
 
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
+    --sidebar-background: 240 10% 98%;
+    --sidebar-foreground: 222 15% 25%;
+    --sidebar-primary: 220 60% 25%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 220 13% 95%;
+    --sidebar-accent-foreground: 222 15% 25%;
     --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 220 60% 25%;
   }
 
   .dark {
@@ -120,6 +137,100 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Custom scrollbar for better UX */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+
+  /* Focus styles for accessibility */
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Enhanced card styles */
+  .admin-card {
+    @apply bg-gradient-to-br from-card to-muted/30 border border-border/50 shadow-card backdrop-blur-sm;
+    transition: var(--transition-smooth);
+  }
+
+  .admin-card:hover {
+    @apply shadow-admin transform -translate-y-1;
+  }
+
+  /* Status indicators */
+  .status-active {
+    @apply bg-success text-success-foreground;
+  }
+
+  .status-pending {
+    @apply bg-warning text-warning-foreground;
+  }
+
+  .status-info {
+    @apply bg-info text-info-foreground;
+  }
+
+  /* Enhanced button styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-button hover:shadow-admin;
+    transition: var(--transition-smooth);
+  }
+
+  .btn-primary:hover {
+    @apply from-primary/90 to-primary/70 transform -translate-y-0.5;
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-white/20 backdrop-blur-md border border-white/20;
+  }
+
+  /* Improved animations */
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
