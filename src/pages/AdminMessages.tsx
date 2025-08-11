@@ -58,9 +58,9 @@ const AdminMessages = () => {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Sidebar with chat list or back button when showing profile */}
-      <div className="w-1/3 border-r">
+      <div className="w-1/3 border-r bg-white/70 backdrop-blur-sm shadow-lg">
         {selectedUserId && !showProfile ? (
           <div className="p-4 border-b">
             <div className="flex items-center gap-3">
@@ -76,26 +76,26 @@ const AdminMessages = () => {
         ) : !showProfile ? (
           <>
             {/* Stats Header */}
-            <div className="p-4 border-b space-y-4">
+            <div className="p-4 border-b space-y-4 bg-gradient-to-r from-primary/10 to-primary/5">
               <div>
-                <h1 className="text-2xl font-bold">Messages</h1>
+                <h1 className="text-2xl font-bold text-primary">Messages</h1>
                 <p className="text-muted-foreground">
                   WhatsApp-style admin chat
                 </p>
               </div>
               
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">{activeConversations.length}</div>
-                  <div className="text-xs text-muted-foreground">Active</div>
+                <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-2xl font-bold text-green-700">{activeConversations.length}</div>
+                  <div className="text-xs text-green-600 font-medium">Active</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-yellow-600">{pendingConversations.length}</div>
-                  <div className="text-xs text-muted-foreground">Pending</div>
+                <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="text-2xl font-bold text-yellow-700">{pendingConversations.length}</div>
+                  <div className="text-xs text-yellow-600 font-medium">Pending</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-600">{uniqueUsers}</div>
-                  <div className="text-xs text-muted-foreground">Users</div>
+                <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-700">{uniqueUsers}</div>
+                  <div className="text-xs text-blue-600 font-medium">Users</div>
                 </div>
               </div>
             </div>
@@ -110,7 +110,7 @@ const AdminMessages = () => {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1">
+      <div className="flex-1 bg-white/50 backdrop-blur-sm">
         {selectedUserId && showProfile ? (
           <UserProfileView
             userId={selectedUserId}

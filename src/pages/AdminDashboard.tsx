@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
+import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff, ArrowUp, ArrowDown, Clock } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -480,61 +480,78 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-brand mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage your jnCrafts business</p>
+        {/* Header Section */}
+        <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-xl">
+          <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
+          <p className="text-primary-foreground/80 text-lg">Manage your jnCrafts business with ease</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-blue-700">Total Orders</CardTitle>
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <Package className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalOrders}</div>
+              <div className="text-3xl font-bold text-blue-800">{stats.totalOrders}</div>
+              <p className="text-xs text-blue-600 mt-1">All time orders</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-green-700">Total Revenue</CardTitle>
+              <div className="p-2 bg-green-500 rounded-lg">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+              <div className="text-3xl font-bold text-green-800">KSh {stats.totalRevenue.toLocaleString()}</div>
+              <p className="text-xs text-green-600 mt-1">Total earnings</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-orange-700">Pending Orders</CardTitle>
+              <div className="p-2 bg-orange-500 rounded-lg">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingOrders}</div>
+              <div className="text-3xl font-bold text-orange-800">{stats.pendingOrders}</div>
+              <p className="text-xs text-orange-600 mt-1">Awaiting action</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-purple-700">Total Customers</CardTitle>
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <Users className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+              <div className="text-3xl font-bold text-purple-800">{stats.totalCustomers}</div>
+              <p className="text-xs text-purple-600 mt-1">Registered users</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Management Tabs */}
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="orders">Order Management</TabsTrigger>
-            <TabsTrigger value="products">Product Management</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-muted/50 backdrop-blur-sm">
+            <TabsTrigger value="orders" className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+              Order Management
+            </TabsTrigger>
+            <TabsTrigger value="products" className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+              Product Management
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="orders">
@@ -575,7 +592,11 @@ const AdminDashboard = () => {
                             </div>
                             
                             <div className="flex flex-wrap gap-2">
-                              {getStatusActions(order)}
+                              {getStatusActions(order).map((action, index) => (
+                                <div key={index} className="transform transition-transform hover:scale-105">
+                                  {action}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         </CardContent>

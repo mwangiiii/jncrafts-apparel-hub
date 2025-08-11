@@ -44,10 +44,14 @@
     /* Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(var(--brand-beige)), hsl(var(--brand-black)));
     --gradient-card: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    --gradient-admin: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+    --gradient-stats: linear-gradient(145deg, hsl(var(--card)), hsl(var(--muted) / 0.5));
 
     /* Shadows */
     --shadow-elegant: 0 20px 40px -10px hsl(var(--brand-black) / 0.1);
     --shadow-product: 0 10px 30px -5px hsl(var(--brand-black) / 0.15);
+    --shadow-admin: 0 8px 25px -5px hsl(var(--primary) / 0.15);
+    --shadow-card: 0 4px 15px -3px hsl(var(--foreground) / 0.1);
 
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
