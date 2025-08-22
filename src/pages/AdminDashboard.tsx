@@ -12,7 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff, ArrowUp, ArrowDown, Clock } from 'lucide-react';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff, ArrowUp, ArrowDown, Clock, AlertCircle, BarChart3, Target, ShoppingBag, Zap, Calendar, MapPin } from 'lucide-react';
+import adminAnalytics from '@/assets/admin-analytics.jpg';
+import orderFlow from '@/assets/order-flow.jpg';
 
 interface Order {
   id: string;
@@ -59,6 +63,8 @@ const AdminDashboard = () => {
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedOrderStatus, setSelectedOrderStatus] = useState('all');
   const { toast } = useToast();
 
   // Product form state
@@ -74,9 +80,79 @@ const AdminDashboard = () => {
     is_active: true
   });
 
-  const categories = ['t-shirts', 'hoodies', 'jackets', 'pants', 'outerwear'];
+  const categories = ['t-shirts', 'hoodies', 'jackets', 'pants', 'outerwear', 'accessories', 'footwear'];
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   const availableColors = ['Black', 'White', 'Gray', 'Navy', 'Red', 'Blue', 'Green', 'Brown', 'Olive'];
+
+  // Chart data preparation
+  const getOrderStatusData = () => {
+    const statusCounts = orders.reduce((acc, order) => {
+      acc[order.status] = (acc[order.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      { name: 'Pending', value: statusCounts.pending || 0, color: '#f59e0b' },
+      { name: 'Confirmed', value: statusCounts.confirmed || 0, color: '#3b82f6' },
+      { name: 'Processing', value: statusCounts.processing || 0, color: '#f97316' },
+      { name: 'Shipped', value: statusCounts.shipped || 0, color: '#8b5cf6' },
+      { name: 'Delivered', value: statusCounts.delivered || 0, color: '#10b981' },
+      { name: 'Cancelled', value: statusCounts.cancelled || 0, color: '#ef4444' }
+    ];
+  };
+
+  const getCategoryData = () => {
+    const categoryCounts = products.reduce((acc, product) => {
+      acc[product.category] = (acc[product.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(categoryCounts).map(([category, count]) => ({
+      name: category,
+      value: count,
+      products: products.filter(p => p.category === category),
+      totalStock: products.filter(p => p.category === category).reduce((sum, p) => sum + p.stock_quantity, 0)
+    }));
+  };
+
+  const getRevenueByStatus = () => {
+    const statusRevenue = orders.reduce((acc, order) => {
+      acc[order.status] = (acc[order.status] || 0) + Number(order.total_amount);
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      { name: 'Pending', value: statusRevenue.pending || 0 },
+      { name: 'Confirmed', value: statusRevenue.confirmed || 0 },
+      { name: 'Processing', value: statusRevenue.processing || 0 },
+      { name: 'Shipped', value: statusRevenue.shipped || 0 },
+      { name: 'Delivered', value: statusRevenue.delivered || 0 }
+    ];
+  };
+
+  const getQuickStats = () => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const todayOrders = orders.filter(order => new Date(order.created_at) >= todayStart);
+    const recentOrders = orders.filter(order => {
+      const orderDate = new Date(order.created_at);
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return orderDate >= weekAgo;
+    });
+
+    const lowStockProducts = products.filter(p => p.stock_quantity < 10 && p.is_active);
+    
+    return {
+      todayOrders: todayOrders.length,
+      weeklyOrders: recentOrders.length,
+      lowStockCount: lowStockProducts.length,
+      activeProducts: products.filter(p => p.is_active).length,
+      urgentOrders: orders.filter(o => o.status === 'pending').length
+    };
+  };
+
+  const quickStats = getQuickStats();
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -479,14 +555,23 @@ const AdminDashboard = () => {
     }
   };
 
+  // Filter functions
+  const filteredOrders = selectedOrderStatus === 'all' 
+    ? orders 
+    : orders.filter(order => order.status === selectedOrderStatus);
+
+  const filteredProducts = selectedCategory === 'all' 
+    ? products 
+    : products.filter(product => product.category === selectedCategory);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
-        {/* Modern Header */}
-        <header className="mb-10">
+        {/* Enhanced Header with Hero Image */}
+        <header className="mb-12">
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-primary/90 to-admin-secondary text-white shadow-2xl">
             <div className="absolute inset-0 opacity-10">
-              <div className="absolute inset-0" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"2\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"}}></div>
+              <img src={adminAnalytics} alt="Analytics Background" className="w-full h-full object-cover" />
             </div>
             
             <div className="relative p-8 lg:p-12">
@@ -494,11 +579,11 @@ const AdminDashboard = () => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                      <Package className="h-8 w-8 text-white" />
+                      <BarChart3 className="h-8 w-8 text-white" />
                     </div>
                     <div>
                       <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">Admin Dashboard</h1>
-                      <p className="text-lg text-white/90 mt-1">Welcome back! Here&apos;s what&apos;s happening with your business today.</p>
+                      <p className="text-lg text-white/90 mt-1">Complete business insights and management</p>
                     </div>
                   </div>
                 </div>
@@ -514,11 +599,11 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* Stats Cards */}
-        <section className="mb-12" aria-labelledby="stats-heading">
-          <h2 id="stats-heading" className="sr-only">Business Statistics</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Enhanced Stats Cards with Quick Actions */}
+        <section className="mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             
+            {/* Total Orders */}
             <div className="group relative">
               <div className="admin-card p-6 h-full">
                 <div className="flex items-start justify-between mb-4">
@@ -527,16 +612,14 @@ const AdminDashboard = () => {
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-foreground">{stats.totalOrders}</div>
-                    <div className="text-sm text-muted-foreground font-medium">Total Orders</div>
+                    <div className="text-sm text-muted-foreground font-medium">All Orders</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span className="text-muted-foreground">All time orders</span>
-                </div>
+                <div className="text-xs text-muted-foreground">+{quickStats.todayOrders} today</div>
               </div>
             </div>
 
+            {/* Total Revenue */}
             <div className="group relative">
               <div className="admin-card p-6 h-full">
                 <div className="flex items-start justify-between mb-4">
@@ -544,64 +627,134 @@ const AdminDashboard = () => {
                     <DollarSign className="h-6 w-6" />
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-foreground">KSh {stats.totalRevenue.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground font-medium">Total Revenue</div>
+                    <div className="text-2xl font-bold text-foreground">KSh {stats.totalRevenue.toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Revenue</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
-                  <span className="text-muted-foreground">Total earnings</span>
-                </div>
+                <div className="text-xs text-muted-foreground">Total earnings</div>
               </div>
             </div>
 
+            {/* Urgent Orders */}
             <div className="group relative">
               <div className="admin-card p-6 h-full">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg group-hover:shadow-amber-500/25 transition-all duration-300">
-                    <Clock className="h-6 w-6" />
+                    <AlertCircle className="h-6 w-6" />
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-foreground">{stats.pendingOrders}</div>
-                    <div className="text-sm text-muted-foreground font-medium">Pending Orders</div>
+                    <div className="text-3xl font-bold text-foreground">{quickStats.urgentOrders}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Urgent</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 rounded-full bg-amber-500"></div>
-                  <span className="text-muted-foreground">Requires attention</span>
-                </div>
+                <div className="text-xs text-muted-foreground">Needs attention</div>
               </div>
             </div>
 
+            {/* Active Products */}
             <div className="group relative">
               <div className="admin-card p-6 h-full">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300">
-                    <Users className="h-6 w-6" />
+                    <ShoppingBag className="h-6 w-6" />
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-foreground">{stats.totalCustomers}</div>
-                    <div className="text-sm text-muted-foreground font-medium">Total Customers</div>
+                    <div className="text-3xl font-bold text-foreground">{quickStats.activeProducts}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Products</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                  <span className="text-muted-foreground">Registered users</span>
+                <div className="text-xs text-muted-foreground">Active items</div>
+              </div>
+            </div>
+
+            {/* Low Stock Alert */}
+            <div className="group relative">
+              <div className="admin-card p-6 h-full">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg group-hover:shadow-red-500/25 transition-all duration-300">
+                    <Target className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-foreground">{quickStats.lowStockCount}</div>
+                    <div className="text-sm text-muted-foreground font-medium">Low Stock</div>
+                  </div>
                 </div>
+                <div className="text-xs text-muted-foreground">Restock soon</div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Management Tabs */}
+        {/* Analytics Charts */}
+        <section className="mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Order Status Chart */}
+            <Card className="admin-card border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                  Order Status Distribution
+                </CardTitle>
+                <CardDescription>Visual breakdown of order statuses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={getOrderStatusData()}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                      >
+                        {getOrderStatusData().map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Revenue by Status */}
+            <Card className="admin-card border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <DollarSign className="h-6 w-6 text-emerald-600" />
+                  Revenue by Order Status
+                </CardTitle>
+                <CardDescription>Revenue breakdown across order stages</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={getRevenueByStatus()}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <ChartTooltip />
+                      <Bar dataKey="value" fill="hsl(var(--primary))" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Management Tabs with Enhanced Layout */}
         <section className="space-y-8">
           <Tabs defaultValue="orders" className="w-full">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-foreground">Business Management</h2>
-                <p className="text-muted-foreground">Manage orders and products efficiently</p>
+                <p className="text-muted-foreground">Comprehensive order and product management</p>
               </div>
-              <TabsList className="grid w-full sm:w-auto grid-cols-2 h-12 p-1 bg-muted/80 backdrop-blur-sm rounded-xl shadow-sm">
+              <TabsList className="grid w-full sm:w-auto grid-cols-3 h-12 p-1 bg-muted/80 backdrop-blur-sm rounded-xl shadow-sm">
                 <TabsTrigger 
                   value="orders" 
                   className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-foreground transition-all duration-200 rounded-lg"
@@ -613,24 +766,50 @@ const AdminDashboard = () => {
                   value="products" 
                   className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-foreground transition-all duration-200 rounded-lg"
                 >
-                  <TrendingUp className="h-4 w-4 mr-2" />
+                  <ShoppingBag className="h-4 w-4 mr-2" />
                   Products
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="analytics" 
+                  className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-foreground transition-all duration-200 rounded-lg"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Analytics
                 </TabsTrigger>
               </TabsList>
             </div>
             
+            {/* Orders Tab with Status Filtering */}
             <TabsContent value="orders" className="space-y-6 animate-fade-in-up">
               <Card className="admin-card border-0 shadow-xl overflow-hidden">
                 <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/10 rounded-xl">
-                      <Package className="h-6 w-6 text-primary" />
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-xl">
+                        <Package className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-2xl font-bold text-foreground">Order Management</CardTitle>
+                        <CardDescription className="text-base text-muted-foreground mt-1">
+                          Track and manage orders by status
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-2xl font-bold text-foreground">Order Management</CardTitle>
-                      <CardDescription className="text-base text-muted-foreground mt-1">
-                        Track and manage customer orders with real-time status updates
-                      </CardDescription>
+                    <div className="flex items-center gap-4">
+                      <Select value={selectedOrderStatus} onValueChange={setSelectedOrderStatus}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Orders</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="confirmed">Confirmed</SelectItem>
+                          <SelectItem value="processing">Processing</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </CardHeader>
@@ -640,15 +819,35 @@ const AdminDashboard = () => {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                       <p className="text-muted-foreground text-lg">Loading orders...</p>
                     </div>
-                  ) : orders.length === 0 ? (
+                  ) : filteredOrders.length === 0 ? (
                     <div className="text-center py-12">
-                      <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <img src={orderFlow} alt="No Orders" className="w-32 h-32 mx-auto mb-6 rounded-lg opacity-60" />
                       <p className="text-muted-foreground text-lg">No orders found</p>
-                      <p className="text-sm text-muted-foreground mt-2">Orders will appear here when customers place them</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {selectedOrderStatus === 'all' 
+                          ? 'Orders will appear here when customers place them'
+                          : `No ${selectedOrderStatus} orders at the moment`
+                        }
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {orders.map((order) => (
+                      {/* Order Status Categories */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                        {getOrderStatusData().map((status) => (
+                          <div key={status.name} className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
+                            <div 
+                              className="w-4 h-4 rounded-full mx-auto mb-2" 
+                              style={{ backgroundColor: status.color }}
+                            ></div>
+                            <div className="text-2xl font-bold text-foreground">{status.value}</div>
+                            <div className="text-xs text-muted-foreground">{status.name}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Orders List */}
+                      {filteredOrders.map((order) => (
                         <Card key={order.id} className="border-l-4 border-l-primary shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-white to-muted/10">
                           <CardContent className="p-6">
                             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -669,6 +868,10 @@ const AdminDashboard = () => {
                                     <div className="flex items-center gap-2">
                                       <span className="text-muted-foreground">📧 {order.customer_info?.email || 'N/A'}</span>
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-muted-foreground">{order.shipping_address?.city || 'N/A'}</span>
+                                    </div>
                                   </div>
                                   <div className="space-y-2">
                                     <div className="flex items-center gap-2">
@@ -676,7 +879,12 @@ const AdminDashboard = () => {
                                       <span className="font-bold text-emerald-700 text-lg">KSh {order.total_amount.toLocaleString()}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <span className="text-muted-foreground">📅 {new Date(order.created_at).toLocaleDateString()}</span>
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Package className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-muted-foreground">{order.order_items?.length || 0} items</span>
                                     </div>
                                   </div>
                                 </div>
@@ -699,206 +907,220 @@ const AdminDashboard = () => {
               </Card>
             </TabsContent>
 
+            {/* Products Tab with Category Filtering */}
             <TabsContent value="products" className="space-y-6 animate-fade-in-up">
               <Card className="admin-card border-0 shadow-xl overflow-hidden">
                 <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-primary/10 rounded-xl">
-                        <TrendingUp className="h-6 w-6 text-primary" />
+                        <ShoppingBag className="h-6 w-6 text-primary" />
                       </div>
                       <div>
                         <CardTitle className="text-2xl font-bold text-foreground">Product Management</CardTitle>
-                        <CardDescription className="text-base text-muted-foreground mt-1">Add, edit, and manage products in your store</CardDescription>
+                        <CardDescription className="text-base text-muted-foreground mt-1">Manage products by category</CardDescription>
                       </div>
                     </div>
-                    <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button onClick={resetProductForm} className="btn-primary">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Product
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {editingProduct ? 'Edit Product' : 'Add New Product'}
-                          </DialogTitle>
-                        </DialogHeader>
-                        
-                        <form onSubmit={handleProductSubmit} className="space-y-6">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="name">Product Name</Label>
-                              <Input
-                                id="name"
-                                value={productFormData.name}
-                                onChange={(e) => setProductFormData(prev => ({ ...prev, name: e.target.value }))}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor="price">Price</Label>
-                              <Input
-                                id="price"
-                                type="number"
-                                step="0.01"
-                                value={productFormData.price}
-                                onChange={(e) => setProductFormData(prev => ({ ...prev, price: e.target.value }))}
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label htmlFor="description">Description</Label>
-                            <Textarea
-                              id="description"
-                              value={productFormData.description}
-                              onChange={(e) => setProductFormData(prev => ({ ...prev, description: e.target.value }))}
-                              rows={3}
-                            />
-                          </div>
-
-                          {/* Product Images */}
-                          <div>
-                            <Label>Product Images</Label>
-                            <div className="space-y-4">
-                              <div className="flex gap-2">
+                    <div className="flex items-center gap-4">
+                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Filter by category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {categories.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button onClick={resetProductForm} className="btn-primary">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Product
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>
+                              {editingProduct ? 'Edit Product' : 'Add New Product'}
+                            </DialogTitle>
+                          </DialogHeader>
+                          
+                          <form onSubmit={handleProductSubmit} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="name">Product Name</Label>
                                 <Input
-                                  placeholder="Enter image URL"
-                                  value={newImageUrl}
-                                  onChange={(e) => setNewImageUrl(e.target.value)}
+                                  id="name"
+                                  value={productFormData.name}
+                                  onChange={(e) => setProductFormData(prev => ({ ...prev, name: e.target.value }))}
+                                  required
                                 />
-                                <Button 
-                                  type="button" 
-                                  onClick={addImageUrl}
-                                  variant="outline"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
                               </div>
-                              
-                              {productFormData.images.length > 0 && (
-                                <div className="space-y-2">
-                                  <p className="text-sm text-muted-foreground">Current Images:</p>
-                                  {productFormData.images.map((image, index) => (
-                                    <div key={index} className="flex items-center gap-2 p-2 border rounded">
-                                      <img 
-                                        src={image} 
-                                        alt={`Product ${index + 1}`} 
-                                        className="w-16 h-16 object-cover rounded"
-                                      />
-                                      <div className="flex-1 truncate">
-                                        <p className="text-sm">{image}</p>
-                                        <p className="text-xs text-muted-foreground">Position {index + 1}</p>
-                                      </div>
-                                      <div className="flex gap-1">
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => moveImageUp(index)}
-                                          disabled={index === 0}
-                                        >
-                                          <ArrowUp className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => moveImageDown(index)}
-                                          disabled={index === productFormData.images.length - 1}
-                                        >
-                                          <ArrowDown className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="destructive"
-                                          onClick={() => removeImage(index)}
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                              <div>
+                                <Label htmlFor="price">Price</Label>
+                                <Input
+                                  id="price"
+                                  type="number"
+                                  step="0.01"
+                                  value={productFormData.price}
+                                  onChange={(e) => setProductFormData(prev => ({ ...prev, price: e.target.value }))}
+                                  required
+                                />
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label htmlFor="category">Category</Label>
-                              <Select value={productFormData.category} onValueChange={(value) => setProductFormData(prev => ({ ...prev, category: value }))}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {categories.map(cat => (
-                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="stock">Stock Quantity</Label>
-                              <Input
-                                id="stock"
-                                type="number"
-                                value={productFormData.stock_quantity}
-                                onChange={(e) => setProductFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
-                                required
+                              <Label htmlFor="description">Description</Label>
+                              <Textarea
+                                id="description"
+                                value={productFormData.description}
+                                onChange={(e) => setProductFormData(prev => ({ ...prev, description: e.target.value }))}
+                                rows={3}
                               />
                             </div>
-                          </div>
 
-                          {/* Sizes */}
-                          <div>
-                            <Label>Available Sizes</Label>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {availableSizes.map(size => (
-                                <Badge
-                                  key={size}
-                                  variant={productFormData.sizes.includes(size) ? "default" : "outline"}
-                                  className="cursor-pointer"
-                                  onClick={() => productFormData.sizes.includes(size) ? removeSize(size) : addSize(size)}
-                                >
-                                  {size}
-                                </Badge>
-                              ))}
+                            {/* Product Images */}
+                            <div>
+                              <Label>Product Images</Label>
+                              <div className="space-y-4">
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="Enter image URL"
+                                    value={newImageUrl}
+                                    onChange={(e) => setNewImageUrl(e.target.value)}
+                                  />
+                                  <Button 
+                                    type="button" 
+                                    onClick={addImageUrl}
+                                    variant="outline"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                
+                                {productFormData.images.length > 0 && (
+                                  <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Current Images:</p>
+                                    {productFormData.images.map((image, index) => (
+                                      <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                                        <img 
+                                          src={image} 
+                                          alt={`Product ${index + 1}`} 
+                                          className="w-16 h-16 object-cover rounded"
+                                        />
+                                        <div className="flex-1 truncate">
+                                          <p className="text-sm">{image}</p>
+                                          <p className="text-xs text-muted-foreground">Position {index + 1}</p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => moveImageUp(index)}
+                                            disabled={index === 0}
+                                          >
+                                            <ArrowUp className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => moveImageDown(index)}
+                                            disabled={index === productFormData.images.length - 1}
+                                          >
+                                            <ArrowDown className="h-3 w-3" />
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => removeImage(index)}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Colors */}
-                          <div>
-                            <Label>Available Colors</Label>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {availableColors.map(color => (
-                                <Badge
-                                  key={color}
-                                  variant={productFormData.colors.includes(color) ? "default" : "outline"}
-                                  className="cursor-pointer"
-                                  onClick={() => productFormData.colors.includes(color) ? removeColor(color) : addColor(color)}
-                                >
-                                  {color}
-                                </Badge>
-                              ))}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="category">Category</Label>
+                                <Select value={productFormData.category} onValueChange={(value) => setProductFormData(prev => ({ ...prev, category: value }))}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select category" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {categories.map(cat => (
+                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="stock">Stock Quantity</Label>
+                                <Input
+                                  id="stock"
+                                  type="number"
+                                  value={productFormData.stock_quantity}
+                                  onChange={(e) => setProductFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
+                                  required
+                                />
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="flex justify-end gap-4">
-                            <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button type="submit" className="btn-primary">
-                              {editingProduct ? 'Update Product' : 'Create Product'}
-                            </Button>
-                          </div>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                            {/* Sizes */}
+                            <div>
+                              <Label>Available Sizes</Label>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {availableSizes.map(size => (
+                                  <Badge
+                                    key={size}
+                                    variant={productFormData.sizes.includes(size) ? "default" : "outline"}
+                                    className="cursor-pointer"
+                                    onClick={() => productFormData.sizes.includes(size) ? removeSize(size) : addSize(size)}
+                                  >
+                                    {size}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Colors */}
+                            <div>
+                              <Label>Available Colors</Label>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {availableColors.map(color => (
+                                  <Badge
+                                    key={color}
+                                    variant={productFormData.colors.includes(color) ? "default" : "outline"}
+                                    className="cursor-pointer"
+                                    onClick={() => productFormData.colors.includes(color) ? removeColor(color) : addColor(color)}
+                                  >
+                                    {color}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end gap-4">
+                              <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
+                                Cancel
+                              </Button>
+                              <Button type="submit" className="btn-primary">
+                                {editingProduct ? 'Update Product' : 'Create Product'}
+                              </Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8">
@@ -907,69 +1129,174 @@ const AdminDashboard = () => {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                       <p className="text-muted-foreground text-lg">Loading products...</p>
                     </div>
-                  ) : products.length === 0 ? (
+                  ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-12">
-                      <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <ShoppingBag className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground text-lg">No products found</p>
-                      <p className="text-sm text-muted-foreground mt-2">Create your first product to get started</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {selectedCategory === 'all' 
+                          ? 'Create your first product to get started'
+                          : `No products in ${selectedCategory} category`
+                        }
+                      </p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {products.map(product => (
-                        <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''} admin-card border-0`}>
-                          <CardHeader>
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-lg font-bold">{product.name}</CardTitle>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => toggleProductStatus(product)}
-                                  className="hover:scale-105 transition-transform"
-                                >
-                                  {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openEditProductDialog(product)}
-                                  className="hover:scale-105 transition-transform"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => deleteProduct(product.id)}
-                                  className="hover:scale-105 transition-transform"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                    <>
+                      {/* Category Overview */}
+                      <div className="mb-8">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                          {getCategoryData().map((category) => (
+                            <div key={category.name} className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
+                              <div className="text-2xl font-bold text-primary">{category.value}</div>
+                              <div className="text-xs text-muted-foreground capitalize">{category.name}</div>
+                              <div className="text-xs text-muted-foreground mt-1">Stock: {category.totalStock}</div>
                             </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              <p className="text-2xl font-bold text-primary">KSh {product.price.toLocaleString()}</p>
-                              <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                              <div className="flex flex-wrap gap-1">
-                                <Badge variant="secondary">{product.category}</Badge>
-                                <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
-                                {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
-                                <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
-                                <p className="text-xs font-medium">Images: {product.images?.length || 0}</p>
-                              </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Products Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredProducts.map(product => (
+                          <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''} admin-card border-0 overflow-hidden`}>
+                            <div className="aspect-video bg-gradient-to-br from-muted/50 to-muted/80 relative">
+                              {product.images && product.images.length > 0 ? (
+                                <img 
+                                  src={product.images[0]} 
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Package className="h-12 w-12 text-muted-foreground" />
+                                </div>
+                              )}
+                              {product.stock_quantity < 10 && (
+                                <Badge className="absolute top-2 left-2 bg-red-500 text-white">
+                                  Low Stock
+                                </Badge>
+                              )}
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-start">
+                                  <h3 className="font-bold text-lg">{product.name}</h3>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => toggleProductStatus(product)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      {product.is_active ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openEditProductDialog(product)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => deleteProduct(product.id)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <p className="text-2xl font-bold text-primary">KSh {product.price.toLocaleString()}</p>
+                                <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                                <div className="flex flex-wrap gap-1">
+                                  <Badge variant="secondary" className="capitalize">{product.category}</Badge>
+                                  <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
+                                  {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
+                                </div>
+                                <div className="space-y-1 text-xs">
+                                  <p><span className="font-medium">Sizes:</span> {product.sizes.join(', ')}</p>
+                                  <p><span className="font-medium">Colors:</span> {product.colors.join(', ')}</p>
+                                  <p><span className="font-medium">Images:</span> {product.images?.length || 0}</p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Analytics Tab */}
+            <TabsContent value="analytics" className="space-y-6 animate-fade-in-up">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Product Categories Distribution */}
+                <Card className="admin-card border-0 shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <Target className="h-6 w-6 text-primary" />
+                      Product Categories
+                    </CardTitle>
+                    <CardDescription>Distribution of products across categories</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getCategoryData()}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <ChartTooltip />
+                          <Bar dataKey="value" fill="hsl(var(--primary))" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Business Insights */}
+                <Card className="admin-card border-0 shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <Zap className="h-6 w-6 text-amber-500" />
+                      Business Insights
+                    </CardTitle>
+                    <CardDescription>Key performance indicators</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Average Order Value</span>
+                        <span className="text-lg font-bold text-primary">
+                          KSh {stats.totalOrders > 0 ? Math.round(stats.totalRevenue / stats.totalOrders).toLocaleString() : 0}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Weekly Orders</span>
+                        <span className="text-lg font-bold text-emerald-600">{quickStats.weeklyOrders}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Conversion Rate</span>
+                        <span className="text-lg font-bold text-blue-600">
+                          {stats.totalCustomers > 0 ? Math.round((stats.totalOrders / stats.totalCustomers) * 100) : 0}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <span className="text-sm font-medium">Active Products</span>
+                        <span className="text-lg font-bold text-purple-600">{quickStats.activeProducts}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                        <span className="text-sm font-medium text-red-700">Low Stock Alerts</span>
+                        <span className="text-lg font-bold text-red-600">{quickStats.lowStockCount}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </section>
