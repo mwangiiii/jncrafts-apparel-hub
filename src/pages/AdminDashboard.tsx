@@ -65,6 +65,8 @@ const AdminDashboard = () => {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedOrderStatus, setSelectedOrderStatus] = useState('all');
+  const [selectedStatusView, setSelectedStatusView] = useState('overview');
+  const [showOrderDetails, setShowOrderDetails] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Product form state
@@ -216,6 +218,35 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+    }
+  };
+
+  const reviveOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'pending' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: 'pending' } : order
+      ));
+
+      toast({
+        title: "Order Revived",
+        description: "Cancelled order has been restored to pending status."
+      });
+
+      fetchStats(); // Refresh stats
+    } catch (error) {
+      console.error('Error reviving order:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to revive order"
+      });
     }
   };
 
@@ -564,6 +595,35 @@ const AdminDashboard = () => {
     ? products 
     : products.filter(product => product.category === selectedCategory);
 
+  // Get orders by status for detailed views
+  const getOrdersByStatus = (status: string) => {
+    return orders.filter(order => order.status === status);
+  };
+
+  const getStatusInsights = (status: string) => {
+    const statusOrders = getOrdersByStatus(status);
+    const totalRevenue = statusOrders.reduce((sum, order) => sum + Number(order.total_amount), 0);
+    const averageOrderValue = statusOrders.length > 0 ? totalRevenue / statusOrders.length : 0;
+    const totalItems = statusOrders.reduce((sum, order) => sum + (order.order_items?.length || 0), 0);
+    
+    return {
+      count: statusOrders.length,
+      totalRevenue,
+      averageOrderValue,
+      totalItems,
+      orders: statusOrders
+    };
+  };
+
+  const orderStatuses = [
+    { key: 'pending', label: 'Pending Orders', color: 'bg-amber-500', icon: Clock, description: 'Orders awaiting confirmation' },
+    { key: 'confirmed', label: 'Confirmed Orders', color: 'bg-blue-500', icon: CheckCircle, description: 'Orders confirmed and ready to process' },
+    { key: 'processing', label: 'Processing Orders', color: 'bg-orange-500', icon: Package, description: 'Orders currently being prepared' },
+    { key: 'shipped', label: 'Shipped Orders', color: 'bg-purple-500', icon: Truck, description: 'Orders in transit to customers' },
+    { key: 'delivered', label: 'Delivered Orders', color: 'bg-emerald-500', icon: CheckCircle, description: 'Successfully completed orders' },
+    { key: 'cancelled', label: 'Cancelled Orders', color: 'bg-red-500', icon: X, description: 'Cancelled orders that can be revived' }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <div className="container mx-auto px-6 py-8 max-w-7xl">
@@ -754,13 +814,20 @@ const AdminDashboard = () => {
                 <h2 className="text-2xl font-bold text-foreground">Business Management</h2>
                 <p className="text-muted-foreground">Comprehensive order and product management</p>
               </div>
-              <TabsList className="grid w-full sm:w-auto grid-cols-3 h-12 p-1 bg-muted/80 backdrop-blur-sm rounded-xl shadow-sm">
+              <TabsList className="grid w-full sm:w-auto grid-cols-4 h-12 p-1 bg-muted/80 backdrop-blur-sm rounded-xl shadow-sm">
                 <TabsTrigger 
                   value="orders" 
                   className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-foreground transition-all duration-200 rounded-lg"
                 >
                   <Package className="h-4 w-4 mr-2" />
                   Orders
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="status-categories" 
+                  className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-foreground transition-all duration-200 rounded-lg"
+                >
+                  <Target className="h-4 w-4 mr-2" />
+                  By Status
                 </TabsTrigger>
                 <TabsTrigger 
                   value="products" 
@@ -905,6 +972,313 @@ const AdminDashboard = () => {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Order Status Categories Tab */}
+            <TabsContent value="status-categories" className="space-y-6 animate-fade-in-up">
+              {selectedStatusView === 'overview' ? (
+                <Card className="admin-card border-0 shadow-xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-primary/10 rounded-xl">
+                        <Target className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-2xl font-bold text-foreground">Orders by Status</CardTitle>
+                        <CardDescription className="text-base text-muted-foreground mt-1">
+                          Comprehensive view of orders categorized by their current status
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {orderStatuses.map((status) => {
+                        const insights = getStatusInsights(status.key);
+                        const StatusIcon = status.icon;
+                        
+                        return (
+                          <Card 
+                            key={status.key} 
+                            className="admin-card border-l-4 cursor-pointer hover:shadow-lg transition-all duration-200"
+                            style={{ borderLeftColor: status.color.replace('bg-', '').includes('amber') ? '#f59e0b' : 
+                              status.color.replace('bg-', '').includes('blue') ? '#3b82f6' :
+                              status.color.replace('bg-', '').includes('orange') ? '#f97316' :
+                              status.color.replace('bg-', '').includes('purple') ? '#8b5cf6' :
+                              status.color.replace('bg-', '').includes('emerald') ? '#10b981' : '#ef4444' }}
+                            onClick={() => setSelectedStatusView(status.key)}
+                          >
+                            <CardContent className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className={`p-3 rounded-xl ${status.color} text-white shadow-lg`}>
+                                  <StatusIcon className="h-6 w-6" />
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-3xl font-bold text-foreground">{insights.count}</div>
+                                  <div className="text-sm text-muted-foreground">Orders</div>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <h3 className="font-semibold text-lg text-foreground">{status.label}</h3>
+                                <p className="text-sm text-muted-foreground">{status.description}</p>
+                                
+                                <div className="space-y-2 pt-2 border-t border-border/50">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">Total Revenue</span>
+                                    <span className="text-sm font-semibold text-emerald-600">
+                                      KSh {insights.totalRevenue.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">Avg Order Value</span>
+                                    <span className="text-sm font-semibold">
+                                      KSh {Math.round(insights.averageOrderValue).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">Total Items</span>
+                                    <span className="text-sm font-semibold">{insights.totalItems}</span>
+                                  </div>
+                                </div>
+                                
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full mt-4 hover:bg-primary hover:text-primary-foreground"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedStatusView(status.key);
+                                  }}
+                                >
+                                  View Details →
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                /* Detailed Status View */
+                <Card className="admin-card border-0 shadow-xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setSelectedStatusView('overview')}
+                          className="hover:bg-primary hover:text-primary-foreground"
+                        >
+                          ← Back to Overview
+                        </Button>
+                        <div>
+                          <CardTitle className="text-2xl font-bold text-foreground capitalize">
+                            {selectedStatusView} Orders
+                          </CardTitle>
+                          <CardDescription className="text-base text-muted-foreground mt-1">
+                            Detailed view of {selectedStatusView} orders with management options
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-8">
+                    {(() => {
+                      const statusOrders = getOrdersByStatus(selectedStatusView);
+                      const insights = getStatusInsights(selectedStatusView);
+                      
+                      return (
+                        <div className="space-y-6">
+                          {/* Status Summary */}
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                            <div className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
+                              <div className="text-2xl font-bold text-foreground">{insights.count}</div>
+                              <div className="text-xs text-muted-foreground">Total Orders</div>
+                            </div>
+                            <div className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
+                              <div className="text-2xl font-bold text-emerald-600">KSh {insights.totalRevenue.toLocaleString()}</div>
+                              <div className="text-xs text-muted-foreground">Total Revenue</div>
+                            </div>
+                            <div className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
+                              <div className="text-2xl font-bold text-blue-600">KSh {Math.round(insights.averageOrderValue).toLocaleString()}</div>
+                              <div className="text-xs text-muted-foreground">Avg Order Value</div>
+                            </div>
+                            <div className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
+                              <div className="text-2xl font-bold text-purple-600">{insights.totalItems}</div>
+                              <div className="text-xs text-muted-foreground">Total Items</div>
+                            </div>
+                          </div>
+
+                          {statusOrders.length === 0 ? (
+                            <div className="text-center py-12">
+                              <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                              <p className="text-muted-foreground text-lg">No {selectedStatusView} orders found</p>
+                              <p className="text-sm text-muted-foreground mt-2">
+                                Orders will appear here when they reach {selectedStatusView} status
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {statusOrders.map((order) => (
+                                <Card key={order.id} className="border-l-4 border-l-primary shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-white to-muted/10">
+                                  <CardContent className="p-6">
+                                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                                      <div className="space-y-4 flex-1">
+                                        <div className="flex items-center gap-3">
+                                          <h3 className="font-bold text-xl text-primary">#{order.order_number}</h3>
+                                          <Badge className={`${getStatusColor(order.status)} text-white text-sm px-3 py-1 font-medium`}>
+                                            {order.status.toUpperCase()}
+                                          </Badge>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <Users className="h-4 w-4 text-muted-foreground" />
+                                              <span className="font-medium text-foreground">{order.customer_info?.fullName || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-muted-foreground">📧 {order.customer_info?.email || 'N/A'}</span>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <DollarSign className="h-4 w-4 text-emerald-600" />
+                                              <span className="font-bold text-emerald-700 text-lg">KSh {order.total_amount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                                              <span className="text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <Package className="h-4 w-4 text-muted-foreground" />
+                                              <span className="text-muted-foreground">{order.order_items?.length || 0} items</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                                              <span className="text-muted-foreground">{order.shipping_address?.city || 'N/A'}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Order Items Preview */}
+                                        {order.order_items && order.order_items.length > 0 && (
+                                          <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                                            <p className="text-sm font-medium text-foreground mb-2">Order Items:</p>
+                                            <div className="space-y-1">
+                                              {order.order_items.slice(0, 3).map((item: any, index: number) => (
+                                                <div key={index} className="flex justify-between items-center text-xs">
+                                                  <span className="text-muted-foreground">
+                                                    {item.product_name} ({item.size}, {item.color}) x{item.quantity}
+                                                  </span>
+                                                  <span className="font-semibold">KSh {Number(item.price).toLocaleString()}</span>
+                                                </div>
+                                              ))}
+                                              {order.order_items.length > 3 && (
+                                                <p className="text-xs text-muted-foreground">
+                                                  +{order.order_items.length - 3} more items...
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      <div className="flex flex-col gap-3 min-w-[200px]">
+                                        {/* Status Actions */}
+                                        {getStatusActions(order).map((action, index) => (
+                                          <div key={index} className="transform transition-all duration-200 hover:scale-105">
+                                            {action}
+                                          </div>
+                                        ))}
+                                        
+                                        {/* Revive Cancelled Order */}
+                                        {order.status === 'cancelled' && (
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            onClick={() => reviveOrder(order.id)}
+                                            className="border-emerald-200 text-emerald-700 hover:bg-emerald-500 hover:text-white"
+                                          >
+                                            <Zap className="h-3 w-3 mr-1" />
+                                            Revive Order
+                                          </Button>
+                                        )}
+                                        
+                                        {/* View Details */}
+                                        <Button 
+                                          size="sm" 
+                                          variant="ghost"
+                                          onClick={() => setShowOrderDetails(showOrderDetails === order.id ? null : order.id)}
+                                          className="hover:bg-muted"
+                                        >
+                                          <Eye className="h-3 w-3 mr-1" />
+                                          {showOrderDetails === order.id ? 'Hide Details' : 'View Details'}
+                                        </Button>
+                                      </div>
+                                    </div>
+
+                                    {/* Expanded Order Details */}
+                                    {showOrderDetails === order.id && (
+                                      <div className="mt-6 pt-6 border-t border-border/50">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                          {/* Customer Information */}
+                                          <div className="space-y-4">
+                                            <h4 className="font-semibold text-foreground">Customer Information</h4>
+                                            <div className="space-y-2 text-sm">
+                                              <div><strong>Name:</strong> {order.customer_info?.fullName}</div>
+                                              <div><strong>Email:</strong> {order.customer_info?.email}</div>
+                                              <div><strong>Phone:</strong> {order.customer_info?.phone || 'N/A'}</div>
+                                            </div>
+                                            
+                                            <h4 className="font-semibold text-foreground mt-4">Shipping Address</h4>
+                                            <div className="text-sm space-y-1">
+                                              <div>{order.shipping_address?.street}</div>
+                                              <div>{order.shipping_address?.city}, {order.shipping_address?.state}</div>
+                                              <div>{order.shipping_address?.zipCode}</div>
+                                              <div>{order.shipping_address?.country}</div>
+                                            </div>
+                                          </div>
+
+                                          {/* Order Summary */}
+                                          <div className="space-y-4">
+                                            <h4 className="font-semibold text-foreground">Order Summary</h4>
+                                            <div className="space-y-2 text-sm">
+                                              <div className="flex justify-between">
+                                                <span>Subtotal:</span>
+                                                <span>KSh {(Number(order.total_amount) - Number(order.discount_amount || 0)).toLocaleString()}</span>
+                                              </div>
+                                              {order.discount_amount > 0 && (
+                                                <div className="flex justify-between text-emerald-600">
+                                                  <span>Discount ({order.discount_code}):</span>
+                                                  <span>-KSh {Number(order.discount_amount).toLocaleString()}</span>
+                                                </div>
+                                              )}
+                                              <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+                                                <span>Total:</span>
+                                                <span>KSh {Number(order.total_amount).toLocaleString()}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* Products Tab with Category Filtering */}
