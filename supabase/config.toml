@@ -25,3 +25,9 @@ verify_jwt = false
 
 [functions.stock-alert-notifications]
 verify_jwt = false
+
+[auth]
+# Shorten OTP validity window to 5 minutes
+otp_expiry = 300
+# Enable leaked password protection (HaveIBeenPwned)
+hibp_enabled = true
