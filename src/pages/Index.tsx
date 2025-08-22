@@ -1,4 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
+import { Link } from "react-router-dom";
+import { MessageCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ProductsSection from "@/components/ProductsSection";
@@ -7,6 +9,7 @@ import AboutSection from "@/components/AboutSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import Cart from "@/components/Cart";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePersistentCart } from '@/hooks/usePersistentCart';
@@ -37,6 +40,20 @@ const Index = () => {
         onCartClick={() => setIsCartOpen(true)} 
       />
       <Hero />
+      
+      {/* Quick Access to Messages */}
+      {user && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-end">
+            <Link to="/messages">
+              <Button variant="outline" className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                My Conversations
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
       <DiscountsSection />
       <ProductsSection onAddToCart={handleAddToCart} />
       <AboutSection />

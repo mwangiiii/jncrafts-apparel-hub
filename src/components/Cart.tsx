@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, Plus, Trash2, ShoppingBag, MapPin, User } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { ShoppingBag, Plus, Minus, Trash2, User, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/integrations/supabase/client";
-import OrderConfirmationDialog from "./OrderConfirmationDialog";
-import DeliveryMethodSelector from "./DeliveryMethodSelector";
+import { useToast } from "@/hooks/use-toast";
+import OrderConfirmationDialog from './OrderConfirmationDialog';
+import DeliveryMethodSelector from './DeliveryMethodSelector';
+import AddressAutocomplete from './AddressAutocomplete';
 
 import { CartItem } from "@/types/database";
 
@@ -46,10 +47,12 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
     phone: "",
   });
   const [shippingAddress, setShippingAddress] = useState({
-    address: "",
-    city: "",
-    postalCode: "",
-    isCurrentLocation: false,
+    address: '',
+    city: '',
+    postalCode: '',
+    lat: undefined as number | undefined,
+    lon: undefined as number | undefined,
+    isCurrentLocation: false
   });
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<{
@@ -84,78 +87,8 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
     }
   }, [user, isOpen]);
 
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            // Use OpenStreetMap Nominatim API for reverse geocoding
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
-            );
-            const data = await response.json();
-            
-            if (data && data.address) {
-              const address = data.address;
-              const streetAddress = [
-                address.house_number,
-                address.road || address.street,
-                address.neighbourhood || address.suburb
-              ].filter(Boolean).join(' ');
-              
-              setShippingAddress(prev => ({
-                ...prev,
-                address: streetAddress || data.display_name?.split(',')[0] || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-                city: address.city || address.town || address.village || address.county || "Auto-detected",
-                postalCode: address.postcode || "00000",
-                isCurrentLocation: true,
-              }));
-            } else {
-              // Fallback to coordinates if geocoding fails
-              setShippingAddress(prev => ({
-                ...prev,
-                address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-                city: "Auto-detected",
-                postalCode: "00000",
-                isCurrentLocation: true,
-              }));
-            }
-            
-            toast({
-              title: "Location detected",
-              description: "Your current location has been set as the delivery address.",
-            });
-          } catch (error) {
-            // Fallback to coordinates if geocoding fails
-            setShippingAddress(prev => ({
-              ...prev,
-              address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-              city: "Auto-detected",
-              postalCode: "00000",
-              isCurrentLocation: true,
-            }));
-            toast({
-              title: "Location detected",
-              description: "Your current location has been set as the delivery address.",
-            });
-          }
-        },
-        (error) => {
-          toast({
-            variant: "destructive",
-            title: "Location Error",
-            description: "Unable to access your location. Please enter your address manually.",
-          });
-        }
-      );
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Not Supported",
-        description: "Geolocation is not supported by your browser.",
-      });
-    }
+  const handleAddressChange = (newAddress: typeof shippingAddress) => {
+    setShippingAddress(newAddress);
   };
 
   const applyDiscount = async () => {
@@ -385,7 +318,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       // Reset everything
       onClearCart();
       setCustomerInfo({ fullName: "", email: user?.email || "", phone: "" });
-      setShippingAddress({ address: "", city: "", postalCode: "", isCurrentLocation: false });
+      setShippingAddress({ address: "", city: "", postalCode: "", lat: undefined, lon: undefined, isCurrentLocation: false });
       setDiscountCode("");
       setAppliedDiscount(null);
       setDeliveryDetails(null);
@@ -549,60 +482,10 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     
                     <div>
                       <h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={getCurrentLocation}
-                            className="flex items-center gap-2"
-                          >
-                            <MapPin className="h-4 w-4" />
-                            Use Current Location
-                          </Button>
-                          {shippingAddress.isCurrentLocation && (
-                            <span className="text-sm text-green-600">📍 Location detected</span>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="address">Street Address</Label>
-                          <Input
-                            id="address"
-                            value={shippingAddress.address}
-                            onChange={(e) =>
-                              setShippingAddress((prev) => ({ ...prev, address: e.target.value, isCurrentLocation: false }))
-                            }
-                            placeholder="Enter your street address"
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="city">City</Label>
-                            <Input
-                              id="city"
-                              value={shippingAddress.city}
-                              onChange={(e) =>
-                                setShippingAddress((prev) => ({ ...prev, city: e.target.value, isCurrentLocation: false }))
-                              }
-                              placeholder="City"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="postalCode">Postal Code</Label>
-                            <Input
-                              id="postalCode"
-                              value={shippingAddress.postalCode}
-                              onChange={(e) =>
-                                setShippingAddress((prev) => ({ ...prev, postalCode: e.target.value, isCurrentLocation: false }))
-                              }
-                              placeholder="Postal Code"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      <AddressAutocomplete
+                        value={shippingAddress}
+                        onChange={handleAddressChange}
+                      />
                     </div>
                     
                     <Separator />
