@@ -80,6 +80,35 @@ export const usePersistentCart = () => {
         setCartItems(prev => [data, ...prev]);
       }
 
+      // Send admin notification for cart addition
+      if (user) {
+        try {
+          // Get user profile for full name
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('user_id', user.id)
+            .single();
+
+          await supabase.functions.invoke('send-admin-notification', {
+            body: {
+              type: 'cart_addition',
+              customerEmail: user.email || 'Unknown',
+              customerName: profile?.full_name || 'Unknown Customer',
+              productDetails: {
+                name: product.name,
+                size,
+                color,
+                price: product.price,
+                quantity
+              }
+            }
+          });
+        } catch (notificationError) {
+          console.error('Error sending admin notification:', notificationError);
+        }
+      }
+
       toast({
         title: "Added to cart",
         description: `${product.name} has been added to your cart`,

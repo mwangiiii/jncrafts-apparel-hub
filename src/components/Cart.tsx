@@ -289,6 +289,35 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         console.error('Error sending order confirmation email:', emailError);
       }
 
+      // Send admin notification for new order
+      try {
+        await supabase.functions.invoke('send-admin-notification', {
+          body: {
+            type: 'new_order',
+            customerEmail: customerInfo.email,
+            customerName: customerInfo.fullName,
+            orderDetails: {
+              orderNumber: orderNumber,
+              items: items.map(item => ({
+                product_name: item.product_name,
+                quantity: item.quantity,
+                size: item.size,
+                color: item.color,
+                price: item.price
+              })),
+              totalAmount: finalTotal,
+              shippingAddress: {
+                address: shippingAddress.address,
+                city: shippingAddress.city,
+                postalCode: shippingAddress.postalCode
+              }
+            }
+          }
+        });
+      } catch (adminNotificationError) {
+        console.error('Error sending admin notification:', adminNotificationError);
+      }
+
       toast({
         title: "Order Placed Successfully!",
         description: `Your order ${orderNumber} has been placed. We'll send you updates via email.`,
