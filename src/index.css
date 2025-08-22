@@ -131,6 +131,44 @@
   }
 }
 
+@layer utilities {
+  .shadow-admin {
+    box-shadow: var(--shadow-admin);
+  }
+  
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  
+  .shadow-product {
+    box-shadow: var(--shadow-product);
+  }
+  
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .shadow-button {
+    box-shadow: var(--shadow-button);
+  }
+  
+  .gradient-admin {
+    background: var(--gradient-admin);
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .gradient-stats {
+    background: var(--gradient-stats);
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
