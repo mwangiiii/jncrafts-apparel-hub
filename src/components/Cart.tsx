@@ -11,8 +11,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/integrations/supabase/client";
 import OrderConfirmationDialog from "./OrderConfirmationDialog";
+import DeliveryMethodSelector from "./DeliveryMethodSelector";
 
 import { CartItem } from "@/types/database";
+
+type DeliveryMethod = 'home_delivery' | 'pickup_mtaani' | 'pickup_in_town' | 'customer_logistics';
+
+interface DeliveryDetails {
+  method: DeliveryMethod;
+  cost: number;
+  location: string;
+  distanceFromCBD: number;
+  courierDetails?: {
+    name: string;
+    phone: string;
+    company?: string;
+    pickupWindow?: string;
+  };
+}
 
 interface CartProps {
   isOpen: boolean;
@@ -44,6 +60,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const [loadingDiscount, setLoadingDiscount] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [deliveryDetails, setDeliveryDetails] = useState<DeliveryDetails | null>(null);
   const { user } = useAuth();
   const { formatPrice, selectedCurrency } = useCurrency();
   const { toast } = useToast();
@@ -54,7 +71,8 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       ? (total * appliedDiscount.amount) / 100
       : appliedDiscount.amount
     : 0;
-  const finalTotal = Math.max(0, total - discountAmount);
+  const deliveryCost = deliveryDetails?.cost || 0;
+  const finalTotal = Math.max(0, total - discountAmount + deliveryCost);
 
   useEffect(() => {
     if (user && isOpen) {
@@ -233,6 +251,15 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       return;
     }
 
+    if (!deliveryDetails) {
+      toast({
+        variant: "destructive",
+        title: "Delivery Method Required",
+        description: "Please select a delivery method.",
+      });
+      return;
+    }
+
     setShowConfirmation(true);
   };
 
@@ -253,6 +280,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
           discount_code: appliedDiscount?.code || null,
           customer_info: customerInfo,
           shipping_address: shippingAddress,
+          delivery_details: deliveryDetails,
         })
         .select()
         .single();
@@ -360,6 +388,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       setShippingAddress({ address: "", city: "", postalCode: "", isCurrentLocation: false });
       setDiscountCode("");
       setAppliedDiscount(null);
+      setDeliveryDetails(null);
       setShowConfirmation(false);
       onClose();
     } catch (error) {
@@ -578,6 +607,15 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     
                     <Separator />
                     
+                    {/* Delivery Method Selection */}
+                    <DeliveryMethodSelector
+                      deliveryDetails={deliveryDetails}
+                      onDeliveryChange={setDeliveryDetails}
+                      shippingAddress={shippingAddress}
+                    />
+                    
+                    <Separator />
+                    
                     <div className="space-y-2">
                        <div className="flex items-center justify-between">
                          <span className="text-base">Subtotal:</span>
@@ -589,6 +627,12 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                            <span className="text-base">-{formatPrice(discountAmount)}</span>
                          </div>
                        )}
+                       {deliveryDetails && (
+                         <div className="flex items-center justify-between">
+                           <span className="text-base">Delivery ({deliveryDetails.method.replace('_', ' ')}):</span>
+                           <span className="text-base">{formatPrice(deliveryCost)}</span>
+                         </div>
+                       )}
                        <Separator />
                        <div className="flex items-center justify-between">
                          <span className="text-lg font-bold">Total:</span>
@@ -596,8 +640,13 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                        </div>
                     </div>
                     
-                    <Button onClick={handleCheckout} className="w-full" size="lg">
-                      Place Order
+                    <Button 
+                      onClick={handleCheckout} 
+                      className="w-full" 
+                      size="lg"
+                      disabled={!deliveryDetails}
+                    >
+                      {deliveryDetails ? 'Place Order' : 'Select Delivery Method'}
                     </Button>
                   </div>
                 )}
@@ -614,9 +663,11 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         items={items}
         customerInfo={customerInfo}
         shippingAddress={shippingAddress}
+        deliveryDetails={deliveryDetails}
         discountCode={appliedDiscount?.code}
         discountAmount={discountAmount}
         total={total}
+        deliveryCost={deliveryCost}
         finalTotal={finalTotal}
         isLoading={isPlacingOrder}
       />

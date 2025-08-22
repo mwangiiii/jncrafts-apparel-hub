@@ -2,8 +2,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { CartItem } from '@/types/database';
-import { MapPin, User, CreditCard, Tag } from 'lucide-react';
+import { MapPin, User, CreditCard, Tag, Truck } from 'lucide-react';
 import { useCurrency } from '@/contexts/CurrencyContext';
+
+type DeliveryMethod = 'home_delivery' | 'pickup_mtaani' | 'pickup_in_town' | 'customer_logistics';
+
+interface DeliveryDetails {
+  method: DeliveryMethod;
+  cost: number;
+  location: string;
+  distanceFromCBD: number;
+  courierDetails?: {
+    name: string;
+    phone: string;
+    company?: string;
+    pickupWindow?: string;
+  };
+}
 
 interface OrderConfirmationDialogProps {
   isOpen: boolean;
@@ -21,9 +36,11 @@ interface OrderConfirmationDialogProps {
     postalCode: string;
     isCurrentLocation: boolean;
   };
+  deliveryDetails: DeliveryDetails | null;
   discountCode?: string;
   discountAmount: number;
   total: number;
+  deliveryCost: number;
   finalTotal: number;
   isLoading: boolean;
 }
@@ -35,9 +52,11 @@ const OrderConfirmationDialog = ({
   items,
   customerInfo,
   shippingAddress,
+  deliveryDetails,
   discountCode,
   discountAmount,
   total,
+  deliveryCost,
   finalTotal,
   isLoading
 }: OrderConfirmationDialogProps) => {
@@ -114,6 +133,37 @@ const OrderConfirmationDialog = ({
             </div>
           </div>
 
+          {/* Delivery Information */}
+          {deliveryDetails && (
+            <div>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                Delivery Information
+              </h3>
+              <div className="bg-accent/5 p-4 rounded-lg space-y-2">
+                <p><span className="font-medium">Method:</span> {deliveryDetails.method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+                <p><span className="font-medium">Location:</span> {deliveryDetails.location}</p>
+                {deliveryDetails.distanceFromCBD > 0 && (
+                  <p><span className="font-medium">Distance from CBD:</span> {deliveryDetails.distanceFromCBD.toFixed(1)} km</p>
+                )}
+                <p><span className="font-medium">Cost:</span> {formatPrice(deliveryDetails.cost)}</p>
+                {deliveryDetails.courierDetails && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="font-medium mb-2">Courier Details:</p>
+                    <p>Name: {deliveryDetails.courierDetails.name}</p>
+                    <p>Phone: {deliveryDetails.courierDetails.phone}</p>
+                    {deliveryDetails.courierDetails.company && (
+                      <p>Company: {deliveryDetails.courierDetails.company}</p>
+                    )}
+                    {deliveryDetails.courierDetails.pickupWindow && (
+                      <p>Pickup Window: {deliveryDetails.courierDetails.pickupWindow}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <Separator />
 
           {/* Order Summary */}
@@ -132,6 +182,13 @@ const OrderConfirmationDialog = ({
                     Discount ({discountCode}):
                   </span>
                   <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+              
+              {deliveryDetails && (
+                <div className="flex justify-between">
+                  <span>Delivery:</span>
+                  <span>{formatPrice(deliveryCost)}</span>
                 </div>
               )}
               
