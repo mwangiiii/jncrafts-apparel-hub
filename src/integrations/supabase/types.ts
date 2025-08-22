@@ -242,6 +242,7 @@ export type Database = {
         Row: {
           created_at: string
           customer_info: Json
+          delivery_details: Json | null
           discount_amount: number | null
           discount_code: string | null
           id: string
@@ -255,6 +256,7 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_info: Json
+          delivery_details?: Json | null
           discount_amount?: number | null
           discount_code?: string | null
           id?: string
@@ -268,6 +270,7 @@ export type Database = {
         Update: {
           created_at?: string
           customer_info?: Json
+          delivery_details?: Json | null
           discount_amount?: number | null
           discount_code?: string | null
           id?: string
