@@ -72,7 +72,44 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
-            // In a real app, you'd use a geocoding service to convert coordinates to address
+            // Use OpenStreetMap Nominatim API for reverse geocoding
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+            );
+            const data = await response.json();
+            
+            if (data && data.address) {
+              const address = data.address;
+              const streetAddress = [
+                address.house_number,
+                address.road || address.street,
+                address.neighbourhood || address.suburb
+              ].filter(Boolean).join(' ');
+              
+              setShippingAddress(prev => ({
+                ...prev,
+                address: streetAddress || data.display_name?.split(',')[0] || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+                city: address.city || address.town || address.village || address.county || "Auto-detected",
+                postalCode: address.postcode || "00000",
+                isCurrentLocation: true,
+              }));
+            } else {
+              // Fallback to coordinates if geocoding fails
+              setShippingAddress(prev => ({
+                ...prev,
+                address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+                city: "Auto-detected",
+                postalCode: "00000",
+                isCurrentLocation: true,
+              }));
+            }
+            
+            toast({
+              title: "Location detected",
+              description: "Your current location has been set as the delivery address.",
+            });
+          } catch (error) {
+            // Fallback to coordinates if geocoding fails
             setShippingAddress(prev => ({
               ...prev,
               address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
@@ -83,12 +120,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
             toast({
               title: "Location detected",
               description: "Your current location has been set as the delivery address.",
-            });
-          } catch (error) {
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: "Failed to get your location details.",
             });
           }
         },

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { CartItem } from '@/types/database';
 import { MapPin, User, CreditCard, Tag } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface OrderConfirmationDialogProps {
   isOpen: boolean;
@@ -40,6 +41,8 @@ const OrderConfirmationDialog = ({
   finalTotal,
   isLoading
 }: OrderConfirmationDialogProps) => {
+  const { formatPrice } = useCurrency();
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -74,7 +77,7 @@ const OrderConfirmationDialog = ({
                     </p>
                   </div>
                   <span className="font-semibold text-sm">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    {formatPrice(item.price * item.quantity)}
                   </span>
                 </div>
               ))}
@@ -119,7 +122,7 @@ const OrderConfirmationDialog = ({
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatPrice(total)}</span>
               </div>
               
               {discountCode && discountAmount > 0 && (
@@ -128,14 +131,14 @@ const OrderConfirmationDialog = ({
                     <Tag className="h-3 w-3" />
                     Discount ({discountCode}):
                   </span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+                  <span>-{formatPrice(discountAmount)}</span>
                 </div>
               )}
               
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
-                <span className="text-brand">${finalTotal.toFixed(2)}</span>
+                <span className="text-brand">{formatPrice(finalTotal)}</span>
               </div>
             </div>
           </div>
