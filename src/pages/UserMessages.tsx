@@ -1,36 +1,56 @@
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Send, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Send, MessageCircle } from "lucide-react";
-import { useMessaging } from "@/hooks/useMessaging";
-import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMessaging } from "@/hooks/useMessaging";
+import { useParams, useNavigate } from "react-router-dom";
+import { ConversationList } from "@/components/ConversationList";
+import { MessagesList } from "@/components/MessagesList";
+import ProductReferenceCard from "@/components/ProductReferenceCard";
 
 const UserMessages = () => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const { conversationId } = useParams<{ conversationId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const {
-    conversations,
-    messages,
-    activeConversation,
-    setActiveConversation,
-    sendMessage,
-    isLoading,
+  const { 
+    conversations, 
+    messages, 
+    activeConversation, 
+    setActiveConversation, 
+    sendMessage, 
+    isLoading 
   } = useMessaging();
+
+  // Auto-select conversation from URL params
+  useEffect(() => {
+    if (conversationId && conversations.length > 0) {
+      const conversation = conversations.find(c => c.id === conversationId);
+      if (conversation) {
+        setSelectedConversation(conversationId);
+        setActiveConversation(conversationId);
+      }
+    }
+  }, [conversationId, conversations, setActiveConversation]);
 
   const handleSelectConversation = (conversationId: string) => {
     setSelectedConversation(conversationId);
     setActiveConversation(conversationId);
+    navigate(`/messages/${conversationId}`);
   };
 
   const handleBack = () => {
     setSelectedConversation(null);
     setActiveConversation(null);
+    navigate('/messages');
   };
 
   const handleSendMessage = async () => {
@@ -152,68 +172,26 @@ const UserMessages = () => {
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
+                {/* Product Reference Card */}
+                {activeConv.product_id && (
+                  <ProductReferenceCard productId={activeConv.product_id} />
+                )}
+
                 {/* Conversation Info */}
                 <div className="text-center py-4">
                   <div className="bg-muted/50 rounded-lg p-3 inline-block">
                     <p className="text-sm font-medium">{activeConv.subject}</p>
-                    {activeConv.product && (
-                      <p className="text-xs text-muted-foreground">
-                        About: {activeConv.product.name}
-                      </p>
-                    )}
                     <p className="text-xs text-muted-foreground">
                       Started {formatDistanceToNow(new Date(activeConv.created_at), { addSuffix: true })}
                     </p>
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div className="space-y-3">
-                  {messages.map((message) => {
-                    const isOwnMessage = message.sender_id === user?.id;
-                    const isAdmin = message.sender_type === 'admin';
-                    
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                      >
-                        {!isOwnMessage && (
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                              A
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        
-                        <div
-                          className={`max-w-xs lg:max-w-md p-3 rounded-lg ${
-                            isOwnMessage
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
-                        >
-                          <p className="text-sm break-words">{message.content}</p>
-                          <p
-                            className={`text-xs mt-1 ${
-                              isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                            }`}
-                          >
-                            {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
-
-                        {isOwnMessage && (
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
-                              U
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* Messages using MessagesList component */}
+                <MessagesList 
+                  messages={messages} 
+                  currentUserId={user?.id}
+                />
               </div>
             </ScrollArea>
 
@@ -240,11 +218,6 @@ const UserMessages = () => {
                   <Badge variant={activeConv.status === 'active' ? 'default' : 'secondary'}>
                     {activeConv.status}
                   </Badge>
-                  {activeConv.product && (
-                    <Badge variant="outline" className="text-xs">
-                      About: {activeConv.product.name}
-                    </Badge>
-                  )}
                 </div>
               </div>
             ) : (

@@ -280,7 +280,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
           discount_code: appliedDiscount?.code || null,
           customer_info: customerInfo,
           shipping_address: shippingAddress,
-          delivery_details: deliveryDetails,
+          delivery_details: deliveryDetails as any,
         })
         .select()
         .single();

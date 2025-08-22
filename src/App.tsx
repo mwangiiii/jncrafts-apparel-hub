@@ -25,6 +25,7 @@ const App = () => (
       <Route path="/admin/products" element={<AdminProducts />} />
       <Route path="/admin/messages" element={<AdminMessages />} />
       <Route path="/messages" element={<UserMessages />} />
+      <Route path="/messages/:conversationId" element={<UserMessages />} />
       <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/product/:id" element={<ProductDetail />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

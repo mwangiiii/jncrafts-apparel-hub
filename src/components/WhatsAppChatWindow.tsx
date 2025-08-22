@@ -10,6 +10,7 @@ import { Conversation, Message } from "@/types/database";
 import { useMessaging } from "@/hooks/useMessaging";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
+import ProductReferenceCard from "@/components/ProductReferenceCard";
 
 interface WhatsAppChatWindowProps {
   userId: string;
@@ -138,15 +139,15 @@ export const WhatsAppChatWindow = ({
       <ScrollArea className="flex-1 p-4">
         {activeConv && (
           <div className="space-y-4">
+            {/* Product Reference Card */}
+            {activeConv.product_id && (
+              <ProductReferenceCard productId={activeConv.product_id} />
+            )}
+
             {/* Conversation Info */}
             <div className="text-center py-4">
               <div className="bg-muted/50 rounded-lg p-3 inline-block">
                 <p className="text-sm font-medium">{activeConv.subject}</p>
-                {activeConv.product && (
-                  <p className="text-xs text-muted-foreground">
-                    About: {activeConv.product.name}
-                  </p>
-                )}
                 <p className="text-xs text-muted-foreground">
                   Started {formatDistanceToNow(new Date(activeConv.created_at), { addSuffix: true })}
                 </p>

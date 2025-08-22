@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, X } from "lucide-react";
-import { ChatWindow } from "./ChatWindow";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useMessaging } from "@/hooks/useMessaging";
 
 interface ChatWidgetProps {
   productId?: string;
@@ -10,33 +10,35 @@ interface ChatWidgetProps {
 }
 
 const ChatWidget = ({ productId, productName }: ChatWidgetProps) => {
-  const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { createConversation } = useMessaging();
 
   if (!user) {
     return null;
   }
 
+  const handleStartConversation = async () => {
+    try {
+      const subject = productName ? `Enquiry about ${productName}` : "General Enquiry";
+      const conversationId = await createConversation(subject, productId);
+      navigate(`/messages/${conversationId}`);
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      // Fallback: navigate to messages page
+      navigate('/messages');
+    }
+  };
+
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      {isOpen && (
-        <div className="mb-4">
-          <ChatWindow
-            onClose={() => setIsOpen(false)}
-            productId={productId}
-            productName={productName}
-          />
-        </div>
-      )}
-      
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        size="lg"
-        className="rounded-full h-12 w-12 shadow-lg bg-primary hover:bg-primary/90"
-      >
-        {isOpen ? <X size={20} /> : <MessageCircle size={20} />}
-      </Button>
-    </div>
+    <Button
+      onClick={handleStartConversation}
+      size="lg"
+      className="rounded-full h-12 w-12 shadow-lg bg-primary hover:bg-primary/90"
+      title={productName ? `Message about ${productName}` : "Start conversation"}
+    >
+      <MessageCircle size={20} />
+    </Button>
   );
 };
 

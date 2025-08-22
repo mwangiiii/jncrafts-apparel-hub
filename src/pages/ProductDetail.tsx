@@ -396,7 +396,7 @@ const ProductDetail = () => {
 
         {/* Chat Widget */}
         {user && (
-          <div className="fixed bottom-4 right-4">
+          <div className="mt-8 flex justify-center">
             <ChatWidget 
               productId={product.id} 
               productName={product.name}

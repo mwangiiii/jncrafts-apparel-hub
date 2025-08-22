@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Minus, Heart, Eye } from "lucide-react";
+import { Plus, Minus, Heart, Eye, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,19 +77,27 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             <Eye className="h-4 w-4" />
           </Button>
           {user && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="p-2 bg-background/80 backdrop-blur-sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleWishlistToggle();
-              }}
-            >
-              <Heart 
-                className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
-              />
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="p-2 bg-background/80 backdrop-blur-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWishlistToggle();
+                }}
+              >
+                <Heart 
+                  className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                />
+              </Button>
+              <div className="relative">
+                <ChatWidget 
+                  productId={product.id} 
+                  productName={product.name}
+                />
+              </div>
+            </>
           )}
         </div>
 
@@ -186,15 +194,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         </div>
       </CardContent>
       
-      {/* Chat Widget for logged-in users */}
-      {user && (
-        <div className="absolute bottom-2 right-2">
-          <ChatWidget 
-            productId={product.id} 
-            productName={product.name}
-          />
-        </div>
-      )}
     </Card>
   );
 };
