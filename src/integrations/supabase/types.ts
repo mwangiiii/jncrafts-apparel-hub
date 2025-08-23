@@ -479,7 +479,9 @@ export type Database = {
           price: number
           sizes: string[] | null
           stock_quantity: number | null
+          thumbnail_index: number | null
           updated_at: string
+          videos: string[] | null
         }
         Insert: {
           category: string
@@ -493,7 +495,9 @@ export type Database = {
           price: number
           sizes?: string[] | null
           stock_quantity?: number | null
+          thumbnail_index?: number | null
           updated_at?: string
+          videos?: string[] | null
         }
         Update: {
           category?: string
@@ -507,7 +511,9 @@ export type Database = {
           price?: number
           sizes?: string[] | null
           stock_quantity?: number | null
+          thumbnail_index?: number | null
           updated_at?: string
+          videos?: string[] | null
         }
         Relationships: []
       }

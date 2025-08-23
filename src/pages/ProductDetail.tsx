@@ -16,6 +16,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { usePersistentCart } from '@/hooks/usePersistentCart';
 import ChatWidget from '@/components/ChatWidget';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import ProductVideoPlayer from '@/components/admin/ProductVideoPlayer';
 import Header from '@/components/Header';
 
 const ProductDetail = () => {
@@ -409,6 +410,16 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Product Videos */}
+        {product.videos && product.videos.length > 0 && (
+          <div className="mt-8">
+            <ProductVideoPlayer 
+              videos={product.videos} 
+              productName={product.name}
+            />
+          </div>
+        )}
 
         {/* Chat Widget */}
         {user && (

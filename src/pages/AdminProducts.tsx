@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit2, Trash2, Upload, Eye, EyeOff, Image, X, ChevronUp, ChevronDown, Package } from 'lucide-react';
+import ProductMediaManager from '@/components/admin/ProductMediaManager';
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
 
@@ -30,6 +31,8 @@ const AdminProducts = () => {
     description: '',
     category: '',
     images: [] as string[],
+    videos: [] as string[],
+    thumbnailIndex: 0,
     sizes: [] as string[],
     colors: [] as string[],
     stock_quantity: '',
@@ -82,6 +85,8 @@ const AdminProducts = () => {
       description: '',
       category: '',
       images: [],
+      videos: [],
+      thumbnailIndex: 0,
       sizes: [],
       colors: [],
       stock_quantity: '',
@@ -97,9 +102,11 @@ const AdminProducts = () => {
       price: product.price.toString(),
       description: product.description || '',
       category: product.category,
-      images: product.images,
-      sizes: product.sizes,
-      colors: product.colors,
+      images: product.images || [],
+      videos: product.videos || [],
+      thumbnailIndex: product.thumbnail_index || 0,
+      sizes: product.sizes || [],
+      colors: product.colors || [],
       stock_quantity: product.stock_quantity.toString(),
       is_active: product.is_active
     });
@@ -116,6 +123,8 @@ const AdminProducts = () => {
         description: formData.description,
         category: formData.category,
         images: formData.images,
+        videos: formData.videos,
+        thumbnail_index: formData.thumbnailIndex,
         sizes: formData.sizes,
         colors: formData.colors,
         stock_quantity: parseInt(formData.stock_quantity),
@@ -383,100 +392,19 @@ const AdminProducts = () => {
                     </div>
                   </div>
 
-                  {/* Product Images */}
-                  <div>
-                    <Label>Product Images</Label>
-                    <div className="space-y-4 mt-2">
-                      {/* Upload Button */}
-                      <div className="flex items-center gap-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('image-upload')?.click()}
-                          className="flex items-center gap-2"
-                        >
-                          <Upload className="h-4 w-4" />
-                          Add Images
-                        </Button>
-                        <input
-                          id="image-upload"
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          {formData.images.length} image(s) selected
-                        </span>
-                      </div>
-
-                      {/* Image Preview and Management */}
-                      {formData.images.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {formData.images.map((image, index) => (
-                            <div
-                              key={index}
-                              className="relative group border border-border rounded-lg overflow-hidden bg-muted"
-                            >
-                              <div className="aspect-square">
-                                <img
-                                  src={image}
-                                  alt={`Product image ${index + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              
-                              {/* Image Controls */}
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                {/* Move Up */}
-                                {index > 0 && (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => moveImage(index, 'up')}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <ChevronUp className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                
-                                {/* Move Down */}
-                                {index < formData.images.length - 1 && (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => moveImage(index, 'down')}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <ChevronDown className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                
-                                {/* Remove */}
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => removeImage(index)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              
-                              {/* Image Position Indicator */}
-                              <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium">
-                                {index + 1}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                <ProductMediaManager
+                  media={{
+                    images: formData.images,
+                    videos: formData.videos,
+                    thumbnailIndex: formData.thumbnailIndex
+                  }}
+                  onMediaChange={(media) => setFormData(prev => ({
+                    ...prev,
+                    images: media.images,
+                    videos: media.videos,
+                    thumbnailIndex: media.thumbnailIndex
+                  }))}
+                />
 
                   <div className="flex justify-end gap-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

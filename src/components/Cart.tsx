@@ -17,7 +17,7 @@ import MpesaPaymentDialog from './MpesaPaymentDialog';
 
 import { CartItem } from "@/types/database";
 
-type DeliveryMethod = 'home_delivery' | 'pickup_mtaani' | 'pickup_in_town' | 'customer_logistics';
+import { DeliveryMethod } from '@/components/DeliveryMethodSelector';
 
 interface DeliveryDetails {
   method: DeliveryMethod;
@@ -317,6 +317,44 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       } catch (adminNotificationError) {
         console.error('Error sending admin notification:', adminNotificationError);
       }
+
+        // Send WhatsApp notification for international orders
+        if (deliveryDetails?.method === 'international_delivery') {
+          try {
+            const whatsappNotification = await supabase.functions.invoke('send-whatsapp-notification', {
+              body: {
+                type: 'international_order',
+                orderDetails: {
+                  orderNumber: orderNumber,
+                  customerName: customerInfo.fullName,
+                  customerEmail: customerInfo.email,
+                  items: items.map(item => ({
+                    product_name: item.product_name,
+                    quantity: item.quantity,
+                    size: item.size,
+                    color: item.color,
+                    price: item.price
+                  })),
+                  totalAmount: finalTotal,
+                  shippingAddress: {
+                    address: shippingAddress.address,
+                    city: shippingAddress.city,
+                    postalCode: shippingAddress.postalCode
+                  },
+                  deliveryMethod: deliveryDetails.method
+                }
+              }
+            });
+
+            if (whatsappNotification.data?.whatsappUrl) {
+              // Open WhatsApp with pre-filled message
+              window.open(whatsappNotification.data.whatsappUrl, '_blank');
+            }
+          } catch (whatsappError) {
+            console.error('WhatsApp notification error:', whatsappError);
+            // Don't fail the order if WhatsApp fails
+          }
+        }
 
       toast({
         title: "Order Placed Successfully!",

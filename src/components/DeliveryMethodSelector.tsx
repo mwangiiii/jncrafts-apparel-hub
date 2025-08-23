@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Truck, Building, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, Truck, Building, User, Globe } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/hooks/use-toast";
 
-type DeliveryMethod = 'home_delivery' | 'pickup_mtaani' | 'pickup_in_town' | 'customer_logistics';
+export type DeliveryMethod = 'home_delivery' | 'pickup_mtaani' | 'pickup_in_town' | 'customer_logistics' | 'international_delivery';
 
 interface DeliveryDetails {
   method: DeliveryMethod;
@@ -203,7 +204,7 @@ const DeliveryMethodSelector = ({
           break;
 
         case 'pickup_in_town':
-          cost = await calculateDeliveryCost(0, method);
+          cost = 0; // Free pickup at Nairobi Archives
           location = "Nairobi Archives";
           distanceFromCBD = 0;
           break;
@@ -211,6 +212,12 @@ const DeliveryMethodSelector = ({
         case 'customer_logistics':
           cost = 300; // Default standard delivery price KES 300
           location = "Customer arranged pickup";
+          distanceFromCBD = 0;
+          break;
+
+        case 'international_delivery':
+          cost = 0; // Cost to be determined through contact
+          location = "International shipping - Contact us for quote";
           distanceFromCBD = 0;
           break;
       }
@@ -246,30 +253,40 @@ const DeliveryMethodSelector = ({
     {
       id: 'home_delivery' as DeliveryMethod,
       title: 'Home Delivery (Doorstep)',
-      description: 'Direct delivery to your address',
+      description: 'Coming Soon - Direct delivery to your address',
       icon: <Truck className="h-5 w-5" />,
-      disabled: !shippingAddress.address,
+      disabled: true,
+      comingSoon: true,
     },
     {
       id: 'pickup_mtaani' as DeliveryMethod,
       title: 'Pickup Mtaani',
-      description: 'Collect at nearest agent location',
+      description: 'Coming Soon - Collect at nearest agent location',
       icon: <MapPin className="h-5 w-5" />,
-      disabled: false,
+      disabled: true,
+      comingSoon: true,
     },
     {
       id: 'pickup_in_town' as DeliveryMethod,
       title: 'Pickup in Town',
-      description: 'Collect at our CBD location',
+      description: 'Collect at Nairobi Archives (FREE)',
       icon: <Building className="h-5 w-5" />,
       disabled: false,
     },
     {
       id: 'customer_logistics' as DeliveryMethod,
       title: 'Customer-Preferred Logistics',
-      description: 'Your own courier/rider arrangement',
+      description: 'Your own courier/rider arrangement (KES 300)',
       icon: <User className="h-5 w-5" />,
       disabled: false,
+    },
+    {
+      id: 'international_delivery' as DeliveryMethod,
+      title: 'International Delivery',
+      description: 'Worldwide shipping - Contact us for details',
+      icon: <Truck className="h-5 w-5" />,
+      disabled: false,
+      international: true,
     },
   ];
 
@@ -302,7 +319,12 @@ const DeliveryMethodSelector = ({
                 >
                   {option.icon}
                   <div>
-                    <div className="font-medium">{option.title}</div>
+                    <div className="font-medium flex items-center gap-2">
+                      {option.title}
+                      {option.comingSoon && (
+                        <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                      )}
+                    </div>
                     <div className="text-sm text-muted-foreground">
                       {option.description}
                     </div>
@@ -320,6 +342,24 @@ const DeliveryMethodSelector = ({
                           value={pickupAgent}
                           onChange={(e) => setPickupAgent(e.target.value)}
                         />
+                      </div>
+                    )}
+                    
+                    {option.id === 'international_delivery' && (
+                      <div className="space-y-3">
+                        <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                            📧 Contact Required for International Orders
+                          </h4>
+                          <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                            Please contact us via WhatsApp for international shipping quotes and delivery arrangements.
+                          </p>
+                          <div className="text-sm text-muted-foreground">
+                            <strong>Note:</strong> You can proceed with placing your order. After confirmation, 
+                            we'll automatically send your order details to our admin team via WhatsApp for 
+                            international shipping coordination.
+                          </div>
+                        </div>
                       </div>
                     )}
                     

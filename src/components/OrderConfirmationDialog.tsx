@@ -5,7 +5,7 @@ import { CartItem } from '@/types/database';
 import { MapPin, User, CreditCard, Tag, Truck } from 'lucide-react';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
-type DeliveryMethod = 'home_delivery' | 'pickup_mtaani' | 'pickup_in_town' | 'customer_logistics';
+import { DeliveryMethod } from '@/components/DeliveryMethodSelector';
 
 interface DeliveryDetails {
   method: DeliveryMethod;
