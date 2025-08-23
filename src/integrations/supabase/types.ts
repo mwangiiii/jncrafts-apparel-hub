@@ -568,8 +568,7 @@ export type Database = {
       stock_alerts: {
         Row: {
           created_at: string
-          email: string
-          email_hash: string | null
+          email_hash: string
           id: string
           notified: boolean | null
           product_id: string
@@ -577,8 +576,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          email: string
-          email_hash?: string | null
+          email_hash: string
           id?: string
           notified?: boolean | null
           product_id: string
@@ -586,8 +584,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          email?: string
-          email_hash?: string | null
+          email_hash?: string
           id?: string
           notified?: boolean | null
           product_id?: string
@@ -654,6 +651,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_stock_alert_secure: {
+        Args: { p_email: string; p_product_id: string }
+        Returns: string
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -689,6 +690,10 @@ export type Database = {
       }
       verify_email_match: {
         Args: { input_email: string; stored_hash: string }
+        Returns: boolean
+      }
+      verify_stock_alert_email: {
+        Args: { p_alert_id: string; p_email: string }
         Returns: boolean
       }
     }
