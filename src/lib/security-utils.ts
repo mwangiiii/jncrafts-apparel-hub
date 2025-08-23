@@ -76,6 +76,7 @@ export interface ContactFormData {
   email: string;
   phone: string;
   subject: string;
+  inquiryType: string;
   message: string;
 }
 
@@ -142,6 +143,7 @@ export const sanitizeContactForm = (data: ContactFormData): ContactFormData => {
     email: data.email.trim().toLowerCase().slice(0, 254),
     phone: data.phone.replace(/[^\d+\s-]/g, '').slice(0, 20),
     subject: sanitizeText(data.subject, 200),
+    inquiryType: sanitizeText(data.inquiryType, 100),
     message: sanitizeText(data.message, 2000)
   };
 };

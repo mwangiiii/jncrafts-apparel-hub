@@ -35,7 +35,14 @@ const ContactSection = () => {
     }
     
     // Sanitize form data
-    const sanitizedData = sanitizeContactForm(formData);
+    const sanitizedData = sanitizeContactForm({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      subject: formData.subject,
+      inquiryType: formData.inquiryType,
+      message: formData.message
+    });
     
     // Validate form data
     const validation = validateContactForm(sanitizedData);
@@ -56,7 +63,7 @@ const ContactSection = () => {
 Full Name: ${sanitizedData.name}
 Email: ${sanitizedData.email}
 Phone: ${sanitizedData.phone}
-${sanitizedData.inquiryType ? `Inquiry Type: ${formData.inquiryType}` : ''}
+${sanitizedData.inquiryType ? `Inquiry Type: ${sanitizedData.inquiryType}` : ''}
 ${sanitizedData.subject ? `Subject: ${sanitizedData.subject}` : ''}
 Message: ${sanitizedData.message}
 
