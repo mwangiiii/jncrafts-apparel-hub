@@ -19,6 +19,7 @@ import adminAnalytics from '@/assets/admin-analytics.jpg';
 import orderFlow from '@/assets/order-flow.jpg';
 import SpecialOffersManager from '@/components/admin/SpecialOffersManager';
 import AdminOrdersTable from '@/components/admin/AdminOrdersTable';
+import Header from '@/components/Header';
 
 interface Order {
   id: string;
@@ -628,6 +629,10 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+      <Header 
+        cartItems={0} 
+        onCartClick={() => {}} 
+      />
       <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Enhanced Header with Hero Image */}
         <header className="mb-12">
