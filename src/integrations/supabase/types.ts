@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          accessed_data: Json | null
+          action: string
+          admin_user_id: string
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+        }
+        Insert: {
+          accessed_data?: Json | null
+          action: string
+          admin_user_id: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+        }
+        Update: {
+          accessed_data?: Json | null
+          action?: string
+          admin_user_id?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           color: string
@@ -503,6 +539,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          email_hash: string | null
           id: string
           notified: boolean | null
           product_id: string
@@ -511,6 +548,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email: string
+          email_hash?: string | null
           id?: string
           notified?: boolean | null
           product_id: string
@@ -519,6 +557,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+          email_hash?: string | null
           id?: string
           notified?: boolean | null
           product_id?: string
@@ -589,6 +628,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      hash_email: {
+        Args: { email_address: string }
+        Returns: string
+      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -597,12 +640,25 @@ export type Database = {
         Args: { p_discount_id: string; p_product_id: string }
         Returns: boolean
       }
+      log_admin_data_access: {
+        Args: {
+          p_accessed_data?: Json
+          p_action: string
+          p_record_id?: string
+          p_table_name: string
+        }
+        Returns: undefined
+      }
       validate_discount_code: {
         Args: { p_code: string; p_order_total?: number }
         Returns: Json
       }
       validate_guest_session: {
         Args: { p_session_id: string }
+        Returns: boolean
+      }
+      verify_email_match: {
+        Args: { input_email: string; stored_hash: string }
         Returns: boolean
       }
     }
