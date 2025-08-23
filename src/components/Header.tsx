@@ -25,66 +25,75 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+      <div className="w-full max-w-none px-2 sm:px-4">
+        <div className="flex items-center justify-between min-h-[64px] h-16">
+          {/* Logo - Responsive */}
           <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-foreground">
-              jn<span className="text-brand-beige">CRAFTS</span>
-            </h1>
+            <Link to="/">
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                jn<span className="text-brand-beige">CRAFTS</span>
+              </h1>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden lg:flex space-x-6 xl:space-x-8">
             {navigation.map((item) => (
               <a
                 key={item.name}
                 href={item.href}
-                className="text-foreground hover:text-brand-beige transition-colors duration-300"
+                className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base"
               >
                 {item.name}
               </a>
             ))}
             {isAdmin && (
-              <Link to="/admin" className="text-foreground hover:text-brand-beige transition-colors duration-300">
+              <Link to="/admin" className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base">
                 Admin
               </Link>
             )}
           </nav>
 
-          {/* Currency, Cart, User Menu and Mobile Menu */}
-          <div className="flex items-center space-x-4">
-            <CurrencySelector />
+          {/* Right Side Controls - Responsive */}
+          <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4">
+            {/* Currency Selector - Hidden on very small screens */}
+            <div className="hidden sm:block">
+              <CurrencySelector />
+            </div>
+            
+            {/* Wishlist - Only show for logged in users */}
             {user && (
               <Link to="/wishlist">
-                <Button variant="ghost" size="icon">
-                  <Heart className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+                  <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
             )}
             
+            {/* Cart Button - Responsive */}
             <Button
               variant="ghost"
               size="icon"
               onClick={onCartClick}
-              className="relative"
+              className="relative h-8 w-8 sm:h-10 sm:w-10"
             >
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" />
               {cartItems > 0 && (
-                <span className="absolute -top-2 -right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItems}
+                <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs font-medium">
+                  {cartItems > 99 ? '99+' : cartItems}
                 </span>
               )}
             </Button>
 
+            {/* User Menu or Sign In */}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem>
                     <User className="mr-2 h-4 w-4" />
                     Profile
@@ -119,7 +128,7 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button size="sm" onClick={() => navigate('/auth')}>
+              <Button size="sm" onClick={() => navigate('/auth')} className="text-xs sm:text-sm px-2 sm:px-4">
                 Sign In
               </Button>
             )}
@@ -128,27 +137,27 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="lg:hidden h-8 w-8 sm:h-10 sm:w-10"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               ) : (
-                <Menu className="h-5 w-5" />
+                <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
               )}
             </Button>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Enhanced */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-border">
-            <nav className="py-4 space-y-2">
+          <div className="lg:hidden border-t border-border bg-background/95 backdrop-blur-sm">
+            <nav className="py-3 space-y-1 px-2">
               {navigation.map((item) => (
                 <a
                   key={item.name}
                   href={item.href}
-                  className="block px-4 py-2 text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                  className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.name}
@@ -157,12 +166,17 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
               {isAdmin && (
                 <Link 
                   to="/admin" 
-                  className="block px-4 py-2 text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                  className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Admin
                 </Link>
               )}
+              
+              {/* Currency Selector in Mobile Menu */}
+              <div className="sm:hidden px-3 py-3">
+                <CurrencySelector />
+              </div>
             </nav>
           </div>
         )}

@@ -104,63 +104,76 @@ const AdminOrdersTable = ({
   return (
     <Card className="admin-card border-0 shadow-xl overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col gap-4">
+          {/* Header Title */}
           <div className="flex items-center gap-4">
             <div className="p-3 bg-primary/10 rounded-xl">
               <Package className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold text-foreground">Order Management</CardTitle>
-              <CardDescription className="text-base text-muted-foreground mt-1">
+              <CardTitle className="text-xl sm:text-2xl font-bold text-foreground">Order Management</CardTitle>
+              <CardDescription className="text-sm sm:text-base text-muted-foreground mt-1">
                 Track and manage all customer orders
               </CardDescription>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-background rounded-lg border p-1">
-              <Button
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('table')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('cards')}
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="relative">
+          
+          {/* Controls - Mobile First Layout */}
+          <div className="flex flex-col gap-3">
+            {/* Search Bar - Full Width on Mobile */}
+            <div className="relative w-full">
               <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search orders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="pl-10 w-full"
               />
             </div>
-            <Select value={selectedOrderStatus} onValueChange={setSelectedOrderStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Orders</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            {/* Filter and View Mode Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <Select value={selectedOrderStatus} onValueChange={setSelectedOrderStatus}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Orders</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <div className="flex items-center gap-2 bg-background rounded-lg border p-1 w-fit">
+                <Button
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                  className="flex items-center gap-1"
+                >
+                  <List className="h-4 w-4" />
+                  <span className="hidden sm:inline">Table</span>
+                </Button>
+                <Button
+                  variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('cards')}
+                  className="flex items-center gap-1"
+                >
+                  <Grid className="h-4 w-4" />
+                  <span className="hidden sm:inline">Cards</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </CardHeader>
       
-      <CardContent className="p-8">
+      <CardContent className="p-4 sm:p-6 lg:p-8">
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -181,15 +194,15 @@ const AdminOrdersTable = ({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Order Status Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            {/* Order Status Summary - Responsive Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 mb-6 lg:mb-8">
               {getOrderStatusData().map((status) => (
-                <div key={status.name} className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
+                <div key={status.name} className="text-center p-2 sm:p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
                   <div 
-                    className="w-4 h-4 rounded-full mx-auto mb-2" 
+                    className="w-3 h-3 sm:w-4 sm:h-4 rounded-full mx-auto mb-1 sm:mb-2" 
                     style={{ backgroundColor: status.color }}
                   ></div>
-                  <div className="text-2xl font-bold text-foreground">{status.value}</div>
+                  <div className="text-lg sm:text-2xl font-bold text-foreground">{status.value}</div>
                   <div className="text-xs text-muted-foreground">{status.name}</div>
                 </div>
               ))}
@@ -198,65 +211,71 @@ const AdminOrdersTable = ({
             {/* Orders Display */}
             {viewMode === 'table' ? (
               <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredOrders.map((order) => (
-                      <TableRow 
-                        key={order.id} 
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleOrderClick(order.id)}
-                      >
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            #{order.order_number}
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{order.customer_info?.fullName || 'N/A'}</div>
-                            <div className="text-sm text-muted-foreground">{order.customer_info?.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                            {order.order_items?.length || 0} items
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-bold text-emerald-600">
-                            KSh {order.total_amount.toLocaleString()}
-                          </div>
-                          {order.discount_amount > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              -{order.discount_code}
+                {/* Mobile: Show table hint */}
+                <div className="lg:hidden bg-muted/30 px-4 py-2 text-sm text-muted-foreground text-center">
+                  Swipe horizontally to view all columns
+                </div>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[800px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[120px]">Order ID</TableHead>
+                        <TableHead className="min-w-[200px]">Customer</TableHead>
+                        <TableHead className="min-w-[100px]">Items</TableHead>
+                        <TableHead className="min-w-[120px]">Total</TableHead>
+                        <TableHead className="min-w-[100px]">Status</TableHead>
+                        <TableHead className="min-w-[100px]">Date</TableHead>
+                        <TableHead className="min-w-[120px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow 
+                          key={order.id} 
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleOrderClick(order.id)}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm"># {order.order_number}</span>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${getStatusColor(order.status)} text-white`}>
-                            {order.status.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium text-sm">{order.customer_info?.fullName || 'N/A'}</div>
+                              <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                {order.customer_info?.email}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">{order.order_items?.length || 0}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-bold text-emerald-600 text-sm">
+                              KSh {order.total_amount.toLocaleString()}
+                            </div>
+                            {order.discount_amount > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                -{order.discount_code}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${getStatusColor(order.status)} text-white text-xs`}>
+                              {order.status.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs">
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell>
                             <Button
                               variant="outline"
                               size="sm"
@@ -264,68 +283,72 @@ const AdminOrdersTable = ({
                                 e.stopPropagation();
                                 handleOrderClick(order.id);
                               }}
+                              className="text-xs"
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               View
                             </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {filteredOrders.map((order) => (
                   <Card 
                     key={order.id} 
                     className="border-l-4 border-l-primary shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-white to-muted/10 cursor-pointer"
                     onClick={() => handleOrderClick(order.id)}
                   >
-                    <CardContent className="p-6">
-                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                        <div className="space-y-4 flex-1">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col gap-4">
+                        {/* Card Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <h3 className="font-bold text-xl text-primary">#{order.order_number}</h3>
-                            <Badge className={`${getStatusColor(order.status)} text-white text-sm px-3 py-1 font-medium`}>
+                            <h3 className="font-bold text-lg sm:text-xl text-primary">#{order.order_number}</h3>
+                            <Badge className={`${getStatusColor(order.status)} text-white text-xs sm:text-sm px-2 sm:px-3 py-1 font-medium`}>
                               {order.status.toUpperCase()}
                             </Badge>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium text-foreground">{order.customer_info?.fullName || 'N/A'}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">📧 {order.customer_info?.email || 'N/A'}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">{order.shipping_address?.city || 'N/A'}</span>
-                              </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground self-end sm:self-auto" />
+                        </div>
+                        
+                        {/* Card Content */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="font-medium text-foreground truncate">{order.customer_info?.fullName || 'N/A'}</span>
                             </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <DollarSign className="h-4 w-4 text-emerald-600" />
-                                <span className="font-bold text-emerald-700 text-lg">KSh {order.total_amount.toLocaleString()}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Package className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">{order.order_items?.length || 0} items</span>
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground truncate">📧 {order.customer_info?.email || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-muted-foreground truncate">{order.shipping_address?.city || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                              <span className="font-bold text-emerald-700 text-base sm:text-lg">KSh {order.total_amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-muted-foreground">{order.order_items?.length || 0} items</span>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="flex flex-wrap gap-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Card Actions */}
+                        <div className="flex flex-wrap gap-2 sm:gap-3 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                           {getStatusActions(order).map((action, index) => (
                             <div key={index} className="transform transition-all duration-200 hover:scale-105">
                               {action}
