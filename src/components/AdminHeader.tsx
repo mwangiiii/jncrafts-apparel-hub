@@ -23,18 +23,18 @@ const AdminHeader = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-gradient-to-r from-primary/95 to-primary-dark/95 backdrop-blur-sm border-b border-primary/20 shadow-lg">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Admin Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <Shield className="h-6 w-6 text-white" />
-              <div>
-                <h1 className="text-xl font-bold text-white">
+    <header className="sticky top-0 z-[100] w-full bg-gradient-to-r from-primary/95 to-primary-dark/95 backdrop-blur-sm border-b border-primary/20 shadow-lg">
+      <div className="w-full max-w-none px-2 sm:px-4">
+        <div className="flex items-center justify-between min-h-[64px] h-16">
+          {/* Admin Logo - Responsive */}
+          <div className="flex items-center space-x-1 sm:space-x-3 flex-shrink-0 min-w-0">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-white flex-shrink-0" />
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-white truncate">
                   jn<span className="text-brand-beige">CRAFTS</span>
                 </h1>
-                <Badge variant="secondary" className="text-xs bg-white/20 text-white border-white/30">
+                <Badge variant="secondary" className="text-xs bg-white/20 text-white border-white/30 hidden sm:inline-flex">
                   Admin Panel
                 </Badge>
               </div>
@@ -42,7 +42,7 @@ const AdminHeader = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden lg:flex items-center space-x-1 flex-1 justify-center">
             {adminNavigation.map((item) => {
               const Icon = item.icon;
               const isActive = isActivePath(item.href);
@@ -50,26 +50,27 @@ const AdminHeader = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                  className={`flex items-center space-x-2 px-3 xl:px-4 py-2 rounded-lg transition-all duration-300 ${
                     isActive 
                       ? "bg-white/20 text-white shadow-md" 
                       : "text-white/80 hover:text-white hover:bg-white/10"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  <span className="font-medium">{item.name}</span>
+                  <span className="font-medium text-sm xl:text-base">{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* User Menu and Navigation */}
-          <div className="flex items-center space-x-4">
-            {/* Back to Main Site */}
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
-                <Home className="h-4 w-4 mr-2" />
-                Main Site
+          {/* User Menu and Navigation - Responsive */}
+          <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 flex-shrink-0">
+            {/* Back to Main Site - Hidden on small screens, shown in mobile menu instead */}
+            <Link to="/" className="hidden sm:block">
+              <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10 text-xs sm:text-sm px-2 sm:px-3">
+                <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden md:inline">Main Site</span>
+                <span className="md:hidden">Main</span>
               </Button>
             </Link>
 
@@ -77,8 +78,8 @@ const AdminHeader = () => {
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white/80 hover:text-white hover:bg-white/10">
-                    <User className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="text-white/80 hover:text-white hover:bg-white/10 h-8 w-8 sm:h-10 sm:w-10">
+                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -120,22 +121,22 @@ const AdminHeader = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-white/80 hover:text-white hover:bg-white/10"
+              className="lg:hidden text-white/80 hover:text-white hover:bg-white/10 h-8 w-8 sm:h-10 sm:w-10"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               ) : (
-                <Menu className="h-5 w-5" />
+                <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
               )}
             </Button>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Improved */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-white/20">
-            <nav className="py-4 space-y-1">
+          <div className="lg:hidden border-t border-white/20 bg-gradient-to-r from-primary/95 to-primary-dark/95">
+            <nav className="py-3 space-y-1 px-2">
               {adminNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActivePath(item.href);
@@ -143,7 +144,7 @@ const AdminHeader = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-300 ${
+                    className={`flex items-center space-x-3 px-3 py-3 mx-1 rounded-lg transition-colors duration-300 ${
                       isActive 
                         ? "bg-white/20 text-white" 
                         : "text-white/80 hover:text-white hover:bg-white/10"
@@ -151,17 +152,17 @@ const AdminHeader = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Icon className="h-4 w-4" />
-                    <span>{item.name}</span>
+                    <span className="font-medium">{item.name}</span>
                   </Link>
                 );
               })}
               <Link 
                 to="/" 
-                className="flex items-center space-x-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-300"
+                className="flex items-center space-x-3 px-3 py-3 mx-1 text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-300 rounded-lg"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <Home className="h-4 w-4" />
-                <span>Main Site</span>
+                <span className="font-medium">Main Site</span>
               </Link>
             </nav>
           </div>
