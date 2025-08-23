@@ -65,9 +65,18 @@ const AdminOrdersTable = ({
   const filteredOrders = orders.filter(order => {
     const matchesStatus = selectedOrderStatus === 'all' || order.status === selectedOrderStatus;
     const matchesSearch = searchTerm === '' || 
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer_info?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer_info?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      order.customer_info?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer_info?.phone?.includes(searchTerm.toLowerCase()) ||
+      order.shipping_address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.shipping_address?.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.order_items?.some((item: any) => 
+        item.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.size?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.color?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     
     return matchesStatus && matchesSearch;
   });

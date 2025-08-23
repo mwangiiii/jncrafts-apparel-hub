@@ -74,525 +74,731 @@ export const saveDocumentMetadata = async (
   }
 };
 
-// Create printable invoice HTML
+// Create the HTML content for an invoice
 export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): string => {
-  const subtotal = data.order.total_amount + (data.order.discount_amount || 0);
-  const deliveryCost = data.order.delivery_details?.cost || 0;
+  const currentDate = new Date().toLocaleDateString();
   
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
-      <meta charset="utf-8">
-      <title>Invoice ${invoiceNumber}</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Invoice #${invoiceNumber}</title>
       <style>
-        @media print {
-          body { margin: 0; }
-          .no-print { display: none; }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
         }
         
         body {
-          font-family: Arial, sans-serif;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.6;
+          color: #2d3748;
+          background: #ffffff;
+        }
+        
+        .invoice-container {
           max-width: 800px;
           margin: 0 auto;
-          padding: 20px;
+          padding: 40px;
           background: white;
-          color: black;
+          box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+          }
+          
+          .invoice-container {
+            padding: 20px;
+            box-shadow: none;
+          }
         }
         
         .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 30px;
-          border-bottom: 2px solid #000;
-          padding-bottom: 20px;
-        }
-        
-        .logo {
-          max-width: 150px;
-          max-height: 80px;
-        }
-        
-        .company-info {
-          text-align: right;
-        }
-        
-        .invoice-title {
-          font-size: 28px;
-          font-weight: bold;
-          margin: 20px 0;
-          text-align: center;
-        }
-        
-        .invoice-details {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 30px;
-          margin-bottom: 30px;
-        }
-        
-        .customer-info, .invoice-info {
-          padding: 15px;
-          border: 1px solid #ddd;
-        }
-        
-        .section-title {
-          font-weight: bold;
-          font-size: 16px;
-          margin-bottom: 10px;
-          color: #333;
-        }
-        
-        .items-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 20px 0;
-        }
-        
-        .items-table th, .items-table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-        
-        .items-table th {
-          background-color: #f5f5f5;
-          font-weight: bold;
-        }
-        
-        .totals {
-          float: right;
-          width: 300px;
-          margin-top: 20px;
-        }
-        
-        .total-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 5px 0;
-        }
-        
-        .final-total {
-          font-weight: bold;
-          font-size: 18px;
-          border-top: 2px solid #000;
-          padding-top: 10px;
-        }
-        
-        .footer {
-          margin-top: 50px;
-          text-align: center;
-          font-size: 12px;
-          color: #666;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div>
-          ${data.companyInfo.logo ? `<img src="${data.companyInfo.logo}" alt="Company Logo" class="logo">` : ''}
-          <div>
-            <h2>${data.companyInfo.name}</h2>
-            <p>${data.companyInfo.address}</p>
-            <p>Phone: ${data.companyInfo.phone}</p>
-            <p>Email: ${data.companyInfo.email}</p>
-          </div>
-        </div>
-        <div class="company-info">
-          <h1>INVOICE</h1>
-          <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-          <p><strong>Order #:</strong> ${data.order.order_number}</p>
-        </div>
-      </div>
-
-      <div class="invoice-details">
-        <div class="customer-info">
-          <div class="section-title">Bill To:</div>
-          <p><strong>${data.order.customer_info?.fullName || 'N/A'}</strong></p>
-          <p>${data.order.customer_info?.email || ''}</p>
-          <p>${data.order.customer_info?.phone || ''}</p>
-          ${data.order.shipping_address ? `
-            <p>${data.order.shipping_address.street || ''}</p>
-            <p>${data.order.shipping_address.city || ''}, ${data.order.shipping_address.state || ''}</p>
-            <p>${data.order.shipping_address.zipCode || ''}</p>
-          ` : ''}
-        </div>
-        
-        <div class="invoice-info">
-          <div class="section-title">Order Details:</div>
-          <p><strong>Order Date:</strong> ${new Date(data.order.created_at).toLocaleDateString()}</p>
-          <p><strong>Order Status:</strong> ${data.order.status.toUpperCase()}</p>
-          <p><strong>Payment Method:</strong> Cash on Delivery</p>
-          ${data.order.delivery_details?.method ? `<p><strong>Delivery Method:</strong> ${data.order.delivery_details.method}</p>` : ''}
-        </div>
-      </div>
-
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Size</th>
-            <th>Color</th>
-            <th>Qty</th>
-            <th>Unit Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.order.order_items?.map(item => `
-            <tr>
-              <td>${item.product_name}</td>
-              <td>${item.size}</td>
-              <td>${item.color}</td>
-              <td>${item.quantity}</td>
-              <td>KSh ${item.price?.toLocaleString()}</td>
-              <td>KSh ${(item.price * item.quantity)?.toLocaleString()}</td>
-            </tr>
-          `).join('') || ''}
-        </tbody>
-      </table>
-
-      <div class="totals">
-        <div class="total-row">
-          <span>Subtotal:</span>
-          <span>KSh ${subtotal.toLocaleString()}</span>
-        </div>
-        ${data.order.discount_amount > 0 ? `
-          <div class="total-row">
-            <span>Discount (${data.order.discount_code}):</span>
-            <span>-KSh ${data.order.discount_amount.toLocaleString()}</span>
-          </div>
-        ` : ''}
-        ${deliveryCost > 0 ? `
-          <div class="total-row">
-            <span>Delivery:</span>
-            <span>KSh ${deliveryCost.toLocaleString()}</span>
-          </div>
-        ` : ''}
-        <div class="total-row final-total">
-          <span>Total Amount:</span>
-          <span>KSh ${data.order.total_amount.toLocaleString()}</span>
-        </div>
-      </div>
-
-      <div style="clear: both;"></div>
-
-      <div class="footer">
-        <p>Thank you for your business!</p>
-        <p>This is a computer-generated invoice.</p>
-      </div>
-
-      <div class="no-print" style="text-align: center; margin-top: 20px;">
-        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px;">Print Invoice</button>
-      </div>
-    </body>
-    </html>
-  `;
-};
-
-// Create printable receipt HTML
-export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): string => {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Receipt ${receiptNumber}</title>
-      <style>
-        @media print {
-          body { margin: 0; }
-          .no-print { display: none; }
-        }
-        
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 30px;
-          background: white;
-          color: #2d3748;
-          line-height: 1.6;
-        }
-        
-        .receipt-container {
-          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-          border-radius: 16px;
-          padding: 40px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-        }
-        
-        .header {
-          text-align: center;
           margin-bottom: 40px;
-          padding-bottom: 30px;
-          border-bottom: 3px solid #4299e1;
+          padding-bottom: 25px;
           position: relative;
         }
         
         .header::after {
           content: '';
           position: absolute;
-          bottom: -3px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 80px;
-          height: 3px;
-          background: linear-gradient(90deg, #4299e1, #63b3ed);
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
           border-radius: 2px;
         }
         
-        .logo {
-          max-width: 140px;
-          max-height: 70px;
-          margin-bottom: 15px;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        .company-info {
+          flex: 1;
         }
         
-        .company-name {
-          font-size: 28px;
-          font-weight: 700;
+        .company-logo {
+          font-size: 3rem;
+          font-weight: bold;
           color: #2d3748;
-          margin: 15px 0 10px 0;
-          letter-spacing: -0.5px;
+          margin-bottom: 12px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .logo-crafts {
+          color: #d4af84;
+        }
+        
+        .company-tagline {
+          color: #4a5568;
+          font-style: italic;
+          font-size: 0.95rem;
+          margin-bottom: 8px;
         }
         
         .company-details {
-          font-size: 14px;
-          color: #718096;
-          margin: 5px 0;
+          color: #4a5568;
+          font-size: 0.9rem;
+          line-height: 1.6;
         }
         
-        .receipt-title {
-          background: linear-gradient(135deg, #4299e1, #63b3ed);
-          color: white;
-          font-size: 28px;
-          font-weight: 700;
-          margin: 30px -20px 30px -20px;
-          padding: 20px;
-          text-align: center;
-          border-radius: 12px;
-          box-shadow: 0 4px 15px rgba(66, 153, 225, 0.3);
-          letter-spacing: 1px;
-        }
-        
-        .receipt-info {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 30px;
-          margin: 30px 0;
-        }
-        
-        .info-column {
-          background: white;
+        .invoice-details {
+          text-align: right;
+          color: #4a5568;
+          background: linear-gradient(145deg, #f8fafc 0%, #edf2f7 100%);
           padding: 25px;
           border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
           border: 1px solid #e2e8f0;
         }
         
-        .info-item {
+        .invoice-title {
+          font-size: 2.2rem;
+          font-weight: bold;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-bottom: 12px;
+        }
+        
+        .invoice-number {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #2d3748;
+          margin-bottom: 8px;
+        }
+        
+        .status-badge {
+          background: linear-gradient(135deg, #48bb78 0%, #68d391 100%);
+          color: white;
+          padding: 8px 20px;
+          border-radius: 25px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          display: inline-block;
+          margin-top: 12px;
+          box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3);
+        }
+        
+        .customer-section {
+          margin: 35px 0;
+          padding: 30px;
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+          font-size: 1.3rem;
+          font-weight: bold;
+          color: #2d3748;
+          margin-bottom: 20px;
+          position: relative;
+          padding-bottom: 8px;
+        }
+        
+        .section-title::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 50px;
+          height: 3px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          border-radius: 2px;
+        }
+        
+        .customer-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 25px;
+        }
+        
+        .customer-info p {
+          margin: 6px 0;
+          color: #4a5568;
+          font-size: 0.95rem;
+        }
+        
+        .customer-info strong {
+          color: #2d3748;
+          font-weight: 600;
+        }
+        
+        .items-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 35px 0;
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .items-table th {
+          background: linear-gradient(135deg, #2d4a5e 0%, #4a6572 100%);
+          color: white;
+          padding: 18px 15px;
+          text-align: left;
+          font-weight: 600;
+          font-size: 0.9rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .items-table td {
+          padding: 16px 15px;
+          border-bottom: 1px solid #e2e8f0;
+          color: #4a5568;
+          font-size: 0.9rem;
+        }
+        
+        .items-table tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        
+        .items-table tr:hover {
+          background-color: #edf2f7;
+          transform: translateY(-1px);
+          transition: all 0.3s ease;
+        }
+        
+        .text-right {
+          text-align: right;
+        }
+        
+        .font-medium {
+          font-weight: 600;
+          color: #2d3748;
+        }
+        
+        .totals-section {
+          margin-top: 35px;
+          padding: 30px;
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        
+        .totals-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 0;
-          border-bottom: 1px solid #e2e8f0;
-          transition: background-color 0.2s;
-        }
-        
-        .info-item:last-child {
-          border-bottom: none;
-        }
-        
-        .info-item:hover {
-          background-color: #f7fafc;
-          margin: 0 -10px;
-          padding-left: 10px;
-          padding-right: 10px;
-          border-radius: 6px;
-        }
-        
-        .info-label {
-          font-weight: 600;
+          padding: 10px 0;
           color: #4a5568;
-          font-size: 14px;
+          font-size: 1rem;
         }
         
-        .info-value {
-          font-weight: 500;
-          color: #2d3748;
-          font-size: 14px;
-        }
-        
-        .amount-paid {
-          background: linear-gradient(135deg, #48bb78, #68d391);
+        .totals-row.grand-total {
+          border-top: 3px solid #e2e8f0;
+          margin-top: 20px;
+          padding-top: 20px;
+          font-size: 1.4rem;
+          font-weight: bold;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
           color: white;
-          font-size: 24px;
-          font-weight: 700;
-          text-align: center;
-          margin: 40px 0;
-          padding: 30px;
+          padding: 20px 25px;
+          border-radius: 12px;
+          margin: 20px -10px 0;
+          box-shadow: 0 4px 15px rgba(45, 74, 94, 0.3);
+        }
+        
+        .delivery-section {
+          margin: 25px 0;
+          padding: 25px;
+          background: linear-gradient(145deg, #f0fff4 0%, #c6f6d5 100%);
           border-radius: 16px;
-          box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3);
+          border-left: 5px solid #48bb78;
+          box-shadow: 0 4px 15px rgba(72, 187, 120, 0.1);
+        }
+        
+        .footer {
+          margin-top: 60px;
+          padding-top: 30px;
+          border-top: 3px solid #e2e8f0;
+          text-align: center;
+          color: #4a5568;
+        }
+        
+        .thank-you {
+          font-size: 1.3rem;
+          font-weight: 600;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-bottom: 20px;
+        }
+        
+        .contact-info {
+          font-size: 0.9rem;
+          line-height: 1.6;
+          color: #4a5568;
+        }
+        
+        .brand-gradient {
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="invoice-container">
+        <div class="header">
+          <div class="company-info">
+            <div class="company-logo">
+              jn<span class="logo-crafts">CRAFTS</span>
+            </div>
+            <div class="company-tagline">Premium Streetwear & Fashion</div>
+            <div class="company-details">
+              Nairobi, Kenya<br>
+              Email: info@jncrafts.com<br>
+              Phone: +254 700 000 000<br>
+              Web: www.jncrafts.com
+            </div>
+          </div>
+          <div class="invoice-details">
+            <div class="invoice-title">INVOICE</div>
+            <div class="invoice-number">#${invoiceNumber}</div>
+            <p><strong>Date:</strong> ${currentDate}</p>
+            <div class="status-badge">${data.order.status.toUpperCase()}</div>
+          </div>
+        </div>
+
+        <div class="customer-section">
+          <div class="section-title">Customer Information</div>
+          <div class="customer-grid">
+            <div class="customer-info">
+              <p><strong>Name:</strong> ${data.order.customer_info.fullName}</p>
+              <p><strong>Email:</strong> ${data.order.customer_info.email}</p>
+              <p><strong>Phone:</strong> ${data.order.customer_info.phone}</p>
+            </div>
+            <div class="customer-info">
+              <p><strong>Order #:</strong> ${data.order.order_number}</p>
+              <p><strong>Order Date:</strong> ${new Date(data.order.created_at).toLocaleDateString()}</p>
+              <p><strong>Payment Status:</strong> <span class="brand-gradient">Paid</span></p>
+            </div>
+          </div>
+        </div>
+
+        ${data.order.shipping_address ? `
+        <div class="delivery-section">
+          <div class="section-title">Shipping Address</div>
+          <p><strong>${data.order.shipping_address.address}</strong></p>
+          <p>${data.order.shipping_address.city}, ${data.order.shipping_address.county}</p>
+          <p>${data.order.shipping_address.country}</p>
+        </div>
+        ` : ''}
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Product Details</th>
+              <th>Size</th>
+              <th>Color</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Unit Price</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.order.order_items.map((item: any) => `
+              <tr>
+                <td class="font-medium">${item.product_name}</td>
+                <td><span class="font-medium">${item.size}</span></td>
+                <td><span class="font-medium">${item.color}</span></td>
+                <td class="text-right font-medium">${item.quantity}</td>
+                <td class="text-right">KSh ${Number(item.price).toFixed(2)}</td>
+                <td class="text-right font-medium">KSh ${(Number(item.price) * item.quantity).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="totals-section">
+          <div class="totals-row">
+            <span><strong>Subtotal:</strong></span>
+            <span><strong>KSh ${(Number(data.order.total_amount) - Number(data.order.discount_amount || 0)).toFixed(2)}</strong></span>
+          </div>
+          ${data.order.discount_amount > 0 ? `
+          <div class="totals-row">
+            <span>Discount${data.order.discount_code ? ` (${data.order.discount_code})` : ''}:</span>
+            <span style="color: #e53e3e;">-KSh ${Number(data.order.discount_amount).toFixed(2)}</span>
+          </div>
+          ` : ''}
+          <div class="totals-row">
+            <span>Delivery Fee:</span>
+            <span>KSh 0.00</span>
+          </div>
+          <div class="totals-row grand-total">
+            <span>TOTAL AMOUNT:</span>
+            <span>KSh ${Number(data.order.total_amount).toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="thank-you">Thank you for choosing jnCrafts!</div>
+          <div class="contact-info">
+            For any inquiries, please contact us at <strong>info@jncrafts.com</strong> or visit <strong>www.jncrafts.com</strong><br>
+            Follow us on social media <strong>@jncrafts</strong> for latest collections and updates<br><br>
+            <em>This invoice was generated on ${currentDate} and serves as your official receipt.</em>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+// Create the HTML content for a receipt
+export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): string => {
+  const currentDate = new Date().toLocaleDateString();
+  const currentTime = new Date().toLocaleTimeString();
+  
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Receipt #${receiptNumber}</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          line-height: 1.5;
+          color: #2d3748;
+          background: #ffffff;
+        }
+        
+        .receipt-container {
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 35px;
+          background: white;
+          box-shadow: 0 0 25px rgba(0,0,0,0.1);
+          border-radius: 16px;
+        }
+        
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+          }
+          
+          .receipt-container {
+            padding: 20px;
+            box-shadow: none;
+            border-radius: 0;
+          }
+        }
+        
+        .header {
+          text-align: center;
+          margin-bottom: 35px;
+          padding-bottom: 25px;
+          position: relative;
+        }
+        
+        .header::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100px;
+          height: 4px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          border-radius: 2px;
+        }
+        
+        .company-logo {
+          font-size: 2.8rem;
+          font-weight: bold;
+          margin-bottom: 12px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .logo-crafts {
+          color: #d4af84;
+        }
+        
+        .receipt-title {
+          font-size: 2rem;
+          font-weight: bold;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin: 15px 0 10px;
+        }
+        
+        .receipt-subtitle {
+          color: #4a5568;
+          font-size: 1rem;
+          font-style: italic;
+        }
+        
+        .receipt-details {
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 12px;
+          padding: 25px;
+          margin: 25px 0;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin: 12px 0;
+          color: #4a5568;
+          font-size: 0.95rem;
+        }
+        
+        .detail-row strong {
+          color: #2d3748;
+          font-weight: 600;
+        }
+        
+        .customer-section {
+          margin: 25px 0;
+          padding: 25px;
+          background: linear-gradient(145deg, #f0fff4 0%, #c6f6d5 100%);
+          border-radius: 12px;
+          border-left: 5px solid #48bb78;
+          box-shadow: 0 4px 15px rgba(72, 187, 120, 0.1);
+        }
+        
+        .section-title {
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #2d3748;
+          margin-bottom: 15px;
+          position: relative;
+          padding-bottom: 8px;
+        }
+        
+        .section-title::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 40px;
+          height: 2px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          border-radius: 2px;
+        }
+        
+        .payment-summary {
+          margin: 30px 0;
+          padding: 30px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          color: white;
+          border-radius: 16px;
+          text-align: center;
+          box-shadow: 0 8px 25px rgba(45, 74, 94, 0.3);
           position: relative;
           overflow: hidden;
         }
         
-        .amount-paid::before {
+        .payment-summary::before {
           content: '';
           position: absolute;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-          animation: shimmer 2s infinite;
+          background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+          pointer-events: none;
         }
         
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
+        .amount-paid {
+          font-size: 2.5rem;
+          font-weight: bold;
+          margin: 15px 0;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         
-        .amount-label {
-          font-size: 16px;
+        .payment-status {
+          font-size: 1.1rem;
+          font-weight: 600;
+          background: rgba(255,255,255,0.2);
+          padding: 10px 20px;
+          border-radius: 25px;
+          display: inline-block;
+          margin-top: 15px;
+          border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .balance-info {
+          font-size: 1.1rem;
+          margin-top: 10px;
           opacity: 0.9;
-          margin-bottom: 8px;
-          letter-spacing: 0.5px;
-        }
-        
-        .amount-value {
-          font-size: 32px;
-          font-weight: 800;
-          letter-spacing: -1px;
         }
         
         .footer {
           margin-top: 40px;
           text-align: center;
-          padding: 25px;
-          background: #f7fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-        }
-        
-        .footer-message {
-          font-size: 16px;
           color: #4a5568;
+          font-size: 0.9rem;
+          line-height: 1.6;
+          padding-top: 25px;
+          border-top: 2px solid #e2e8f0;
+        }
+        
+        .thank-you {
+          font-size: 1.2rem;
           font-weight: 600;
-          margin-bottom: 10px;
+          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin-bottom: 15px;
         }
         
-        .footer-note {
-          font-size: 12px;
-          color: #718096;
-          margin: 5px 0;
-        }
-        
-        .status-badge {
+        .transaction-id {
+          font-family: 'Courier New', monospace;
+          background: linear-gradient(145deg, #f8fafc 0%, #edf2f7 100%);
+          padding: 8px 15px;
+          border-radius: 8px;
+          color: #2d3748;
+          font-weight: 600;
           display: inline-block;
-          padding: 6px 16px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          margin: 5px 0;
+          border: 1px solid #e2e8f0;
+          font-size: 0.9rem;
         }
         
-        .status-paid {
-          background: #c6f6d5;
-          color: #22543d;
-        }
-        
-        .status-pending {
-          background: #fef5e7;
-          color: #c05621;
-        }
-        
-        @media print {
-          .receipt-container {
-            box-shadow: none;
-            border: 1px solid #e2e8f0;
-          }
-          
-          .amount-paid::before {
-            display: none;
-          }
+        .security-note {
+          background: linear-gradient(145deg, #fffaf0 0%, #fef5e7 100%);
+          border: 1px solid #f6ad55;
+          border-radius: 8px;
+          padding: 15px;
+          margin: 20px 0;
+          font-size: 0.85rem;
+          color: #744210;
+          text-align: left;
         }
       </style>
     </head>
     <body>
       <div class="receipt-container">
         <div class="header">
-          ${data.companyInfo.logo ? `<img src="${data.companyInfo.logo}" alt="Company Logo" class="logo">` : ''}
-          <div class="company-name">${data.companyInfo.name}</div>
-          <div class="company-details">${data.companyInfo.address}</div>
-          <div class="company-details">Phone: ${data.companyInfo.phone} | Email: ${data.companyInfo.email}</div>
+          <div class="company-logo">
+            jn<span class="logo-crafts">CRAFTS</span>
+          </div>
+          <div class="receipt-title">PAYMENT RECEIPT</div>
+          <div class="receipt-subtitle">Official Transaction Record</div>
         </div>
 
-        <div class="receipt-title">PAYMENT RECEIPT</div>
-
-        <div class="receipt-info">
-          <div class="info-column">
-            <div class="info-item">
-              <span class="info-label">Receipt #:</span>
-              <span class="info-value">${receiptNumber}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Date:</span>
-              <span class="info-value">${new Date().toLocaleDateString()}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Order #:</span>
-              <span class="info-value">${data.order.order_number}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Customer:</span>
-              <span class="info-value">${data.order.customer_info?.fullName || 'N/A'}</span>
-            </div>
+        <div class="receipt-details">
+          <div class="detail-row">
+            <span><strong>Receipt Number:</strong></span>
+            <span class="transaction-id">#${receiptNumber}</span>
           </div>
-          
-          <div class="info-column">
-            <div class="info-item">
-              <span class="info-label">Payment Method:</span>
-              <span class="info-value">Cash on Delivery</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Transaction ID:</span>
-              <span class="info-value">COD-${data.order.order_number}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Payment Status:</span>
-              <span class="info-value">
-                <span class="status-badge ${data.order.status === 'delivered' ? 'status-paid' : 'status-pending'}">
-                  ${data.order.status === 'delivered' ? 'PAID' : 'PENDING'}
-                </span>
-              </span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Balance:</span>
-              <span class="info-value">KSh 0.00</span>
-            </div>
+          <div class="detail-row">
+            <span><strong>Order ID:</strong></span>
+            <span><strong>${data.order.order_number}</strong></span>
+          </div>
+          <div class="detail-row">
+            <span><strong>Date & Time:</strong></span>
+            <span>${currentDate} at ${currentTime}</span>
+          </div>
+          <div class="detail-row">
+            <span><strong>Payment Method:</strong></span>
+            <span>Online Payment</span>
+          </div>
+          <div class="detail-row">
+            <span><strong>Transaction ID:</strong></span>
+            <span class="transaction-id">TXN${Date.now().toString().slice(-8)}</span>
+          </div>
+          <div class="detail-row">
+            <span><strong>Order Status:</strong></span>
+            <span style="color: #48bb78; font-weight: 600;">${data.order.status.toUpperCase()}</span>
           </div>
         </div>
 
-        <div class="amount-paid">
-          <div class="amount-label">AMOUNT PAID</div>
-          <div class="amount-value">KSh ${data.order.total_amount.toLocaleString()}</div>
+        <div class="customer-section">
+          <div class="section-title">Customer Details</div>
+          <div class="detail-row">
+            <span><strong>Name:</strong></span>
+            <span>${data.order.customer_info.fullName}</span>
+          </div>
+          <div class="detail-row">
+            <span><strong>Phone:</strong></span>
+            <span>${data.order.customer_info.phone}</span>
+          </div>
+          <div class="detail-row">
+            <span><strong>Email:</strong></span>
+            <span>${data.order.customer_info.email}</span>
+          </div>
+        </div>
+
+        <div class="payment-summary">
+          <div style="font-size: 1.3rem; margin-bottom: 10px; opacity: 0.9;">Total Amount Paid</div>
+          <div class="amount-paid">KSh ${Number(data.order.total_amount).toFixed(2)}</div>
+          <div class="balance-info">Outstanding Balance: <strong>KSh 0.00</strong></div>
+          <div class="payment-status">✓ PAYMENT COMPLETED</div>
+        </div>
+
+        <div class="security-note">
+          <strong>⚠️ Important:</strong> This receipt serves as your official proof of payment. Please retain this document for your records and any potential returns or exchanges.
         </div>
 
         <div class="footer">
-          <div class="footer-message">Thank you for your payment!</div>
-          <div class="footer-note">This receipt serves as proof of payment.</div>
-          <div class="footer-note">Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</div>
+          <div class="thank-you">Thank you for choosing jnCrafts!</div>
+          <div>
+            Your payment has been successfully processed and your order is being prepared.<br>
+            You will receive order updates via email and SMS.<br><br>
+            <strong>jnCrafts Premium Streetwear</strong><br>
+            Email: <strong>info@jncrafts.com</strong> | Phone: <strong>+254 700 000 000</strong><br>
+            Visit: <strong>www.jncrafts.com</strong> | Follow: <strong>@jncrafts</strong><br><br>
+            <em>Receipt generated on ${currentDate} at ${currentTime}</em>
+          </div>
         </div>
-      </div>
-
-      <div class="no-print" style="text-align: center; margin-top: 20px;">
-        <button onclick="window.print()" style="padding: 12px 24px; font-size: 16px; background: #4299e1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Print Receipt</button>
       </div>
     </body>
     </html>
