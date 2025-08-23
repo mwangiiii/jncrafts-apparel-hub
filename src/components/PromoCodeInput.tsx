@@ -32,53 +32,45 @@ const PromoCodeInput = ({ onCodeApplied, onCodeRemoved, appliedDiscount, orderTo
     setLoading(true);
     
     try {
-      // Check if code exists and is valid
-      const { data: discount, error } = await supabase
-        .from('discounts')
-        .select('*')
-        .eq('code', code.toUpperCase())
-        .eq('is_active', true)
-        .eq('requires_code', true)
-        .or('start_date.is.null,start_date.lte.' + new Date().toISOString())
-        .or('end_date.is.null,end_date.gte.' + new Date().toISOString())
-        .single();
+      // Use secure validation function instead of direct table access
+      const { data, error } = await supabase.rpc('validate_discount_code', {
+        p_code: code.toUpperCase(),
+        p_order_total: orderTotal
+      });
 
-      if (error || !discount) {
+      if (error) {
+        console.error('Error validating promo code:', error);
+        toast({
+          title: "Error",
+          description: "Failed to validate promo code. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const result = data as {
+        valid: boolean;
+        error?: string;
+        message?: string;
+        discount?: any;
+      };
+
+      if (!result?.valid) {
         toast({
           title: "Invalid Code",
-          description: "This promo code is not valid or has expired",
+          description: result?.message || "This promo code is not valid or has expired",
           variant: "destructive"
         });
         return;
       }
 
-      // Check usage limits
-      if (discount.usage_limit && discount.used_count >= discount.usage_limit) {
-        toast({
-          title: "Code Unavailable",
-          description: "This promo code has reached its usage limit",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check minimum order amount
-      if (discount.min_order_amount && orderTotal < discount.min_order_amount) {
-        toast({
-          title: "Minimum Order Not Met",
-          description: `This code requires a minimum order of $${discount.min_order_amount}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Apply the discount
-      onCodeApplied(discount);
+      // Apply the valid discount
+      onCodeApplied(result.discount);
       setCode('');
       
       toast({
         title: "Code Applied!",
-        description: `${discount.name} has been applied to your order`,
+        description: `${result.discount.name} has been applied to your order`,
       });
       
     } catch (error) {

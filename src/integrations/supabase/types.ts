@@ -533,6 +533,10 @@ export type Database = {
         Args: { p_discount_id: string; p_product_id: string }
         Returns: boolean
       }
+      validate_discount_code: {
+        Args: { p_code: string; p_order_total?: number }
+        Returns: Json
+      }
     }
     Enums: {
       user_role: "admin" | "customer"
