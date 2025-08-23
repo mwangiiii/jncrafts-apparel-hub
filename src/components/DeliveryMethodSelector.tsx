@@ -68,9 +68,71 @@ const DeliveryMethodSelector = ({
     return R * c;
   };
 
-  // Calculate delivery cost based on distance from CBD at 55 KSh per kilometer
-  const calculateDeliveryCost = (distanceKm: number): number => {
-    return Math.round(distanceKm * 55); // 55 KSh per kilometer from Nairobi CBD
+  // Determine zone based on distance from CBD
+  const getZoneFromDistance = (distanceKm: number): 'CBD' | 'Mtaani' | 'Mashinani' => {
+    if (distanceKm <= 5) return 'CBD';
+    if (distanceKm <= 20) return 'Mtaani';
+    return 'Mashinani';
+  };
+
+  // Fetch delivery rate from API
+  const fetchDeliveryRate = async (
+    originZone: 'CBD' | 'Mtaani' | 'Mashinani',
+    destZone: 'CBD' | 'Mtaani' | 'Mashinani',
+    service: 'pickup_mtaani' | 'doorstep' | 'pickup_in_town' | 'customer_courier',
+    fallbackDistanceKm: number
+  ): Promise<number> => {
+    try {
+      const response = await fetch(
+        `${window.location.origin}/functions/v1/delivery-rates?origin_zone=${originZone}&dest_zone=${destZone}&service=${service}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch delivery rate');
+      }
+      
+      const data = await response.json();
+      return data.rate_ksh || Math.round(fallbackDistanceKm * 55);
+    } catch (error) {
+      console.error('Error fetching delivery rate:', error);
+      // Fallback to distance-based calculation
+      return Math.round(fallbackDistanceKm * 55);
+    }
+  };
+
+  // Calculate delivery cost using API or fallback to distance-based pricing
+  const calculateDeliveryCost = async (
+    distanceKm: number,
+    deliveryMethod: DeliveryMethod
+  ): Promise<number> => {
+    const originZone = 'CBD'; // We're shipping from CBD
+    const destZone = getZoneFromDistance(distanceKm);
+    
+    let service: 'pickup_mtaani' | 'doorstep' | 'pickup_in_town' | 'customer_courier';
+    
+    switch (deliveryMethod) {
+      case 'home_delivery':
+        service = 'doorstep';
+        break;
+      case 'pickup_mtaani':
+        service = 'pickup_mtaani';
+        break;
+      case 'pickup_in_town':
+        service = 'pickup_in_town';
+        break;
+      case 'customer_logistics':
+        service = 'customer_courier';
+        break;
+      default:
+        return Math.round(distanceKm * 55);
+    }
+
+    return await fetchDeliveryRate(originZone, destZone, service, distanceKm);
   };
 
   // Get coordinates for an address using OpenStreetMap Nominatim API
@@ -116,12 +178,12 @@ const DeliveryMethodSelector = ({
                 coords.lat, 
                 coords.lng
               );
-              cost = calculateDeliveryCost(distanceFromCBD);
+              cost = await calculateDeliveryCost(distanceFromCBD, method);
               location = `${shippingAddress.address}, ${shippingAddress.city}`;
             } else {
               // Fallback: assume 10km from CBD if geocoding fails
               distanceFromCBD = 10;
-              cost = calculateDeliveryCost(distanceFromCBD);
+              cost = await calculateDeliveryCost(distanceFromCBD, method);
               location = `${shippingAddress.address}, ${shippingAddress.city}`;
               toast({
                 title: "Distance Estimation",
@@ -135,19 +197,19 @@ const DeliveryMethodSelector = ({
           if (pickupAgent) {
             // For now, assume average 15km from CBD for Mtaani locations
             distanceFromCBD = 15;
-            cost = calculateDeliveryCost(distanceFromCBD);
+            cost = await calculateDeliveryCost(distanceFromCBD, method);
             location = pickupAgent;
           }
           break;
 
         case 'pickup_in_town':
-          cost = 0; // Default free pickup in town
+          cost = await calculateDeliveryCost(0, method);
           location = "JN Crafts CBD Location - Kenyatta Avenue";
           distanceFromCBD = 0;
           break;
 
         case 'customer_logistics':
-          cost = 0;
+          cost = await calculateDeliveryCost(0, method);
           location = "Customer arranged pickup";
           distanceFromCBD = 0;
           break;
