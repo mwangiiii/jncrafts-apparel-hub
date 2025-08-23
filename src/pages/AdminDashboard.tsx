@@ -18,6 +18,7 @@ import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plu
 import adminAnalytics from '@/assets/admin-analytics.jpg';
 import orderFlow from '@/assets/order-flow.jpg';
 import SpecialOffersManager from '@/components/admin/SpecialOffersManager';
+import AdminOrdersTable from '@/components/admin/AdminOrdersTable';
 
 interface Order {
   id: string;
@@ -849,130 +850,15 @@ const AdminDashboard = () => {
             
             {/* Orders Tab with Status Filtering */}
             <TabsContent value="orders" className="space-y-6 animate-fade-in-up">
-              <Card className="admin-card border-0 shadow-xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-muted/30 to-muted/10 border-b border-border/50 pb-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-primary/10 rounded-xl">
-                        <Package className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-2xl font-bold text-foreground">Order Management</CardTitle>
-                        <CardDescription className="text-base text-muted-foreground mt-1">
-                          Track and manage orders by status
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Select value={selectedOrderStatus} onValueChange={setSelectedOrderStatus}>
-                        <SelectTrigger className="w-48">
-                          <SelectValue placeholder="Filter by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Orders</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="confirmed">Confirmed</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-8">
-                  {loadingData ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                      <p className="text-muted-foreground text-lg">Loading orders...</p>
-                    </div>
-                  ) : filteredOrders.length === 0 ? (
-                    <div className="text-center py-12">
-                      <img src={orderFlow} alt="No Orders" className="w-32 h-32 mx-auto mb-6 rounded-lg opacity-60" />
-                      <p className="text-muted-foreground text-lg">No orders found</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {selectedOrderStatus === 'all' 
-                          ? 'Orders will appear here when customers place them'
-                          : `No ${selectedOrderStatus} orders at the moment`
-                        }
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {/* Order Status Categories */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                        {getOrderStatusData().map((status) => (
-                          <div key={status.name} className="text-center p-4 bg-gradient-to-br from-white to-muted/30 rounded-xl border shadow-sm">
-                            <div 
-                              className="w-4 h-4 rounded-full mx-auto mb-2" 
-                              style={{ backgroundColor: status.color }}
-                            ></div>
-                            <div className="text-2xl font-bold text-foreground">{status.value}</div>
-                            <div className="text-xs text-muted-foreground">{status.name}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Orders List */}
-                      {filteredOrders.map((order) => (
-                        <Card key={order.id} className="border-l-4 border-l-primary shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-white to-muted/10">
-                          <CardContent className="p-6">
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                              <div className="space-y-4 flex-1">
-                                <div className="flex items-center gap-3">
-                                  <h3 className="font-bold text-xl text-primary">#{order.order_number}</h3>
-                                  <Badge className={`${getStatusColor(order.status)} text-white text-sm px-3 py-1 font-medium`}>
-                                    {order.status.toUpperCase()}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4 text-muted-foreground" />
-                                      <span className="font-medium text-foreground">{order.customer_info?.fullName || 'N/A'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-muted-foreground">📧 {order.customer_info?.email || 'N/A'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                                      <span className="text-muted-foreground">{order.shipping_address?.city || 'N/A'}</span>
-                                    </div>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <DollarSign className="h-4 w-4 text-emerald-600" />
-                                      <span className="font-bold text-emerald-700 text-lg">KSh {order.total_amount.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                                      <span className="text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Package className="h-4 w-4 text-muted-foreground" />
-                                      <span className="text-muted-foreground">{order.order_items?.length || 0} items</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="flex flex-wrap gap-3">
-                                {getStatusActions(order).map((action, index) => (
-                                  <div key={index} className="transform transition-all duration-200 hover:scale-105">
-                                    {action}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <AdminOrdersTable 
+                orders={orders}
+                loading={loadingData}
+                selectedOrderStatus={selectedOrderStatus}
+                setSelectedOrderStatus={setSelectedOrderStatus}
+                onStatusUpdate={updateOrderStatus}
+                getStatusActions={getStatusActions}
+                getStatusColor={getStatusColor}
+              />
             </TabsContent>
 
             {/* Order Status Categories Tab */}
