@@ -68,11 +68,9 @@ const DeliveryMethodSelector = ({
     return R * c;
   };
 
-  // Calculate delivery cost based on distance from CBD
+  // Calculate delivery cost based on distance from CBD at 55 KSh per kilometer
   const calculateDeliveryCost = (distanceKm: number): number => {
-    const baseRate = 200; // KSh 200 base rate for CBD
-    const additionalRate = Math.ceil(distanceKm / 5) * 200; // KSh 200 per 5km beyond CBD
-    return baseRate + additionalRate;
+    return Math.round(distanceKm * 55); // 55 KSh per kilometer from Nairobi CBD
   };
 
   // Get coordinates for an address using OpenStreetMap Nominatim API
