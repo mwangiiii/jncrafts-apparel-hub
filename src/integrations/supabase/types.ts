@@ -210,6 +210,36 @@ export type Database = {
         }
         Relationships: []
       }
+      guest_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: unknown | null
+          last_accessed: string
+          session_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: unknown | null
+          last_accessed?: string
+          session_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: unknown | null
+          last_accessed?: string
+          session_id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       invoice_receipts: {
         Row: {
           created_at: string
@@ -551,6 +581,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -566,6 +600,10 @@ export type Database = {
       validate_discount_code: {
         Args: { p_code: string; p_order_total?: number }
         Returns: Json
+      }
+      validate_guest_session: {
+        Args: { p_session_id: string }
+        Returns: boolean
       }
     }
     Enums: {
