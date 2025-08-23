@@ -307,127 +307,292 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
         }
         
         body {
-          font-family: Arial, sans-serif;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
           max-width: 600px;
           margin: 0 auto;
-          padding: 20px;
+          padding: 30px;
           background: white;
-          color: black;
+          color: #2d3748;
+          line-height: 1.6;
+        }
+        
+        .receipt-container {
+          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+          border-radius: 16px;
+          padding: 40px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
         }
         
         .header {
           text-align: center;
-          margin-bottom: 30px;
-          border-bottom: 2px solid #000;
-          padding-bottom: 20px;
+          margin-bottom: 40px;
+          padding-bottom: 30px;
+          border-bottom: 3px solid #4299e1;
+          position: relative;
+        }
+        
+        .header::after {
+          content: '';
+          position: absolute;
+          bottom: -3px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 80px;
+          height: 3px;
+          background: linear-gradient(90deg, #4299e1, #63b3ed);
+          border-radius: 2px;
         }
         
         .logo {
-          max-width: 120px;
-          max-height: 60px;
-          margin-bottom: 10px;
+          max-width: 140px;
+          max-height: 70px;
+          margin-bottom: 15px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .company-name {
+          font-size: 28px;
+          font-weight: 700;
+          color: #2d3748;
+          margin: 15px 0 10px 0;
+          letter-spacing: -0.5px;
+        }
+        
+        .company-details {
+          font-size: 14px;
+          color: #718096;
+          margin: 5px 0;
         }
         
         .receipt-title {
-          font-size: 24px;
-          font-weight: bold;
-          margin: 20px 0;
+          background: linear-gradient(135deg, #4299e1, #63b3ed);
+          color: white;
+          font-size: 28px;
+          font-weight: 700;
+          margin: 30px -20px 30px -20px;
+          padding: 20px;
+          text-align: center;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(66, 153, 225, 0.3);
+          letter-spacing: 1px;
         }
         
         .receipt-info {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin: 20px 0;
+          gap: 30px;
+          margin: 30px 0;
+        }
+        
+        .info-column {
+          background: white;
+          padding: 25px;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          border: 1px solid #e2e8f0;
         }
         
         .info-item {
           display: flex;
           justify-content: space-between;
-          padding: 5px 0;
-          border-bottom: 1px dotted #ccc;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #e2e8f0;
+          transition: background-color 0.2s;
+        }
+        
+        .info-item:last-child {
+          border-bottom: none;
+        }
+        
+        .info-item:hover {
+          background-color: #f7fafc;
+          margin: 0 -10px;
+          padding-left: 10px;
+          padding-right: 10px;
+          border-radius: 6px;
+        }
+        
+        .info-label {
+          font-weight: 600;
+          color: #4a5568;
+          font-size: 14px;
+        }
+        
+        .info-value {
+          font-weight: 500;
+          color: #2d3748;
+          font-size: 14px;
         }
         
         .amount-paid {
-          font-size: 20px;
-          font-weight: bold;
+          background: linear-gradient(135deg, #48bb78, #68d391);
+          color: white;
+          font-size: 24px;
+          font-weight: 700;
           text-align: center;
-          margin: 30px 0;
-          padding: 20px;
-          border: 2px solid #000;
+          margin: 40px 0;
+          padding: 30px;
+          border-radius: 16px;
+          box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3);
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .amount-paid::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+          animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        
+        .amount-label {
+          font-size: 16px;
+          opacity: 0.9;
+          margin-bottom: 8px;
+          letter-spacing: 0.5px;
+        }
+        
+        .amount-value {
+          font-size: 32px;
+          font-weight: 800;
+          letter-spacing: -1px;
         }
         
         .footer {
-          margin-top: 30px;
+          margin-top: 40px;
           text-align: center;
+          padding: 25px;
+          background: #f7fafc;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+        
+        .footer-message {
+          font-size: 16px;
+          color: #4a5568;
+          font-weight: 600;
+          margin-bottom: 10px;
+        }
+        
+        .footer-note {
           font-size: 12px;
-          color: #666;
+          color: #718096;
+          margin: 5px 0;
+        }
+        
+        .status-badge {
+          display: inline-block;
+          padding: 6px 16px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .status-paid {
+          background: #c6f6d5;
+          color: #22543d;
+        }
+        
+        .status-pending {
+          background: #fef5e7;
+          color: #c05621;
+        }
+        
+        @media print {
+          .receipt-container {
+            box-shadow: none;
+            border: 1px solid #e2e8f0;
+          }
+          
+          .amount-paid::before {
+            display: none;
+          }
         }
       </style>
     </head>
     <body>
-      <div class="header">
-        ${data.companyInfo.logo ? `<img src="${data.companyInfo.logo}" alt="Company Logo" class="logo">` : ''}
-        <h2>${data.companyInfo.name}</h2>
-        <p>${data.companyInfo.address}</p>
-        <p>Phone: ${data.companyInfo.phone} | Email: ${data.companyInfo.email}</p>
-      </div>
+      <div class="receipt-container">
+        <div class="header">
+          ${data.companyInfo.logo ? `<img src="${data.companyInfo.logo}" alt="Company Logo" class="logo">` : ''}
+          <div class="company-name">${data.companyInfo.name}</div>
+          <div class="company-details">${data.companyInfo.address}</div>
+          <div class="company-details">Phone: ${data.companyInfo.phone} | Email: ${data.companyInfo.email}</div>
+        </div>
 
-      <div class="receipt-title">PAYMENT RECEIPT</div>
+        <div class="receipt-title">PAYMENT RECEIPT</div>
 
-      <div class="receipt-info">
-        <div>
-          <div class="info-item">
-            <span><strong>Receipt #:</strong></span>
-            <span>${receiptNumber}</span>
+        <div class="receipt-info">
+          <div class="info-column">
+            <div class="info-item">
+              <span class="info-label">Receipt #:</span>
+              <span class="info-value">${receiptNumber}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Date:</span>
+              <span class="info-value">${new Date().toLocaleDateString()}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Order #:</span>
+              <span class="info-value">${data.order.order_number}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Customer:</span>
+              <span class="info-value">${data.order.customer_info?.fullName || 'N/A'}</span>
+            </div>
           </div>
-          <div class="info-item">
-            <span><strong>Date:</strong></span>
-            <span>${new Date().toLocaleDateString()}</span>
-          </div>
-          <div class="info-item">
-            <span><strong>Order #:</strong></span>
-            <span>${data.order.order_number}</span>
-          </div>
-          <div class="info-item">
-            <span><strong>Customer:</strong></span>
-            <span>${data.order.customer_info?.fullName || 'N/A'}</span>
+          
+          <div class="info-column">
+            <div class="info-item">
+              <span class="info-label">Payment Method:</span>
+              <span class="info-value">Cash on Delivery</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Transaction ID:</span>
+              <span class="info-value">COD-${data.order.order_number}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Payment Status:</span>
+              <span class="info-value">
+                <span class="status-badge ${data.order.status === 'delivered' ? 'status-paid' : 'status-pending'}">
+                  ${data.order.status === 'delivered' ? 'PAID' : 'PENDING'}
+                </span>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Balance:</span>
+              <span class="info-value">KSh 0.00</span>
+            </div>
           </div>
         </div>
-        
-        <div>
-          <div class="info-item">
-            <span><strong>Payment Method:</strong></span>
-            <span>Cash on Delivery</span>
-          </div>
-          <div class="info-item">
-            <span><strong>Transaction ID:</strong></span>
-            <span>COD-${data.order.order_number}</span>
-          </div>
-          <div class="info-item">
-            <span><strong>Payment Status:</strong></span>
-            <span>${data.order.status === 'delivered' ? 'PAID' : 'PENDING'}</span>
-          </div>
-          <div class="info-item">
-            <span><strong>Balance:</strong></span>
-            <span>KSh 0.00</span>
-          </div>
+
+        <div class="amount-paid">
+          <div class="amount-label">AMOUNT PAID</div>
+          <div class="amount-value">KSh ${data.order.total_amount.toLocaleString()}</div>
         </div>
-      </div>
 
-      <div class="amount-paid">
-        <div>AMOUNT PAID</div>
-        <div>KSh ${data.order.total_amount.toLocaleString()}</div>
-      </div>
-
-      <div class="footer">
-        <p>Thank you for your payment!</p>
-        <p>This receipt serves as proof of payment.</p>
-        <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+        <div class="footer">
+          <div class="footer-message">Thank you for your payment!</div>
+          <div class="footer-note">This receipt serves as proof of payment.</div>
+          <div class="footer-note">Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</div>
+        </div>
       </div>
 
       <div class="no-print" style="text-align: center; margin-top: 20px;">
-        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px;">Print Receipt</button>
+        <button onclick="window.print()" style="padding: 12px 24px; font-size: 16px; background: #4299e1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Print Receipt</button>
       </div>
     </body>
     </html>
