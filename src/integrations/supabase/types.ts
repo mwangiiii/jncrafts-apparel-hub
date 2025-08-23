@@ -210,6 +210,36 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_receipts: {
+        Row: {
+          created_at: string
+          document_number: string
+          document_type: string
+          generated_at: string
+          generated_by: string
+          id: string
+          order_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_number: string
+          document_type: string
+          generated_at?: string
+          generated_by: string
+          id?: string
+          order_id: string
+        }
+        Update: {
+          created_at?: string
+          document_number?: string
+          document_type?: string
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          order_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string

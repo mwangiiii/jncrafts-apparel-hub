@@ -23,8 +23,17 @@ import {
   Clock,
   X,
   Edit,
-  Printer
+  Printer,
+  Download,
+  Receipt
 } from 'lucide-react';
+import { 
+  printInvoice, 
+  exportInvoicePDF, 
+  exportReceiptPDF, 
+  getCompanyInfo,
+  type InvoiceData 
+} from '@/lib/invoice-utils';
 import { 
   Breadcrumb,
   BreadcrumbItem,
@@ -55,6 +64,7 @@ const AdminOrderDetail = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [processingDocument, setProcessingDocument] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -170,6 +180,81 @@ const AdminOrderDetail = () => {
     return statusFlow[currentStatus] || [];
   };
 
+  const handlePrintInvoice = async () => {
+    if (!order || !user?.id) return;
+    
+    setProcessingDocument('print');
+    try {
+      const companyInfo = await getCompanyInfo();
+      const invoiceData: InvoiceData = { order, companyInfo };
+      
+      const invoiceNumber = await printInvoice(invoiceData, user.id);
+      toast({
+        title: "Invoice Printed",
+        description: `Invoice ${invoiceNumber} opened for printing`
+      });
+    } catch (error) {
+      console.error('Error printing invoice:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to print invoice"
+      });
+    } finally {
+      setProcessingDocument(null);
+    }
+  };
+
+  const handleExportInvoice = async () => {
+    if (!order || !user?.id) return;
+    
+    setProcessingDocument('invoice');
+    try {
+      const companyInfo = await getCompanyInfo();
+      const invoiceData: InvoiceData = { order, companyInfo };
+      
+      const invoiceNumber = await exportInvoicePDF(invoiceData, user.id);
+      toast({
+        title: "Invoice Exported",
+        description: `Invoice ${invoiceNumber} downloaded successfully`
+      });
+    } catch (error) {
+      console.error('Error exporting invoice:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to export invoice"
+      });
+    } finally {
+      setProcessingDocument(null);
+    }
+  };
+
+  const handleExportReceipt = async () => {
+    if (!order || !user?.id) return;
+    
+    setProcessingDocument('receipt');
+    try {
+      const companyInfo = await getCompanyInfo();
+      const invoiceData: InvoiceData = { order, companyInfo };
+      
+      const receiptNumber = await exportReceiptPDF(invoiceData, user.id);
+      toast({
+        title: "Receipt Exported",
+        description: `Receipt ${receiptNumber} downloaded successfully`
+      });
+    } catch (error) {
+      console.error('Error exporting receipt:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to export receipt"
+      });
+    } finally {
+      setProcessingDocument(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -230,10 +315,35 @@ const AdminOrderDetail = () => {
             <Badge className={`${getStatusColor(order.status)} text-white px-4 py-2`}>
               {order.status.toUpperCase()}
             </Badge>
-            <Button variant="outline" size="sm">
-              <Printer className="h-4 w-4 mr-2" />
-              Print Invoice
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handlePrintInvoice}
+                disabled={processingDocument === 'print'}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                {processingDocument === 'print' ? 'Printing...' : 'Print Invoice'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportInvoice}
+                disabled={processingDocument === 'invoice'}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {processingDocument === 'invoice' ? 'Exporting...' : 'Export Invoice'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportReceipt}
+                disabled={processingDocument === 'receipt'}
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                {processingDocument === 'receipt' ? 'Exporting...' : 'Export Receipt'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -493,13 +603,32 @@ const AdminOrderDetail = () => {
               </div>
 
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={handlePrintInvoice}
+                  disabled={processingDocument === 'print'}
+                >
                   <Printer className="h-4 w-4 mr-2" />
-                  Export Invoice
+                  {processingDocument === 'print' ? 'Printing...' : 'Print Invoice'}
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export Receipt
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={handleExportInvoice}
+                  disabled={processingDocument === 'invoice'}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {processingDocument === 'invoice' ? 'Exporting...' : 'Export Invoice'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={handleExportReceipt}
+                  disabled={processingDocument === 'receipt'}
+                >
+                  <Receipt className="h-4 w-4 mr-2" />
+                  {processingDocument === 'receipt' ? 'Exporting...' : 'Export Receipt'}
                 </Button>
               </div>
             </CardContent>
