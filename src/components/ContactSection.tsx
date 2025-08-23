@@ -5,13 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 const ContactSection = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     subject: "",
+    inquiryType: "",
     message: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,10 +22,10 @@ const ContactSection = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.message) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Name, Email, Phone, and Message)",
         variant: "destructive",
       });
       return;
@@ -30,21 +33,64 @@ const ContactSection = () => {
 
     setIsSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
+    // Format message for Instagram DM
+    const formattedMessage = `Hello JN Crafts team, I would like to make an inquiry/order.
+
+Full Name: ${formData.name}
+Email: ${formData.email}
+Phone: ${formData.phone}
+${formData.inquiryType ? `Inquiry Type: ${formData.inquiryType}` : ''}
+${formData.subject ? `Subject: ${formData.subject}` : ''}
+Message: ${formData.message}
+
+Looking forward to your response. Thank you!`;
+
+    try {
+      // Copy message to clipboard
+      await navigator.clipboard.writeText(formattedMessage);
+      
       toast({
-        title: "Message Sent!",
-        description: "Thank you for your message. We'll get back to you soon.",
+        title: "Redirecting to Instagram...",
+        description: "Message copied to clipboard. Paste it in the Instagram chat.",
       });
-      setFormData({ name: "", email: "", subject: "", message: "" });
+
+      // Open Instagram profile
+      setTimeout(() => {
+        window.open("https://www.instagram.com/_jncrafts?igsh=bmYzZnRqam0wank5", "_blank");
+      }, 1000);
+
+      // Reset form
+      setFormData({ 
+        name: "", 
+        email: "", 
+        phone: "", 
+        subject: "", 
+        inquiryType: "", 
+        message: "" 
+      });
+      
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not copy message to clipboard. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSelectChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      inquiryType: value
     }));
   };
 
@@ -162,6 +208,38 @@ const ContactSection = () => {
                       placeholder="your@email.com"
                       required
                     />
+                  </div>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phone">Phone *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="+254712345678"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="inquiryType">Inquiry/Order Type</Label>
+                    <Select value={formData.inquiryType} onValueChange={handleSelectChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select inquiry type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom-basket">Custom Handmade Basket</SelectItem>
+                        <SelectItem value="woven-bags">Woven Bags</SelectItem>
+                        <SelectItem value="home-decor">Home Decor Items</SelectItem>
+                        <SelectItem value="bulk-order">Bulk Order</SelectItem>
+                        <SelectItem value="general-inquiry">General Inquiry</SelectItem>
+                        <SelectItem value="shipping-delivery">Shipping & Delivery</SelectItem>
+                        <SelectItem value="custom-design">Custom Design Request</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 
