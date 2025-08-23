@@ -842,49 +842,92 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
     const invoiceNumber = await generateDocumentNumber('invoice');
     const html = createInvoiceHTML(data, invoiceNumber);
     
-    // Create temporary container optimized for PDF generation
+    console.log('Generating invoice PDF...', { invoiceNumber, orderId: data.order.id });
+    
+    // Create temporary container with better visibility for html2canvas
     const container = document.createElement('div');
     container.innerHTML = html;
     container.style.cssText = `
-      position: fixed;
-      top: -10000px;
-      left: -10000px;
-      width: 794px;
+      position: absolute;
+      top: 0;
+      left: -9999px;
+      width: 800px;
       background: white;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.4;
+      line-height: 1.6;
       color: #2d3748;
-      z-index: -9999;
-      visibility: hidden;
-      opacity: 0;
+      z-index: 1000;
+      visibility: visible;
+      opacity: 1;
       transform: scale(1);
       overflow: visible;
       box-sizing: border-box;
+      pointer-events: none;
     `;
     
     document.body.appendChild(container);
     
-    // Allow content to render properly
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for DOM to update and fonts to load
+    await new Promise(resolve => {
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => setTimeout(resolve, 300));
+      } else {
+        setTimeout(resolve, 500);
+      }
+    });
     
-    // Get actual content height
-    const actualHeight = Math.max(container.scrollHeight, container.offsetHeight, 1000);
+    // Force layout calculation
+    container.offsetHeight;
+    
+    // Get actual content dimensions
+    const actualHeight = Math.max(
+      container.scrollHeight, 
+      container.offsetHeight, 
+      container.getBoundingClientRect().height,
+      1200
+    );
+    
+    console.log('Container dimensions:', { 
+      scrollHeight: container.scrollHeight,
+      offsetHeight: container.offsetHeight,
+      actualHeight
+    });
     
     // Convert to canvas with proper settings
     const canvas = await html2canvas(container, {
-      scale: 1.5,
+      scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
-      logging: false,
-      width: 794,
+      logging: true,
+      width: 800,
       height: actualHeight,
-      windowWidth: 794,
-      windowHeight: actualHeight
+      windowWidth: 800,
+      windowHeight: actualHeight,
+      onclone: (clonedDoc) => {
+        const clonedContainer = clonedDoc.querySelector('div');
+        if (clonedContainer) {
+          clonedContainer.style.visibility = 'visible';
+          clonedContainer.style.opacity = '1';
+        }
+      }
+    });
+    
+    console.log('Canvas generated:', { 
+      width: canvas.width, 
+      height: canvas.height,
+      hasContent: canvas.width > 0 && canvas.height > 0
     });
     
     // Clean up container
-    document.body.removeChild(container);
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
+    
+    // Validate canvas
+    if (canvas.width === 0 || canvas.height === 0) {
+      throw new Error('Canvas is empty - failed to render content');
+    }
     
     // Create PDF
     const pdf = new jsPDF({
@@ -893,65 +936,89 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
       format: 'a4'
     });
     
-    // Calculate proper dimensions for A4
+    // Calculate dimensions
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
+    const margin = 15;
     const availableWidth = pdfWidth - (2 * margin);
     const availableHeight = pdfHeight - (2 * margin);
     
     const imgWidth = availableWidth;
     const imgHeight = (canvas.height * availableWidth) / canvas.width;
     
-    // Convert canvas to image
-    const imgData = canvas.toDataURL('image/png', 0.95);
+    // Convert canvas to image data
+    const imgData = canvas.toDataURL('image/png', 1.0);
     
-    // Add content to PDF - single page approach
+    console.log('PDF dimensions:', { 
+      pdfWidth, pdfHeight, 
+      imgWidth, imgHeight,
+      willFitOnOnePage: imgHeight <= availableHeight
+    });
+    
+    // Add content to PDF
     if (imgHeight <= availableHeight) {
-      // Content fits on one page
+      // Single page
       pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
     } else {
-      // Content needs multiple pages - slice the image
-      const pageHeight = availableHeight;
-      const totalPages = Math.ceil(imgHeight / pageHeight);
+      // Multiple pages
+      let remainingHeight = imgHeight;
+      let currentY = 0;
+      let pageNumber = 0;
       
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) {
+      while (remainingHeight > 0) {
+        if (pageNumber > 0) {
           pdf.addPage();
         }
         
-        const sourceY = (page * pageHeight * canvas.width) / availableWidth;
-        const sourceHeight = Math.min(pageHeight * canvas.width / availableWidth, canvas.height - sourceY);
+        const pageContentHeight = Math.min(remainingHeight, availableHeight);
+        const sourceY = (currentY * canvas.height) / imgHeight;
+        const sourceHeight = (pageContentHeight * canvas.height) / imgHeight;
         
-        // Create a temporary canvas for this page
+        // Create canvas slice for this page
         const pageCanvas = document.createElement('canvas');
         const pageCtx = pageCanvas.getContext('2d');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceHeight;
         
         if (pageCtx) {
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          
+          // Fill with white background
           pageCtx.fillStyle = '#ffffff';
           pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-          pageCtx.drawImage(canvas, 0, -sourceY);
           
-          const pageImgData = pageCanvas.toDataURL('image/png', 0.95);
-          const pageImgHeight = (sourceHeight * availableWidth) / canvas.width;
+          // Draw the slice
+          pageCtx.drawImage(
+            canvas,
+            0, sourceY, canvas.width, sourceHeight,
+            0, 0, pageCanvas.width, pageCanvas.height
+          );
           
-          pdf.addImage(pageImgData, 'PNG', margin, margin, imgWidth, pageImgHeight);
+          const pageImgData = pageCanvas.toDataURL('image/png', 1.0);
+          pdf.addImage(pageImgData, 'PNG', margin, margin, imgWidth, pageContentHeight);
         }
+        
+        remainingHeight -= pageContentHeight;
+        currentY += pageContentHeight;
+        pageNumber++;
       }
     }
     
     // Save metadata
-    await saveDocumentMetadata(data.order.id, 'invoice', invoiceNumber, userId);
+    try {
+      await saveDocumentMetadata(data.order.id, 'invoice', invoiceNumber, userId);
+    } catch (metadataError) {
+      console.warn('Failed to save metadata, but PDF was generated successfully:', metadataError);
+    }
     
     // Download PDF
     pdf.save(`JNCrafts-Invoice-${invoiceNumber}.pdf`);
     
+    console.log('Invoice PDF generated successfully:', invoiceNumber);
     return invoiceNumber;
+    
   } catch (error) {
     console.error('Error exporting invoice PDF:', error);
-    throw error;
+    throw new Error(`Failed to generate invoice PDF: ${error.message}`);
   }
 };
 
@@ -961,49 +1028,92 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
     const receiptNumber = await generateDocumentNumber('receipt');
     const html = createReceiptHTML(data, receiptNumber);
     
-    // Create temporary container optimized for PDF generation
+    console.log('Generating receipt PDF...', { receiptNumber, orderId: data.order.id });
+    
+    // Create temporary container with better visibility for html2canvas
     const container = document.createElement('div');
     container.innerHTML = html;
     container.style.cssText = `
-      position: fixed;
-      top: -10000px;
-      left: -10000px;
+      position: absolute;
+      top: 0;
+      left: -9999px;
       width: 600px;
       background: white;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       line-height: 1.4;
       color: #2d3748;
-      z-index: -9999;
-      visibility: hidden;
-      opacity: 0;
+      z-index: 1000;
+      visibility: visible;
+      opacity: 1;
       transform: scale(1);
       overflow: visible;
       box-sizing: border-box;
+      pointer-events: none;
     `;
     
     document.body.appendChild(container);
     
-    // Allow content to render properly
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for DOM to update and fonts to load
+    await new Promise(resolve => {
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => setTimeout(resolve, 300));
+      } else {
+        setTimeout(resolve, 500);
+      }
+    });
     
-    // Get actual content height
-    const actualHeight = Math.max(container.scrollHeight, container.offsetHeight, 800);
+    // Force layout calculation
+    container.offsetHeight;
+    
+    // Get actual content dimensions
+    const actualHeight = Math.max(
+      container.scrollHeight, 
+      container.offsetHeight, 
+      container.getBoundingClientRect().height,
+      800
+    );
+    
+    console.log('Container dimensions:', { 
+      scrollHeight: container.scrollHeight,
+      offsetHeight: container.offsetHeight,
+      actualHeight
+    });
     
     // Convert to canvas with proper settings
     const canvas = await html2canvas(container, {
-      scale: 1.5,
+      scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
-      logging: false,
+      logging: true,
       width: 600,
       height: actualHeight,
       windowWidth: 600,
-      windowHeight: actualHeight
+      windowHeight: actualHeight,
+      onclone: (clonedDoc) => {
+        const clonedContainer = clonedDoc.querySelector('div');
+        if (clonedContainer) {
+          clonedContainer.style.visibility = 'visible';
+          clonedContainer.style.opacity = '1';
+        }
+      }
+    });
+    
+    console.log('Canvas generated:', { 
+      width: canvas.width, 
+      height: canvas.height,
+      hasContent: canvas.width > 0 && canvas.height > 0
     });
     
     // Clean up container
-    document.body.removeChild(container);
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
+    
+    // Validate canvas
+    if (canvas.width === 0 || canvas.height === 0) {
+      throw new Error('Canvas is empty - failed to render content');
+    }
     
     // Create PDF
     const pdf = new jsPDF({
@@ -1012,46 +1122,60 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
       format: 'a4'
     });
     
-    // Calculate proper dimensions for A4 with margins
+    // Calculate dimensions for receipt (centered and properly sized)
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 20;
     const availableWidth = pdfWidth - (2 * margin);
     const availableHeight = pdfHeight - (2 * margin);
     
-    const imgWidth = Math.min(availableWidth * 0.8, availableWidth); // Slightly smaller for better appearance
+    // Make receipt 70% of available width for better proportions
+    const imgWidth = availableWidth * 0.7;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
-    // Center the receipt horizontally
+    // Center the receipt
     const xPosition = (pdfWidth - imgWidth) / 2;
     
-    // Convert canvas to image
-    const imgData = canvas.toDataURL('image/png', 0.95);
+    // Convert canvas to image data
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    
+    console.log('PDF dimensions:', { 
+      pdfWidth, pdfHeight, 
+      imgWidth, imgHeight,
+      willFitOnOnePage: imgHeight <= availableHeight
+    });
     
     // Add content to PDF - optimized for single page
     if (imgHeight <= availableHeight) {
-      // Content fits on one page - center it
-      const yPosition = (pdfHeight - imgHeight) / 2;
+      // Content fits on one page - center it vertically too
+      const yPosition = Math.max(margin, (pdfHeight - imgHeight) / 2);
       pdf.addImage(imgData, 'PNG', xPosition, yPosition, imgWidth, imgHeight);
     } else {
       // Content needs to be scaled down to fit one page
-      const scaledHeight = availableHeight;
+      const scaledHeight = availableHeight * 0.9; // Leave some margin
       const scaledWidth = (canvas.width * scaledHeight) / canvas.height;
       const scaledXPosition = (pdfWidth - scaledWidth) / 2;
+      const scaledYPosition = (pdfHeight - scaledHeight) / 2;
       
-      pdf.addImage(imgData, 'PNG', scaledXPosition, margin, scaledWidth, scaledHeight);
+      pdf.addImage(imgData, 'PNG', scaledXPosition, scaledYPosition, scaledWidth, scaledHeight);
     }
     
     // Save metadata
-    await saveDocumentMetadata(data.order.id, 'receipt', receiptNumber, userId);
+    try {
+      await saveDocumentMetadata(data.order.id, 'receipt', receiptNumber, userId);
+    } catch (metadataError) {
+      console.warn('Failed to save metadata, but PDF was generated successfully:', metadataError);
+    }
     
     // Download PDF
     pdf.save(`JNCrafts-Receipt-${receiptNumber}.pdf`);
     
+    console.log('Receipt PDF generated successfully:', receiptNumber);
     return receiptNumber;
+    
   } catch (error) {
     console.error('Error exporting receipt PDF:', error);
-    throw error;
+    throw new Error(`Failed to generate receipt PDF: ${error.message}`);
   }
 };
 
