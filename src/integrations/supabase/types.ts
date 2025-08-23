@@ -688,6 +688,10 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: boolean
       }
+      validate_guest_session_secure: {
+        Args: { p_session_id: string }
+        Returns: boolean
+      }
       verify_email_match: {
         Args: { input_email: string; stored_hash: string }
         Returns: boolean
