@@ -25,130 +25,111 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-      <div className="responsive-container">
-        <div className="flex items-center justify-between h-14 sm:h-16">
-          {/* Logo - Responsive sizing */}
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
           <div className="flex-shrink-0">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold text-foreground">
               jn<span className="text-brand-beige">CRAFTS</span>
             </h1>
           </div>
 
-          {/* Desktop Navigation - Hidden on mobile */}
-          <nav className="hidden lg:flex space-x-6 xl:space-x-8">
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex space-x-8">
             {navigation.map((item) => (
               <a
                 key={item.name}
                 href={item.href}
-                className="text-sm xl:text-base text-foreground hover:text-brand-beige transition-colors duration-300 touch-target"
+                className="text-foreground hover:text-brand-beige transition-colors duration-300"
               >
                 {item.name}
               </a>
             ))}
             {isAdmin && (
-              <Link 
-                to="/admin" 
-                className="text-sm xl:text-base text-foreground hover:text-brand-beige transition-colors duration-300 touch-target"
-              >
+              <Link to="/admin" className="text-foreground hover:text-brand-beige transition-colors duration-300">
                 Admin
               </Link>
             )}
           </nav>
 
-          {/* Right side controls - Mobile optimized */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Currency Selector - Hidden on small screens */}
-            <div className="hidden sm:block">
-              <CurrencySelector />
-            </div>
-            
-            {/* Wishlist - Only show for logged in users */}
+          {/* Currency, Cart, User Menu and Mobile Menu */}
+          <div className="flex items-center space-x-4">
+            <CurrencySelector />
             {user && (
               <Link to="/wishlist">
-                <Button variant="ghost" size="icon" className="touch-target tap-highlight">
-                  <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="sr-only">Wishlist</span>
+                <Button variant="ghost" size="icon">
+                  <Heart className="h-5 w-5" />
                 </Button>
               </Link>
             )}
             
-            {/* Cart Button - Touch optimized */}
             <Button
               variant="ghost"
               size="icon"
               onClick={onCartClick}
-              className="relative touch-target tap-highlight"
-              aria-label={`Shopping cart with ${cartItems} items`}
+              className="relative"
             >
-              <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" />
+              <ShoppingBag className="h-5 w-5" />
               {cartItems > 0 && (
-                <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center font-medium">
-                  {cartItems > 99 ? '99+' : cartItems}
+                <span className="absolute -top-2 -right-2 bg-brand-beige text-brand-beige-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItems}
                 </span>
               )}
             </Button>
 
-            {/* User Menu/Auth Button */}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="touch-target tap-highlight">
-                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="sr-only">User menu</span>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-background border-border shadow-lg">
-                  <DropdownMenuItem className="cursor-pointer">
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
                   {isAdmin && (
                     <>
-                      <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
                         <Settings className="mr-2 h-4 w-4" />
                         Admin Dashboard
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/admin/products')} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate('/admin/products')}>
                         <Settings className="mr-2 h-4 w-4" />
                         Manage Products
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate('/admin/messages')} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => navigate('/admin/messages')}>
                         <Settings className="mr-2 h-4 w-4" />
                         Admin Messages
                       </DropdownMenuItem>
                     </>
                   )}
                   {!isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate('/messages')} className="cursor-pointer">
+                    <DropdownMenuItem onClick={() => navigate('/messages')}>
                       <User className="mr-2 h-4 w-4" />
                       My Messages
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button 
-                size="sm" 
-                onClick={() => navigate('/auth')}
-                className="text-xs sm:text-sm px-2 sm:px-4 touch-target tap-highlight"
-              >
+              <Button size="sm" onClick={() => navigate('/auth')}>
                 Sign In
               </Button>
             )}
 
-            {/* Mobile menu toggle - Only visible on mobile */}
+            {/* Mobile menu button */}
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden touch-target tap-highlight"
+              className="md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -159,15 +140,15 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
           </div>
         </div>
 
-        {/* Mobile Navigation Menu - Responsive */}
+        {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className={`lg:hidden border-t border-border mobile-nav ${isMobileMenuOpen ? 'mobile-nav-enter' : 'mobile-nav-exit'}`}>
-            <nav className="py-4 space-y-1 animate-fade-in">
+          <div className="md:hidden border-t border-border">
+            <nav className="py-4 space-y-2">
               {navigation.map((item) => (
                 <a
                   key={item.name}
                   href={item.href}
-                  className="block px-4 py-3 text-base text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300 touch-target tap-highlight"
+                  className="block px-4 py-2 text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.name}
@@ -176,18 +157,12 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
               {isAdmin && (
                 <Link 
                   to="/admin" 
-                  className="block px-4 py-3 text-base text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300 touch-target tap-highlight"
+                  className="block px-4 py-2 text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Admin Dashboard
+                  Admin
                 </Link>
               )}
-              
-              {/* Currency selector in mobile menu */}
-              <div className="px-4 py-3 border-t border-border sm:hidden">
-                <div className="text-sm font-medium text-muted-foreground mb-2">Currency</div>
-                <CurrencySelector />
-              </div>
             </nav>
           </div>
         )}

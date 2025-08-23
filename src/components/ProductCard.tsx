@@ -52,55 +52,45 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const stockStatus = getStockStatus();
 
   return (
-    <Card className="group overflow-hidden hover-lift hover:shadow-xl transition-all duration-300 w-full">
-      {/* Product Image Container - Responsive */}
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
       <div className="relative overflow-hidden">
         <div 
-          className="cursor-pointer tap-highlight"
+          className="cursor-pointer"
           onClick={() => navigate(`/product/${product.id}`)}
         >
           <img
             src={product.images[0] || '/placeholder.svg'}
-            alt={`${product.name} - ${product.category} from jnCrafts collection`}
-            className="responsive-product-img transition-transform duration-300 group-hover:scale-110"
-            loading="lazy"
-            srcSet={product.images[0] ? `${product.images[0]} 1x` : undefined}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            alt={product.name}
+            className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-110"
           />
         </div>
-        
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
-        {/* Action buttons overlay - Mobile optimized */}
+        {/* Action buttons overlay */}
         <div className="absolute top-2 right-2 flex flex-col gap-2">
           <Button
             size="sm"
             variant="outline"
-            className="touch-target tap-highlight p-2 bg-background/90 backdrop-blur-sm border-border/50 hover:bg-background shadow-sm"
+            className="p-2 bg-background/80 backdrop-blur-sm"
             onClick={() => navigate(`/product/${product.id}`)}
-            aria-label={`View details for ${product.name}`}
           >
-            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+            <Eye className="h-4 w-4" />
           </Button>
-          
           {user && (
             <>
               <Button
                 size="sm"
                 variant="outline"
-                className="touch-target tap-highlight p-2 bg-background/90 backdrop-blur-sm border-border/50 hover:bg-background shadow-sm"
+                className="p-2 bg-background/80 backdrop-blur-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleWishlistToggle();
                 }}
-                aria-label={isInWishlist(product.id) ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
               >
                 <Heart 
-                  className={`h-3 w-3 sm:h-4 sm:w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                  className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
                 />
               </Button>
-              
               <div className="relative">
                 <ChatWidget 
                   productId={product.id} 
@@ -111,40 +101,37 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           )}
         </div>
 
-        {/* Stock status badge - Mobile optimized */}
+        {/* Stock status badge */}
         {stockStatus && (
           <div className="absolute bottom-2 left-2">
-            <Badge variant={stockStatus.variant} className="text-xs px-2 py-1">
+            <Badge variant={stockStatus.variant} className="text-xs">
               {stockStatus.message}
             </Badge>
           </div>
         )}
       </div>
       
-      {/* Product Details - Mobile optimized layout */}
-      <CardContent className="p-3 sm:p-4 lg:p-6">
-        <div className="space-y-3 sm:space-y-4">
-          {/* Product Info */}
+      <CardContent className="p-6">
+        <div className="space-y-4">
           <div>
-            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground line-clamp-2">{product.name}</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground capitalize">{product.category}</p>
-            <p className="text-lg sm:text-xl lg:text-2xl font-bold text-brand-beige mt-1 sm:mt-2">{formatPrice(product.price)}</p>
+            <h3 className="text-xl font-semibold text-foreground">{product.name}</h3>
+            <p className="text-sm text-muted-foreground">{product.category}</p>
+            <p className="text-2xl font-bold text-brand-beige mt-2">{formatPrice(product.price)}</p>
           </div>
 
-          {/* Size Selection - Mobile optimized */}
+          {/* Size Selection */}
           <div>
-            <label className="text-xs sm:text-sm font-medium text-foreground block mb-2">Size</label>
-            <div className="flex flex-wrap gap-1 sm:gap-2">
+            <label className="text-sm font-medium text-foreground block mb-2">Size</label>
+            <div className="flex gap-2">
               {product.sizes.map((size) => (
                 <button
                   key={size}
                   onClick={() => setSelectedSize(size)}
-                  className={`touch-target tap-highlight px-2 sm:px-3 py-1 border rounded text-xs sm:text-sm transition-colors ${
+                  className={`px-3 py-1 border rounded text-sm transition-colors ${
                     selectedSize === size
                       ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
                       : "border-border hover:border-brand-beige"
                   }`}
-                  aria-label={`Select size ${size}`}
                 >
                   {size}
                 </button>
@@ -152,20 +139,19 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             </div>
           </div>
 
-          {/* Color Selection - Mobile optimized */}
+          {/* Color Selection */}
           <div>
-            <label className="text-xs sm:text-sm font-medium text-foreground block mb-2">Color</label>
-            <div className="flex flex-wrap gap-1 sm:gap-2">
+            <label className="text-sm font-medium text-foreground block mb-2">Color</label>
+            <div className="flex gap-2">
               {product.colors.map((color) => (
                 <button
                   key={color}
                   onClick={() => setSelectedColor(color)}
-                  className={`touch-target tap-highlight px-2 sm:px-3 py-1 border rounded text-xs sm:text-sm transition-colors capitalize ${
+                  className={`px-3 py-1 border rounded text-sm transition-colors capitalize ${
                     selectedColor === color
                       ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
                       : "border-border hover:border-brand-beige"
                   }`}
-                  aria-label={`Select color ${color}`}
                 >
                   {color}
                 </button>
@@ -173,47 +159,41 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             </div>
           </div>
 
-          {/* Quantity Selector - Mobile optimized */}
+          {/* Quantity */}
           <div>
-            <label className="text-xs sm:text-sm font-medium text-foreground block mb-2">Quantity</label>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <label className="text-sm font-medium text-foreground block mb-2">Quantity</label>
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="h-8 w-8 touch-target tap-highlight"
-                aria-label="Decrease quantity"
+                className="h-8 w-8"
               >
-                <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                <Minus className="h-4 w-4" />
               </Button>
-              <span className="text-sm sm:text-lg font-medium w-8 text-center" aria-label={`Quantity: ${quantity}`}>
-                {quantity}
-              </span>
+              <span className="text-lg font-medium w-8 text-center">{quantity}</span>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setQuantity(quantity + 1)}
-                className="h-8 w-8 touch-target tap-highlight"
-                aria-label="Increase quantity"
+                className="h-8 w-8"
               >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Add to Cart Button - Full width on mobile */}
           <Button 
             onClick={handleAddToCart}
-            className="w-full touch-target tap-highlight text-sm sm:text-base py-2 sm:py-3"
+            className="w-full"
             variant="brand"
             size="lg"
-            disabled={product.stock_quantity === 0}
-            aria-label={`Add ${product.name} to cart`}
           >
-            {product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+            Add to Cart
           </Button>
         </div>
       </CardContent>
+      
     </Card>
   );
 };

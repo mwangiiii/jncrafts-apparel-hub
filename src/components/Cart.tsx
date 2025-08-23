@@ -339,7 +339,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   return (
     <div>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-md lg:max-w-lg flex flex-col overflow-hidden">
+        <SheetContent className="w-full sm:max-w-lg flex flex-col">
           <SheetHeader className="flex-shrink-0">
             <SheetTitle className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" />
@@ -350,7 +350,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
             </SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="flex-1 -mx-6 px-6">
+          <ScrollArea className="flex-1 px-6 pb-6">
             {!user && (
               <div className="bg-accent/10 border border-accent rounded-lg p-4 mb-6">
                 <div className="flex items-center gap-2 text-accent mb-2">
@@ -363,50 +363,47 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
               </div>
             )}
             
-            <div className="space-y-4 pb-6">
+            <div className="space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 sm:gap-4 border-b pb-4 last:border-b-0">
+                <div key={item.id} className="flex items-center gap-4 border-b pb-4">
                   <img 
                     src={item.product_image || '/placeholder.svg'} 
                     alt={item.product_name}
-                    className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg flex-shrink-0"
+                    className="w-16 h-16 object-cover rounded-lg"
                   />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm sm:text-base text-foreground truncate">{item.product_name}</h4>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{item.product_name}</h4>
+                    <p className="text-sm text-muted-foreground">
                       {item.size} • {item.color}
                     </p>
-                    <p className="font-semibold text-sm sm:text-base text-brand-beige">{formatPrice(item.price)}</p>
+                    <p className="font-semibold">{formatPrice(item.price)}</p>
                   </div>
-                  <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-6 w-6 sm:h-8 sm:w-8 touch-target tap-highlight"
+                      className="h-8 w-8"
                       onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                      aria-label="Decrease quantity"
                     >
-                      <Minus className="h-2 w-2 sm:h-3 sm:w-3" />
+                      <Minus className="h-3 w-3" />
                     </Button>
-                    <span className="w-6 sm:w-8 text-center text-xs sm:text-sm font-medium">{item.quantity}</span>
+                    <span className="w-8 text-center">{item.quantity}</span>
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-6 w-6 sm:h-8 sm:w-8 touch-target tap-highlight"
+                      className="h-8 w-8"
                       onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                      aria-label="Increase quantity"
                     >
-                      <Plus className="h-2 w-2 sm:h-3 sm:w-3" />
+                      <Plus className="h-3 w-3" />
                     </Button>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => onRemoveItem(item.id)}
-                    className="text-destructive hover:text-destructive h-6 w-6 sm:h-8 sm:w-8 touch-target tap-highlight"
-                    aria-label="Remove item"
+                    className="text-destructive hover:text-destructive"
                   >
-                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
@@ -441,9 +438,9 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                   <div className="space-y-6 border-t pt-6">
                     <h3 className="text-lg font-semibold">Customer Information</h3>
                     
-                    <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
+                        <Label htmlFor="fullName">Full Name</Label>
                         <Input
                           id="fullName"
                           value={customerInfo.fullName}
@@ -451,12 +448,11 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                             setCustomerInfo((prev) => ({ ...prev, fullName: e.target.value }))
                           }
                           placeholder="Enter your full name"
-                          className="mt-1 touch-target"
                         />
                       </div>
                       
                       <div>
-                        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                        <Label htmlFor="email">Email</Label>
                         <Input
                           id="email"
                           type="email"
@@ -466,12 +462,11 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                           }
                           placeholder="Enter your email"
                           disabled
-                          className="mt-1 touch-target"
                         />
                       </div>
                       
                       <div>
-                        <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
+                        <Label htmlFor="phone">Phone Number</Label>
                         <Input
                           id="phone"
                           value={customerInfo.phone}
@@ -479,7 +474,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                             setCustomerInfo((prev) => ({ ...prev, phone: e.target.value }))
                           }
                           placeholder="Enter your phone number"
-                          className="mt-1 touch-target"
                         />
                       </div>
                     </div>
