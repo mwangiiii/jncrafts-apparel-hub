@@ -120,7 +120,7 @@ export const validateContactForm = (data: ContactFormData): { isValid: boolean; 
     /<embed/i
   ];
   
-  const allText = `${data.name} ${data.email} ${data.subject} ${data.message}`;
+  const allText = `${data.name} ${data.email} ${data.subject} ${data.inquiryType} ${data.message}`;
   for (const pattern of suspiciousPatterns) {
     if (pattern.test(allText)) {
       errors.push('Invalid characters detected in form data');
