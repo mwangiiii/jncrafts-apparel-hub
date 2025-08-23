@@ -15,8 +15,8 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-foreground text-background">
-      <div className="container mx-auto px-4 py-16">
+    <footer className="bg-foreground text-background w-full">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-1">
@@ -68,13 +68,13 @@ const Footer = () => {
             <p className="text-background/80 mb-6">
               Subscribe to get updates on new collections and exclusive offers.
             </p>
-            <div className="flex max-w-md mx-auto gap-2">
+            <div className="flex flex-col sm:flex-row max-w-md mx-auto gap-2">
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-4 py-2 rounded-md text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-brand-beige"
+                className="flex-1 px-4 py-2 rounded-md text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-brand-beige min-w-0"
               />
-              <button className="px-6 py-2 bg-brand-beige text-brand-beige-foreground rounded-md hover:bg-brand-beige/90 transition-colors duration-300">
+              <button className="px-4 sm:px-6 py-2 bg-brand-beige text-brand-beige-foreground rounded-md hover:bg-brand-beige/90 transition-colors duration-300 whitespace-nowrap">
                 Subscribe
               </button>
             </div>

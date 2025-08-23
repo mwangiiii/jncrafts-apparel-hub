@@ -24,8 +24,8 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-      <div className="w-full max-w-none px-2 sm:px-4">
+    <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b border-border">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between min-h-[64px] h-16">
           {/* Logo - Responsive */}
           <div className="flex-shrink-0">
