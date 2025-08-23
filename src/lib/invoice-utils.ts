@@ -385,9 +385,9 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
             </div>
             <div class="company-tagline">Premium Streetwear & Fashion</div>
             <div class="company-details">
-              Nairobi, Kenya<br>
-              Email: info@jncrafts.com<br>
-              Phone: +254 700 000 000<br>
+              Nairobi CBD, Kenya 00100<br>
+              Email: craftsjn@gmail.com<br>
+              Phone: +254710573084<br>
               Web: www.jncrafts.com
             </div>
           </div>
@@ -473,7 +473,7 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
         <div class="footer">
           <div class="thank-you">Thank you for choosing jnCrafts!</div>
           <div class="contact-info">
-            For any inquiries, please contact us at <strong>info@jncrafts.com</strong> or visit <strong>www.jncrafts.com</strong><br>
+            For any inquiries, please contact us at <strong>craftsjn@gmail.com</strong> or visit <strong>www.jncrafts.com</strong><br>
             Follow us on social media <strong>@jncrafts</strong> for latest collections and updates<br><br>
             <em>This invoice was generated on ${currentDate} and serves as your official receipt.</em>
           </div>
@@ -795,7 +795,7 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
             Your payment has been successfully processed and your order is being prepared.<br>
             You will receive order updates via email and SMS.<br><br>
             <strong>jnCrafts Premium Streetwear</strong><br>
-            Email: <strong>info@jncrafts.com</strong> | Phone: <strong>+254 700 000 000</strong><br>
+            Email: <strong>craftsjn@gmail.com</strong> | Phone: <strong>+254710573084</strong><br>
             Visit: <strong>www.jncrafts.com</strong> | Follow: <strong>@jncrafts</strong><br><br>
             <em>Receipt generated on ${currentDate} at ${currentTime}</em>
           </div>
@@ -1185,9 +1185,9 @@ export const getCompanyInfo = async () => {
   // This should fetch from your settings table
   return {
     name: 'JN Crafts',
-    address: '123 Business St, Nairobi, Kenya',
-    phone: '+254 700 000 000',
-    email: 'info@jncrafts.com',
+    address: 'Nairobi CBD, Kenya 00100',
+    phone: '+254710573084',
+    email: 'craftsjn@gmail.com',
     logo: '/lovable-uploads/company-logo.png' // You can add this to your uploads
   };
 };

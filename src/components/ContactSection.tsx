@@ -57,10 +57,10 @@ const ContactSection = () => {
 
     setIsSubmitting(true);
     
-    // Format message for Instagram DM using sanitized data
+    // Format message for both email and WhatsApp using sanitized data
     const formattedMessage = `Hello JN Crafts team, I would like to make an inquiry/order.
 
-Full Name: ${sanitizedData.name}
+Name: ${sanitizedData.name}
 Email: ${sanitizedData.email}
 Phone: ${sanitizedData.phone}
 ${sanitizedData.inquiryType ? `Inquiry Type: ${sanitizedData.inquiryType}` : ''}
@@ -70,17 +70,35 @@ Message: ${sanitizedData.message}
 Looking forward to your response. Thank you!`;
 
     try {
-      // Copy message to clipboard
-      await navigator.clipboard.writeText(formattedMessage);
-      
-      toast({
-        title: "Redirecting to Instagram...",
-        description: "Message copied to clipboard. Paste it in the Instagram chat.",
+      // Send email via edge function
+      const { supabase } = await import("@/integrations/supabase/client");
+      const emailResponse = await supabase.functions.invoke('send-contact-email', {
+        body: {
+          name: sanitizedData.name,
+          email: sanitizedData.email,
+          phone: sanitizedData.phone,
+          subject: sanitizedData.subject,
+          inquiryType: sanitizedData.inquiryType,
+          message: sanitizedData.message
+        }
       });
 
-      // Open Instagram profile
+      if (emailResponse.error) {
+        throw new Error('Failed to send email');
+      }
+
+      // Format WhatsApp message with proper encoding
+      const whatsappMessage = encodeURIComponent(formattedMessage);
+      const whatsappUrl = `https://wa.me/254710573084?text=${whatsappMessage}`;
+      
+      toast({
+        title: "Message Sent Successfully!",
+        description: "Opening WhatsApp to send additional copy...",
+      });
+
+      // Open WhatsApp after a brief delay
       setTimeout(() => {
-        window.open("https://www.instagram.com/_jncrafts?igsh=bmYzZnRqam0wank5", "_blank");
+        window.open(whatsappUrl, "_blank");
       }, 1000);
 
       // Reset form
@@ -122,19 +140,19 @@ Looking forward to your response. Thank you!`;
     {
       icon: <Mail className="h-6 w-6" />,
       title: "Email",
-      info: "info@jncrafts.com",
+      info: "craftsjn@gmail.com",
       description: "Send us an email anytime"
     },
     {
       icon: <Phone className="h-6 w-6" />,
       title: "Phone",
-      info: "+1 (555) 123-4567",
+      info: "+254710573084",
       description: "Call us during business hours"
     },
     {
       icon: <MapPin className="h-6 w-6" />,
       title: "Address",
-      info: "123 Fashion Street, NYC 10001",
+      info: "Nairobi CBD, Kenya 00100",
       description: "Visit our showroom"
     }
   ];

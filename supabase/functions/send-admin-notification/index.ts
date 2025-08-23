@@ -199,8 +199,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: "jnCrafts Admin <admin@jncrafts.com>",
-      to: ["mwangiwanjiku033@gmail.com"], // Admin email - you can make this configurable
+      from: "jnCrafts Admin <craftsjn@gmail.com>",
+      to: ["craftsjn@gmail.com"], // Admin email - updated to new address
       subject: subject,
       html: emailHtml,
     });
