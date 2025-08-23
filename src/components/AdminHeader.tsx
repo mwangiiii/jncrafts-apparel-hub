@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut, Home, BarChart3, Package, MessageSquare, Settings, Shield } from "lucide-react";
+import { Menu, X, User, LogOut, Home, BarChart3, Package, MessageSquare, Settings, Shield, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -15,6 +15,7 @@ const AdminHeader = () => {
   const adminNavigation = [
     { name: "Dashboard", href: "/admin", icon: BarChart3 },
     { name: "Products", href: "/admin/products", icon: Package },
+    { name: "Categories", href: "/admin/categories", icon: Tags },
     { name: "Messages", href: "/admin/messages", icon: MessageSquare },
   ];
 
@@ -98,6 +99,10 @@ const AdminHeader = () => {
                   <DropdownMenuItem onClick={() => navigate('/admin/products')}>
                     <Package className="mr-2 h-4 w-4" />
                     Manage Products
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/admin/categories')}>
+                    <Tags className="mr-2 h-4 w-4" />
+                    Manage Categories
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/admin/messages')}>
                     <MessageSquare className="mr-2 h-4 w-4" />

@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminOrderDetail from "./pages/AdminOrderDetail";
 import AdminProducts from "./pages/AdminProducts";
 import AdminMessages from "./pages/AdminMessages";
+import AdminCategories from "./pages/AdminCategories";
 import UserMessages from "./pages/UserMessages";
 import Wishlist from "./pages/Wishlist";
 import ProductDetail from "./pages/ProductDetail";
@@ -25,6 +26,7 @@ const App = () => (
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/order/:orderId" element={<AdminOrderDetail />} />
       <Route path="/admin/products" element={<AdminProducts />} />
+      <Route path="/admin/categories" element={<AdminCategories />} />
       <Route path="/admin/messages" element={<AdminMessages />} />
       <Route path="/messages" element={<UserMessages />} />
       <Route path="/messages/:conversationId" element={<UserMessages />} />
