@@ -14,9 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff, ArrowUp, ArrowDown, Clock, AlertCircle, BarChart3, Target, ShoppingBag, Zap, Calendar, MapPin } from 'lucide-react';
+import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plus, Edit2, Trash2, EyeOff, ArrowUp, ArrowDown, Clock, AlertCircle, BarChart3, Target, ShoppingBag, Zap, Calendar, MapPin, Tag } from 'lucide-react';
 import adminAnalytics from '@/assets/admin-analytics.jpg';
 import orderFlow from '@/assets/order-flow.jpg';
+import SpecialOffersManager from '@/components/admin/SpecialOffersManager';
 
 interface Order {
   id: string;
@@ -1603,6 +1604,16 @@ const AdminDashboard = () => {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Special Offers Tab */}
+            <TabsContent value="special-offers" className="space-y-6 animate-fade-in-up">
+              <SpecialOffersManager />
+            </TabsContent>
+
+            {/* Special Offers Tab */}
+            <TabsContent value="special-offers" className="space-y-6 animate-fade-in-up">
+              <SpecialOffersManager />
             </TabsContent>
 
             {/* Analytics Tab */}

@@ -105,8 +105,49 @@ export type Database = {
           },
         ]
       }
+      discount_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          discount_id: string
+          id: string
+          product_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          discount_id: string
+          id?: string
+          product_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          discount_id?: string
+          id?: string
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_products_discount_id_fkey"
+            columns: ["discount_id"]
+            isOneToOne: false
+            referencedRelation: "discounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discounts: {
         Row: {
+          applies_to: string | null
+          banner_message: string | null
           code: string
           created_at: string
           current_uses: number | null
@@ -119,10 +160,15 @@ export type Database = {
           max_uses: number | null
           min_order_amount: number | null
           name: string
+          requires_code: boolean | null
           start_date: string | null
           updated_at: string
+          usage_limit: number | null
+          used_count: number | null
         }
         Insert: {
+          applies_to?: string | null
+          banner_message?: string | null
           code: string
           created_at?: string
           current_uses?: number | null
@@ -135,10 +181,15 @@ export type Database = {
           max_uses?: number | null
           min_order_amount?: number | null
           name: string
+          requires_code?: boolean | null
           start_date?: string | null
           updated_at?: string
+          usage_limit?: number | null
+          used_count?: number | null
         }
         Update: {
+          applies_to?: string | null
+          banner_message?: string | null
           code?: string
           created_at?: string
           current_uses?: number | null
@@ -151,8 +202,11 @@ export type Database = {
           max_uses?: number | null
           min_order_amount?: number | null
           name?: string
+          requires_code?: boolean | null
           start_date?: string | null
           updated_at?: string
+          usage_limit?: number | null
+          used_count?: number | null
         }
         Relationships: []
       }
@@ -358,6 +412,33 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       stock_alerts: {
         Row: {
           created_at: string
@@ -446,6 +527,10 @@ export type Database = {
       }
       is_admin: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_product_eligible_for_discount: {
+        Args: { p_discount_id: string; p_product_id: string }
         Returns: boolean
       }
     }
