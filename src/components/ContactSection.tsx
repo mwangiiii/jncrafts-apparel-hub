@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { validateContactForm, sanitizeContactForm, checkRateLimit } from "@/lib/security-utils";
 
 const ContactSection = () => {
   const [formData, setFormData] = useState({
@@ -22,10 +23,26 @@ const ContactSection = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.phone || !formData.message) {
+    
+    // Rate limiting check
+    if (!checkRateLimit(`contact_${formData.email}`, 3, 300000)) { // 3 attempts per 5 minutes
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields (Name, Email, Phone, and Message)",
+        title: "Too Many Requests",
+        description: "Please wait before submitting another message.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Sanitize form data
+    const sanitizedData = sanitizeContactForm(formData);
+    
+    // Validate form data
+    const validation = validateContactForm(sanitizedData);
+    if (!validation.isValid) {
+      toast({
+        title: "Invalid Form Data",
+        description: validation.errors.join('. '),
         variant: "destructive",
       });
       return;
@@ -33,15 +50,15 @@ const ContactSection = () => {
 
     setIsSubmitting(true);
     
-    // Format message for Instagram DM
+    // Format message for Instagram DM using sanitized data
     const formattedMessage = `Hello JN Crafts team, I would like to make an inquiry/order.
 
-Full Name: ${formData.name}
-Email: ${formData.email}
-Phone: ${formData.phone}
-${formData.inquiryType ? `Inquiry Type: ${formData.inquiryType}` : ''}
-${formData.subject ? `Subject: ${formData.subject}` : ''}
-Message: ${formData.message}
+Full Name: ${sanitizedData.name}
+Email: ${sanitizedData.email}
+Phone: ${sanitizedData.phone}
+${sanitizedData.inquiryType ? `Inquiry Type: ${formData.inquiryType}` : ''}
+${sanitizedData.subject ? `Subject: ${sanitizedData.subject}` : ''}
+Message: ${sanitizedData.message}
 
 Looking forward to your response. Thank you!`;
 

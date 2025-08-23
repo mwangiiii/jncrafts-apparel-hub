@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { supabase } from '@/integrations/supabase/client';
+import { escapeHtml } from './security-utils';
 
 export interface InvoiceData {
   order: {
@@ -392,9 +393,9 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
           </div>
           <div class="invoice-details">
             <div class="invoice-title">INVOICE</div>
-            <div class="invoice-number">#${invoiceNumber}</div>
-            <p><strong>Date:</strong> ${currentDate}</p>
-            <div class="status-badge">${data.order.status.toUpperCase()}</div>
+            <div class="invoice-number">#${escapeHtml(invoiceNumber)}</div>
+            <p><strong>Date:</strong> ${escapeHtml(currentDate)}</p>
+            <div class="status-badge">${escapeHtml(data.order.status.toUpperCase())}</div>
           </div>
         </div>
 
@@ -402,13 +403,13 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
           <div class="section-title">Customer Information</div>
           <div class="customer-grid">
             <div class="customer-info">
-              <p><strong>Name:</strong> ${data.order.customer_info.fullName}</p>
-              <p><strong>Email:</strong> ${data.order.customer_info.email}</p>
-              <p><strong>Phone:</strong> ${data.order.customer_info.phone}</p>
+              <p><strong>Name:</strong> ${escapeHtml(data.order.customer_info.fullName)}</p>
+              <p><strong>Email:</strong> ${escapeHtml(data.order.customer_info.email)}</p>
+              <p><strong>Phone:</strong> ${escapeHtml(data.order.customer_info.phone)}</p>
             </div>
             <div class="customer-info">
-              <p><strong>Order #:</strong> ${data.order.order_number}</p>
-              <p><strong>Order Date:</strong> ${new Date(data.order.created_at).toLocaleDateString()}</p>
+              <p><strong>Order #:</strong> ${escapeHtml(data.order.order_number)}</p>
+              <p><strong>Order Date:</strong> ${escapeHtml(new Date(data.order.created_at).toLocaleDateString())}</p>
               <p><strong>Payment Status:</strong> <span class="brand-gradient">Paid</span></p>
             </div>
           </div>
@@ -417,9 +418,9 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
         ${data.order.shipping_address ? `
         <div class="delivery-section">
           <div class="section-title">Shipping Address</div>
-          <p><strong>${data.order.shipping_address.address}</strong></p>
-          <p>${data.order.shipping_address.city}, ${data.order.shipping_address.county}</p>
-          <p>${data.order.shipping_address.country}</p>
+          <p><strong>${escapeHtml(data.order.shipping_address.address)}</strong></p>
+          <p>${escapeHtml(data.order.shipping_address.city)}, ${escapeHtml(data.order.shipping_address.county)}</p>
+          <p>${escapeHtml(data.order.shipping_address.country)}</p>
         </div>
         ` : ''}
 
@@ -437,12 +438,12 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
           <tbody>
             ${data.order.order_items.map((item: any) => `
               <tr>
-                <td class="font-medium">${item.product_name}</td>
-                <td><span class="font-medium">${item.size}</span></td>
-                <td><span class="font-medium">${item.color}</span></td>
-                <td class="text-right font-medium">${item.quantity}</td>
-                <td class="text-right">KSh ${Number(item.price).toFixed(2)}</td>
-                <td class="text-right font-medium">KSh ${(Number(item.price) * item.quantity).toFixed(2)}</td>
+                <td class="font-medium">${escapeHtml(item.product_name)}</td>
+                <td><span class="font-medium">${escapeHtml(item.size)}</span></td>
+                <td><span class="font-medium">${escapeHtml(item.color)}</span></td>
+                <td class="text-right font-medium">${escapeHtml(String(item.quantity))}</td>
+                <td class="text-right">KSh ${escapeHtml(Number(item.price).toFixed(2))}</td>
+                <td class="text-right font-medium">KSh ${escapeHtml((Number(item.price) * item.quantity).toFixed(2))}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -455,8 +456,8 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
           </div>
           ${data.order.discount_amount > 0 ? `
           <div class="totals-row">
-            <span>Discount${data.order.discount_code ? ` (${data.order.discount_code})` : ''}:</span>
-            <span style="color: #e53e3e;">-KSh ${Number(data.order.discount_amount).toFixed(2)}</span>
+            <span>Discount${data.order.discount_code ? ` (${escapeHtml(data.order.discount_code)})` : ''}:</span>
+            <span style="color: #e53e3e;">-KSh ${escapeHtml(Number(data.order.discount_amount).toFixed(2))}</span>
           </div>
           ` : ''}
           <div class="totals-row">
