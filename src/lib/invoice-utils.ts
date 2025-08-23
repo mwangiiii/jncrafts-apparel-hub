@@ -842,45 +842,43 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
     const invoiceNumber = await generateDocumentNumber('invoice');
     const html = createInvoiceHTML(data, invoiceNumber);
     
-    // Create temporary container with proper styling
+    // Create temporary container with proper styling for rendering
     const container = document.createElement('div');
     container.innerHTML = html;
     container.style.cssText = `
-      position: fixed;
-      top: -200vh;
-      left: -200vw;
-      width: 210mm;
-      min-height: 297mm;
+      position: absolute;
+      top: 0;
+      left: -100vw;
+      width: 800px;
+      min-height: 1100px;
       background: white;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       line-height: 1.6;
       color: #2d3748;
-      z-index: -9999;
-      visibility: hidden;
-      opacity: 0;
+      z-index: -1000;
+      pointer-events: none;
+      overflow: visible;
       transform: scale(1);
+      padding: 0;
+      margin: 0;
     `;
     
     document.body.appendChild(container);
     
-    // Wait for fonts and styles to load
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for DOM to settle and fonts to load
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Convert to canvas with high quality settings
+    // Convert to canvas with optimized settings
     const canvas = await html2canvas(container, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
       logging: false,
-      width: container.scrollWidth,
-      height: container.scrollHeight,
-      x: 0,
-      y: 0,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: container.scrollWidth,
-      windowHeight: container.scrollHeight
+      width: 800,
+      height: container.offsetHeight || 1100,
+      ignoreElements: () => false,
+      removeContainer: false
     });
     
     // Clean up immediately after canvas creation
@@ -935,45 +933,43 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
     const receiptNumber = await generateDocumentNumber('receipt');
     const html = createReceiptHTML(data, receiptNumber);
     
-    // Create temporary container with proper styling
+    // Create temporary container with proper styling for rendering
     const container = document.createElement('div');
     container.innerHTML = html;
     container.style.cssText = `
-      position: fixed;
-      top: -200vh;
-      left: -200vw;
-      width: 180mm;
-      min-height: 250mm;
+      position: absolute;
+      top: 0;
+      left: -100vw;
+      width: 600px;
+      min-height: 800px;
       background: white;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       line-height: 1.5;
       color: #2d3748;
-      z-index: -9999;
-      visibility: hidden;
-      opacity: 0;
+      z-index: -1000;
+      pointer-events: none;
+      overflow: visible;
       transform: scale(1);
+      padding: 0;
+      margin: 0;
     `;
     
     document.body.appendChild(container);
     
-    // Wait for fonts and styles to load
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for DOM to settle and fonts to load
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Convert to canvas with high quality settings
+    // Convert to canvas with optimized settings
     const canvas = await html2canvas(container, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
       logging: false,
-      width: container.scrollWidth,
-      height: container.scrollHeight,
-      x: 0,
-      y: 0,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: container.scrollWidth,
-      windowHeight: container.scrollHeight
+      width: 600,
+      height: container.offsetHeight || 800,
+      ignoreElements: () => false,
+      removeContainer: false
     });
     
     // Clean up immediately after canvas creation
