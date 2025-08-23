@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import OrderConfirmationDialog from './OrderConfirmationDialog';
 import DeliveryMethodSelector from './DeliveryMethodSelector';
 import AddressAutocomplete from './AddressAutocomplete';
+import MpesaPaymentDialog from './MpesaPaymentDialog';
 
 import { CartItem } from "@/types/database";
 
@@ -62,6 +63,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   } | null>(null);
   const [loadingDiscount, setLoadingDiscount] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showMpesaPayment, setShowMpesaPayment] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [deliveryDetails, setDeliveryDetails] = useState<DeliveryDetails | null>(null);
   const { user } = useAuth();
@@ -196,13 +198,18 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
     setShowConfirmation(true);
   };
 
-  const confirmOrder = async () => {
+  const confirmOrder = () => {
+    setShowConfirmation(false);
+    setShowMpesaPayment(true);
+  };
+
+  const handlePaymentConfirm = async (transactionCode: string) => {
     setIsPlacingOrder(true);
     try {
       // Generate order number
       const { data: orderNumber } = await supabase.rpc('generate_order_number');
 
-      // Create order
+      // Create order with transaction code
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -214,6 +221,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
           customer_info: customerInfo,
           shipping_address: shippingAddress,
           delivery_details: deliveryDetails as any,
+          transaction_code: transactionCode,
         })
         .select()
         .single();
@@ -312,7 +320,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
       toast({
         title: "Order Placed Successfully!",
-        description: `Your order ${orderNumber} has been placed. We'll send you updates via email.`,
+        description: `Your order ${orderNumber} has been placed with M-Pesa transaction code ${transactionCode}.`,
       });
 
       // Reset everything
@@ -323,6 +331,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       setAppliedDiscount(null);
       setDeliveryDetails(null);
       setShowConfirmation(false);
+      setShowMpesaPayment(false);
       onClose();
     } catch (error) {
       console.error('Error placing order:', error);
@@ -553,6 +562,15 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         deliveryCost={deliveryCost}
         finalTotal={finalTotal}
         isLoading={isPlacingOrder}
+      />
+      
+      <MpesaPaymentDialog
+        isOpen={showMpesaPayment}
+        onClose={() => setShowMpesaPayment(false)}
+        onPaymentConfirm={handlePaymentConfirm}
+        totalAmount={finalTotal}
+        orderNumber="pending"
+        isProcessing={isPlacingOrder}
       />
     </div>
   );

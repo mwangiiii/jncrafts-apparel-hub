@@ -110,12 +110,11 @@ const ProductDetail = () => {
     if (!email || !product) return;
 
     try {
-      const { error } = await supabase
-        .from('stock_alerts')
-        .insert({
-          user_id: user?.id || null,
-          email: email,
-          product_id: product.id
+      // Use the secure function to create stock alert with hashed email
+      const { data: alertId, error } = await supabase
+        .rpc('create_stock_alert_secure', {
+          p_product_id: product.id,
+          p_email: email
         });
 
       if (error) throw error;
@@ -127,7 +126,7 @@ const ProductDetail = () => {
       setIsStockAlertDialogOpen(false);
       setEmail('');
     } catch (error: any) {
-      if (error.code === '23505') {
+      if (error.message?.includes('already exists')) {
         toast({
           title: "Already Subscribed",
           description: "You're already subscribed to alerts for this product",

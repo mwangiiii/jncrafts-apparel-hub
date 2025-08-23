@@ -430,6 +430,7 @@ export type Database = {
           shipping_address: Json
           status: string
           total_amount: number
+          transaction_code: string | null
           updated_at: string
           user_id: string
         }
@@ -444,6 +445,7 @@ export type Database = {
           shipping_address: Json
           status?: string
           total_amount: number
+          transaction_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -458,6 +460,7 @@ export type Database = {
           shipping_address?: Json
           status?: string
           total_amount?: number
+          transaction_code?: string | null
           updated_at?: string
           user_id?: string
         }

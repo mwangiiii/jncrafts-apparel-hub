@@ -16,6 +16,7 @@ export interface InvoiceData {
     delivery_details: any;
     status: string;
     order_items: any[];
+    transaction_code?: string | null;
   };
   companyInfo: {
     name: string;
@@ -368,11 +369,17 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
           color: #4a5568;
         }
         
-        .brand-gradient {
-          background: linear-gradient(135deg, #2d4a5e 0%, #5a9fb8 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+        
+        .transaction-code {
+          font-family: 'Courier New', monospace;
+          background: linear-gradient(145deg, #c6f6d5 0%, #48bb78 100%);
+          color: #22543d;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          font-weight: bold;
+          display: inline-block;
+          border: 1px solid #48bb78;
         }
       </style>
     </head>
@@ -410,6 +417,7 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
             <div class="customer-info">
               <p><strong>Order #:</strong> ${escapeHtml(data.order.order_number)}</p>
               <p><strong>Order Date:</strong> ${escapeHtml(new Date(data.order.created_at).toLocaleDateString())}</p>
+              ${data.order.transaction_code ? `<p><strong>M-Pesa Code:</strong> <span class="transaction-code">${escapeHtml(data.order.transaction_code)}</span></p>` : ''}
               <p><strong>Payment Status:</strong> <span class="brand-gradient">Paid</span></p>
             </div>
           </div>
@@ -750,11 +758,11 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
           </div>
           <div class="detail-row">
             <span><strong>Payment Method:</strong></span>
-            <span>Online Payment</span>
+            <span>${data.order.transaction_code ? 'M-Pesa Payment' : 'Online Payment'}</span>
           </div>
           <div class="detail-row">
             <span><strong>Transaction ID:</strong></span>
-            <span class="transaction-id">TXN${Date.now().toString().slice(-8)}</span>
+            <span class="transaction-id">${data.order.transaction_code || `TXN${Date.now().toString().slice(-8)}`}</span>
           </div>
           <div class="detail-row">
             <span><strong>Order Status:</strong></span>

@@ -54,6 +54,7 @@ interface Order {
   shipping_address: any;
   delivery_details: any;
   created_at: string;
+  transaction_code?: string | null;
   order_items: any[];
 }
 
@@ -374,6 +375,15 @@ const AdminOrderDetail = () => {
                     <Phone className="h-4 w-4 text-muted-foreground" />
                     <span>{order.customer_info?.phone || 'N/A'}</span>
                   </div>
+                  {order.transaction_code && (
+                    <div className="flex items-center gap-2">
+                      <span className="h-4 w-4 text-green-600 font-bold">₱</span>
+                      <span className="font-mono bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+                        {order.transaction_code}
+                      </span>
+                      <span className="text-xs text-muted-foreground">M-Pesa Code</span>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-3">
                   <div>

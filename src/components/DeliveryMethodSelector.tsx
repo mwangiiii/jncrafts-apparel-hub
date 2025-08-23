@@ -204,12 +204,12 @@ const DeliveryMethodSelector = ({
 
         case 'pickup_in_town':
           cost = await calculateDeliveryCost(0, method);
-          location = "JN Crafts CBD Location - Kenyatta Avenue";
+          location = "Nairobi Archives";
           distanceFromCBD = 0;
           break;
 
         case 'customer_logistics':
-          cost = await calculateDeliveryCost(0, method);
+          cost = 300; // Default standard delivery price KES 300
           location = "Customer arranged pickup";
           distanceFromCBD = 0;
           break;
