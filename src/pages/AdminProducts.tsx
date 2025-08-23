@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit2, Trash2, Upload, Eye, EyeOff, Image, X, ChevronUp, ChevronDown, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AdminHeader from '@/components/AdminHeader';
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -265,6 +266,7 @@ const AdminProducts = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+      <AdminHeader />
       <div className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-xl">

@@ -6,6 +6,7 @@ import { WhatsAppChatList } from "@/components/WhatsAppChatList";
 import { WhatsAppChatWindow } from "@/components/WhatsAppChatWindow";
 import { UserProfileView } from "@/components/UserProfileView";
 import { Conversation } from "@/types/database";
+import AdminHeader from "@/components/AdminHeader";
 
 const AdminMessages = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -46,11 +47,14 @@ const AdminMessages = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading messages...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+        <AdminHeader />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading messages...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -58,7 +62,9 @@ const AdminMessages = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+      <AdminHeader />
+      <div className="flex h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Sidebar with chat list or back button when showing profile */}
       <div className="w-1/3 border-r bg-white/70 backdrop-blur-sm shadow-lg">
         {selectedUserId && !showProfile ? (
@@ -145,6 +151,7 @@ const AdminMessages = () => {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 };

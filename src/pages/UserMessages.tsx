@@ -14,6 +14,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ConversationList } from "@/components/ConversationList";
 import { MessagesList } from "@/components/MessagesList";
 import ProductReferenceCard from "@/components/ProductReferenceCard";
+import Header from "@/components/Header";
 
 const UserMessages = () => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -71,17 +72,28 @@ const UserMessages = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your messages...</p>
+      <div className="min-h-screen bg-background">
+        <Header 
+          cartItems={0} 
+          onCartClick={() => {}} 
+        />
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading your messages...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="min-h-screen bg-background">
+      <Header 
+        cartItems={0} 
+        onCartClick={() => {}} 
+      />
+      <div className="flex h-screen bg-background">
       {/* Conversations List */}
       <div className="w-1/3 border-r">
         <div className="p-4 border-b">
@@ -242,6 +254,7 @@ const UserMessages = () => {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 };

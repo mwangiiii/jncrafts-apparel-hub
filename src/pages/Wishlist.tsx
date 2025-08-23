@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Header from '@/components/Header';
 
 const Wishlist = () => {
   const { user, loading } = useAuth();
@@ -46,8 +46,15 @@ const Wishlist = () => {
     }));
   };
 
+  const totalItems = 0; // Cart items count for header
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <Header 
+        cartItems={totalItems} 
+        onCartClick={() => {}} 
+      />
+      <div className="container mx-auto px-4 py-8">
       <div className="flex items-center gap-2 mb-8">
         <Heart className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">My Wishlist</h1>
@@ -150,6 +157,7 @@ const Wishlist = () => {
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 };
