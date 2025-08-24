@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/hero-image.jpg";
 
 const Hero = () => {
   return (
@@ -7,9 +6,9 @@ const Hero = () => {
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <img
-          src={heroImage}
-          alt="jnCrafts streetwear collection"
-          className="w-full h-full object-cover"
+          src="/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.png"
+          alt="jnCrafts streetwear models showcasing premium hoodies"
+          className="w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent"></div>
       </div>
