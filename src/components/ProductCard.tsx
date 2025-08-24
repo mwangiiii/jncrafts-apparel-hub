@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useNavigate } from 'react-router-dom';
 import ChatWidget from './ChatWidget';
-import NewArrivalBadge from './NewArrivalBadge';
 
 interface ProductCardProps {
   product: Product;
@@ -55,7 +54,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   return (
     <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
       <div className="relative overflow-hidden">
-        <NewArrivalBadge newArrivalDate={product.new_arrival_date} />
         <div 
           className="cursor-pointer"
           onClick={() => navigate(`/product/${product.id}`)}

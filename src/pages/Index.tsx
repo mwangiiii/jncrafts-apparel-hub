@@ -5,9 +5,8 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ProductsSection from "@/components/ProductsSection";
 import DiscountsSection from "@/components/DiscountsSection";
-import AnimatedFeaturedProducts from "@/components/AnimatedFeaturedProducts";
-import DynamicAboutSection from "@/components/DynamicAboutSection";
-import EnhancedContactSection from "@/components/EnhancedContactSection";
+import AboutSection from "@/components/AboutSection";
+import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import Cart from "@/components/Cart";
 import { Button } from "@/components/ui/button";
@@ -69,18 +68,9 @@ const Index = () => {
         </div>
       )}
       <DiscountsSection />
-      
-      {/* Featured Products Animation */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-4">Featured Products</h2>
-          <AnimatedFeaturedProducts />
-        </div>
-      </div>
-      
       <ProductsSection onAddToCart={handleAddToCart} />
-      <DynamicAboutSection />
-      <EnhancedContactSection />
+      <AboutSection />
+      <ContactSection />
       <Footer />
       
       <Cart

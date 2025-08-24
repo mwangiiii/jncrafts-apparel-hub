@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import ResponsiveProductsGrid from "./ResponsiveProductsGrid";
+import ProductCard from "./ProductCard";
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
 
@@ -75,10 +75,15 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
         {loading ? (
           <div className="text-center py-8">Loading products...</div>
         ) : (
-          <ResponsiveProductsGrid 
-            products={filteredProducts} 
-            onAddToCart={onAddToCart}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={onAddToCart}
+              />
+            ))}
+          </div>
         )}
       </div>
     </section>
