@@ -10,16 +10,17 @@ const Hero = () => {
           alt="jnCrafts streetwear models showcasing premium hoodies"
           className="w-full h-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-background/40"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
       </div>
 
       {/* Content */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-2xl">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            jn<span className="text-brand-beige">CRAFTS</span>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl">
+            jn<span className="text-primary">CRAFTS</span>
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
+          <p className="text-xl md:text-2xl text-gray-200 mb-8 leading-relaxed drop-shadow-lg">
             Premium streetwear designed for the modern lifestyle. Crafted with precision, 
             styled with passion.
           </p>
