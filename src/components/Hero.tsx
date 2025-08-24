@@ -18,9 +18,9 @@ const Hero = () => {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-2xl">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl">
-            jn<span className="text-primary">CRAFTS</span>
+            jn<span className="text-brand-beige">CRAFTS</span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-200 mb-8 leading-relaxed drop-shadow-lg">
+          <p className="text-xl md:text-2xl text-brand-beige/90 mb-8 leading-relaxed drop-shadow-lg">
             Premium streetwear designed for the modern lifestyle. Crafted with precision, 
             styled with passion.
           </p>
