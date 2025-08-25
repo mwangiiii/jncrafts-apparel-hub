@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus, Minus, Heart, Eye, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,11 +20,33 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || '');
   const [selectedColor, setSelectedColor] = useState(product.colors[0] || '');
   const [quantity, setQuantity] = useState(1);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleAddToCart = () => {
     if (product.sizes.length > 0 && !selectedSize) {
@@ -95,11 +117,22 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           className="cursor-pointer"
           onClick={() => navigate(`/product/${product.id}`)}
         >
-          <img
-            src={product.images[0] || '/placeholder.svg'}
-            alt={product.name}
-            className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-110"
-          />
+          <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
+            {isVisible && (
+              <img
+                src={product.images[0] || '/placeholder.svg'}
+                alt={product.name}
+                className={`w-full h-80 object-cover transition-all duration-300 group-hover:scale-110 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setImageLoaded(true)}
+                loading="lazy"
+              />
+            )}
+            {!imageLoaded && isVisible && (
+              <div className="animate-pulse bg-muted w-full h-full" />
+            )}
+          </div>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
