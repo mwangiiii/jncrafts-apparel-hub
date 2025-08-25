@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useNavigate } from 'react-router-dom';
 import ChatWidget from './ChatWidget';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
   product: Product;
@@ -23,13 +24,38 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleAddToCart = () => {
-    if (!selectedSize || !selectedColor) {
-      alert('Please select both size and color');
+    if (product.sizes.length > 0 && !selectedSize) {
+      toast({
+        title: "Size Required",
+        description: "Please select a size before adding to cart",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (product.colors.length > 0 && !selectedColor) {
+      toast({
+        title: "Color Required", 
+        description: "Please select a color before adding to cart",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (product.stock_quantity === 0) {
+      toast({
+        title: "Out of Stock",
+        description: "This product is currently out of stock",
+        variant: "destructive"
+      });
       return;
     }
     onAddToCart(product, quantity, selectedSize, selectedColor);
+    toast({
+      title: "Added to Cart",
+      description: `${product.name} has been added to your cart`,
+    });
   };
 
   const handleWishlistToggle = () => {
