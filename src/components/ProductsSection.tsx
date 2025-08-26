@@ -12,7 +12,7 @@ interface ProductsSectionProps {
 const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  // Optimized query with React Query for caching and performance
+  // High-performance query with aggressive caching and background refetch
   const { data: products = [], isLoading, error } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
@@ -33,14 +33,22 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
           updated_at
         `)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit initial load for performance
 
       if (error) throw error;
       return data || [];
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
+    staleTime: 10 * 60 * 1000, // 10 minutes - consider data fresh longer
+    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: 'always',
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    // Enable background refetching for smooth UX
+    refetchInterval: 5 * 60 * 1000, // Background refresh every 5 minutes
+    refetchIntervalInBackground: false,
   });
 
   const categories = ["all", ...Array.from(new Set(products.map(product => product.category)))];
