@@ -733,6 +733,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_products_optimized: {
+        Args: { p_category?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          category: string
+          colors: string[]
+          created_at: string
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          sizes: string[]
+          stock_quantity: number
+          thumbnail_image: string
+        }[]
+      }
       hash_email: {
         Args: { email_address: string }
         Returns: string
