@@ -51,6 +51,31 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     refetch();
   };
 
+  // Show initial loading state
+  if (isLoading && products.length === 0) {
+    return (
+      <section id="products" className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Our <span className="text-brand-beige">Collection</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Discover our premium streetwear pieces, crafted with attention to detail 
+              and designed for comfort and style.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {Array.from({ length: 16 }).map((_, index) => (
+              <ProductCardSkeleton key={index} />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="products" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -89,20 +114,18 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
             <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
             <p className="text-destructive text-lg mb-2">Failed to load products</p>
             <p className="text-sm text-muted-foreground mb-4">
-              {error?.message || "There was an error loading products"}
+              {error?.code === '57014' 
+                ? "Database is busy, please try again in a moment" 
+                : error?.message?.includes('Failed to fetch')
+                ? "Connection issue, please check your internet and try again"
+                : error?.message || "There was an error loading products"
+              }
             </p>
             <Button onClick={handleRetry} variant="outline">
-              <Loader2 className="h-4 w-4 mr-2" />
               Try Again
             </Button>
           </div>
-        ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {Array.from({ length: 16 }).map((_, index) => (
-              <ProductCardSkeleton key={index} />
-            ))}
-          </div>
-        ) : products.length === 0 ? (
+        ) : products.length === 0 && !isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             No products found in this category.
           </div>
