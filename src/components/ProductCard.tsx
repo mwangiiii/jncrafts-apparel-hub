@@ -110,27 +110,39 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
   const stockStatus = getStockStatus();
 
+  const handleCardClick = () => {
+    navigate(`/product/${product.id}`);
+  };
+
   return (
-    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+    <Card 
+      className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer" 
+      onClick={handleCardClick}
+    >
       <div className="relative overflow-hidden">
-        <div 
-          className="cursor-pointer"
-          onClick={() => navigate(`/product/${product.id}`)}
-        >
+        <div className="relative">
           <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
             {isVisible && (
-              <img
-                src={product.images[0] || '/placeholder.svg'}
-                alt={product.name}
-                className={`w-full h-80 object-cover transition-all duration-300 group-hover:scale-110 ${
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                onLoad={() => setImageLoaded(true)}
-                loading="lazy"
-              />
+              <>
+                <img
+                  src={product.images?.[0] || '/placeholder.svg'}
+                  alt={product.name}
+                  className={`w-full h-full object-cover transition-opacity duration-500 ${
+                    imageLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onLoad={() => setImageLoaded(true)}
+                  loading="lazy"
+                  decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                />
+                {/* Preload next image for faster navigation */}
+                {product.images?.[1] && (
+                  <link rel="preload" as="image" href={product.images[1]} />
+                )}
+              </>
             )}
             {!imageLoaded && isVisible && (
-              <div className="animate-pulse bg-muted w-full h-full" />
+              <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/60 animate-pulse" />
             )}
           </div>
         </div>
@@ -142,7 +154,10 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             size="sm"
             variant="outline"
             className="p-2 bg-background/80 backdrop-blur-sm"
-            onClick={() => navigate(`/product/${product.id}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/product/${product.id}`);
+            }}
           >
             <Eye className="h-4 w-4" />
           </Button>
@@ -161,7 +176,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                   className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
                 />
               </Button>
-              <div className="relative">
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
                 <ChatWidget 
                   productId={product.id} 
                   productName={product.name}
@@ -199,13 +214,16 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Size Selection */}
-          <div>
+          <div onClick={(e) => e.stopPropagation()}>
             <label className="text-sm font-medium text-foreground block mb-2">Size</label>
             <div className="flex gap-2">
               {product.sizes.map((size) => (
                 <button
                   key={size}
-                  onClick={() => setSelectedSize(size)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedSize(size);
+                  }}
                   className={`px-3 py-1 border rounded text-sm transition-colors ${
                     selectedSize === size
                       ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
@@ -219,13 +237,16 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Color Selection */}
-          <div>
+          <div onClick={(e) => e.stopPropagation()}>
             <label className="text-sm font-medium text-foreground block mb-2">Color</label>
             <div className="flex gap-2">
               {product.colors.map((color) => (
                 <button
                   key={color}
-                  onClick={() => setSelectedColor(color)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedColor(color);
+                  }}
                   className={`px-3 py-1 border rounded text-sm transition-colors capitalize ${
                     selectedColor === color
                       ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
@@ -239,13 +260,16 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Quantity */}
-          <div>
+          <div onClick={(e) => e.stopPropagation()}>
             <label className="text-sm font-medium text-foreground block mb-2">Quantity</label>
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQuantity(Math.max(1, quantity - 1));
+                }}
                 className="h-8 w-8"
               >
                 <Minus className="h-4 w-4" />
@@ -254,7 +278,10 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setQuantity(quantity + 1)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQuantity(quantity + 1);
+                }}
                 className="h-8 w-8"
               >
                 <Plus className="h-4 w-4" />
@@ -263,7 +290,10 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           <Button 
-            onClick={handleAddToCart}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddToCart();
+            }}
             className="w-full"
             variant="brand"
             size="lg"
