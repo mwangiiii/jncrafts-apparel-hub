@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Minus, Heart, Eye, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,33 +20,11 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || '');
   const [selectedColor, setSelectedColor] = useState(product.colors[0] || '');
   const [quantity, setQuantity] = useState(1);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Intersection Observer for lazy loading
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
 
   const handleAddToCart = () => {
     if (product.sizes.length > 0 && !selectedSize) {
@@ -110,33 +88,18 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
   const stockStatus = getStockStatus();
 
-  const handleCardClick = () => {
-    navigate(`/product/${product.id}`);
-  };
-
   return (
-    <Card 
-      className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] cursor-pointer" 
-      onClick={handleCardClick}
-    >
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
       <div className="relative overflow-hidden">
-        <div className="relative">
-          <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
-            {isVisible && (
-              <img
-                src={product.images[0] || '/placeholder.svg'}
-                alt={product.name}
-                className={`w-full h-80 object-cover transition-all duration-300 group-hover:scale-110 ${
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                onLoad={() => setImageLoaded(true)}
-                loading="lazy"
-              />
-            )}
-            {!imageLoaded && isVisible && (
-              <div className="animate-pulse bg-muted w-full h-full" />
-            )}
-          </div>
+        <div 
+          className="cursor-pointer"
+          onClick={() => navigate(`/product/${product.id}`)}
+        >
+          <img
+            src={product.images[0] || '/placeholder.svg'}
+            alt={product.name}
+            className="w-full h-80 object-cover transition-transform duration-300 group-hover:scale-110"
+          />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
@@ -146,10 +109,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             size="sm"
             variant="outline"
             className="p-2 bg-background/80 backdrop-blur-sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/product/${product.id}`);
-            }}
+            onClick={() => navigate(`/product/${product.id}`)}
           >
             <Eye className="h-4 w-4" />
           </Button>
@@ -168,7 +128,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                   className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
                 />
               </Button>
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <div className="relative">
                 <ChatWidget 
                   productId={product.id} 
                   productName={product.name}
@@ -206,16 +166,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Size Selection */}
-          <div onClick={(e) => e.stopPropagation()}>
+          <div>
             <label className="text-sm font-medium text-foreground block mb-2">Size</label>
             <div className="flex gap-2">
               {product.sizes.map((size) => (
                 <button
                   key={size}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedSize(size);
-                  }}
+                  onClick={() => setSelectedSize(size)}
                   className={`px-3 py-1 border rounded text-sm transition-colors ${
                     selectedSize === size
                       ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
@@ -229,16 +186,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Color Selection */}
-          <div onClick={(e) => e.stopPropagation()}>
+          <div>
             <label className="text-sm font-medium text-foreground block mb-2">Color</label>
             <div className="flex gap-2">
               {product.colors.map((color) => (
                 <button
                   key={color}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedColor(color);
-                  }}
+                  onClick={() => setSelectedColor(color)}
                   className={`px-3 py-1 border rounded text-sm transition-colors capitalize ${
                     selectedColor === color
                       ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
@@ -252,16 +206,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Quantity */}
-          <div onClick={(e) => e.stopPropagation()}>
+          <div>
             <label className="text-sm font-medium text-foreground block mb-2">Quantity</label>
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setQuantity(Math.max(1, quantity - 1));
-                }}
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 className="h-8 w-8"
               >
                 <Minus className="h-4 w-4" />
@@ -270,10 +221,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setQuantity(quantity + 1);
-                }}
+                onClick={() => setQuantity(quantity + 1)}
                 className="h-8 w-8"
               >
                 <Plus className="h-4 w-4" />
@@ -282,10 +230,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           <Button 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddToCart();
-            }}
+            onClick={handleAddToCart}
             className="w-full"
             variant="brand"
             size="lg"
