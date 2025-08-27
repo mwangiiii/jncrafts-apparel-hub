@@ -39,36 +39,15 @@ const AdminProducts = () => {
     is_active: true
   });
 
-  const [categories, setCategories] = useState<string[]>([]);
+  const categories = ['t-shirts', 'hoodies', 'jackets', 'pants', 'outerwear'];
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-  const availableColors = ['Black', 'White', 'Grey', 'Red', 'Jungle Green', 'Baby Pink', 'Beige'];
+  const availableColors = ['Black', 'White', 'Gray', 'Navy', 'Red', 'Blue', 'Green', 'Brown', 'Olive'];
 
   useEffect(() => {
     if (user && isAdmin) {
       fetchProducts();
-      fetchCategories();
     }
   }, [user, isAdmin]);
-
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('name')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-      setCategories(data?.map(cat => cat.name) || []);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch categories",
-        variant: "destructive"
-      });
-    }
-  };
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;

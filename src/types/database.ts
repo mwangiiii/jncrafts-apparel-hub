@@ -11,7 +11,6 @@ export interface Product {
   colors: string[];
   stock_quantity: number;
   is_active: boolean;
-  new_arrival_date?: string;
   created_at: string;
   updated_at: string;
 }

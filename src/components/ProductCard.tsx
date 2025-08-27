@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useNavigate } from 'react-router-dom';
 import ChatWidget from './ChatWidget';
-import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
   product: Product;
@@ -24,38 +23,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleAddToCart = () => {
-    if (product.sizes.length > 0 && !selectedSize) {
-      toast({
-        title: "Size Required",
-        description: "Please select a size before adding to cart",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (product.colors.length > 0 && !selectedColor) {
-      toast({
-        title: "Color Required", 
-        description: "Please select a color before adding to cart",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (product.stock_quantity === 0) {
-      toast({
-        title: "Out of Stock",
-        description: "This product is currently out of stock",
-        variant: "destructive"
-      });
+    if (!selectedSize || !selectedColor) {
+      alert('Please select both size and color');
       return;
     }
     onAddToCart(product, quantity, selectedSize, selectedColor);
-    toast({
-      title: "Added to Cart",
-      description: `${product.name} has been added to your cart`,
-    });
   };
 
   const handleWishlistToggle = () => {
@@ -73,17 +47,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
       return { status: 'low', message: `Only ${product.stock_quantity} left`, variant: 'secondary' as const };
     }
     return null;
-  };
-
-  const isNewArrival = () => {
-    if (!product.new_arrival_date) return false;
-    
-    const arrivalDate = new Date(product.new_arrival_date);
-    const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - arrivalDate.getTime()) / (1000 * 3600 * 24));
-    
-    // Only show if within 10 days
-    return daysDiff <= 10;
   };
 
   const stockStatus = getStockStatus();
@@ -137,15 +100,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             </>
           )}
         </div>
-
-        {/* New Arrival Badge */}
-        {isNewArrival() && (
-          <div className="absolute top-2 left-2">
-            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg animate-pulse">
-              <span className="text-xs font-semibold">New Arrival</span>
-            </Badge>
-          </div>
-        )}
 
         {/* Stock status badge */}
         {stockStatus && (
