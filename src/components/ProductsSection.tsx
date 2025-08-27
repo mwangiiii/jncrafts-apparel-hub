@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useQuery } from '@tanstack/react-query';
+import { useState, useCallback } from "react";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
-import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
+import { useInfiniteProducts } from '@/hooks/useInfiniteProducts';
+import { Button } from '@/components/ui/button';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 interface ProductsSectionProps {
   onAddToCart: (product: Product, quantity: number, size: string, color: string) => void;
@@ -12,50 +13,43 @@ interface ProductsSectionProps {
 const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  // High-performance query with aggressive caching and background refetch
-  const { data: products = [], isLoading, error } = useQuery({
-    queryKey: ['products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          price,
-          category,
-          images,
-          sizes,
-          colors,
-          stock_quantity,
-          new_arrival_date,
-          is_active,
-          created_at,
-          updated_at
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(50); // Limit initial load for performance
-
-      if (error) throw error;
-      return data || [];
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes - consider data fresh longer
-    gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache longer
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: 'always',
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    // Enable background refetching for smooth UX
-    refetchInterval: 5 * 60 * 1000, // Background refresh every 5 minutes
-    refetchIntervalInBackground: false,
+  // Use infinite products hook for better performance
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useInfiniteProducts({ 
+    category: selectedCategory,
+    pageSize: 16 // Load 16 products per page
   });
 
-  const categories = ["all", ...Array.from(new Set(products.map(product => product.category)))];
+  const products = data?.pages.flatMap(page => page.products) || [];
   
-  const filteredProducts = selectedCategory === "all" 
-    ? products 
-    : products.filter(product => product.category === selectedCategory);
+  // Get categories from all loaded products
+  const allProductsForCategories = data?.pages.flatMap(page => page.products) || [];
+  const categories = ["all", ...Array.from(new Set(allProductsForCategories.map(product => product.category)))];
+
+  // Handle load more
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Handle category change
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+  // Handle retry
+  const handleRetry = () => {
+    refetch();
+  };
 
   return (
     <section id="products" className="py-20 bg-muted/30">
@@ -76,7 +70,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
             {categories.map((category) => (
               <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => handleCategoryChange(category)}
                 className={`px-6 py-2 rounded-md transition-all duration-300 capitalize ${
                   selectedCategory === category
                     ? "bg-brand-beige text-brand-beige-foreground shadow-md"
@@ -90,30 +84,62 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
         </div>
 
         {/* Products Grid */}
-        {isLoading ? (
+        {isError ? (
+          <div className="text-center py-12">
+            <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
+            <p className="text-destructive text-lg mb-2">Failed to load products</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              {error?.message || "There was an error loading products"}
+            </p>
+            <Button onClick={handleRetry} variant="outline">
+              <Loader2 className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {Array.from({ length: 8 }).map((_, index) => (
+            {Array.from({ length: 16 }).map((_, index) => (
               <ProductCardSkeleton key={index} />
             ))}
           </div>
-        ) : error ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Failed to load products. Please try again later.
-          </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No products found in this category.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={onAddToCart}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+            
+            {/* Load More Button */}
+            {hasNextPage && (
+              <div className="flex justify-center mt-12">
+                <Button 
+                  onClick={handleLoadMore} 
+                  disabled={isFetchingNextPage}
+                  size="lg"
+                  variant="outline"
+                  className="bg-background hover:bg-muted"
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading more products...
+                    </>
+                  ) : (
+                    'Load More Products'
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
