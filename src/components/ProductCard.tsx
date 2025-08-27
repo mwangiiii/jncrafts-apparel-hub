@@ -123,26 +123,18 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         <div className="relative">
           <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
             {isVisible && (
-              <>
-                <img
-                  src={product.images?.[0] || '/placeholder.svg'}
-                  alt={product.name}
-                  className={`w-full h-full object-cover transition-opacity duration-500 ${
-                    imageLoaded ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onLoad={() => setImageLoaded(true)}
-                  loading="lazy"
-                  decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-                {/* Preload next image for faster navigation */}
-                {product.images?.[1] && (
-                  <link rel="preload" as="image" href={product.images[1]} />
-                )}
-              </>
+              <img
+                src={product.images[0] || '/placeholder.svg'}
+                alt={product.name}
+                className={`w-full h-80 object-cover transition-all duration-300 group-hover:scale-110 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setImageLoaded(true)}
+                loading="lazy"
+              />
             )}
             {!imageLoaded && isVisible && (
-              <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/60 animate-pulse" />
+              <div className="animate-pulse bg-muted w-full h-full" />
             )}
           </div>
         </div>

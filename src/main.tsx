@@ -10,23 +10,8 @@ import { Toaster } from './components/ui/sonner'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes 
+      staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
-      refetchOnReconnect: 'always',
-      retry: (failureCount, error: any) => {
-        // Don't retry on 4xx errors
-        if (error?.status >= 400 && error?.status < 500) return false;
-        return failureCount < 3;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Enable background refetching for better UX
-      refetchInterval: false, // Per-query basis
-      networkMode: 'online',
-    },
-    mutations: {
-      retry: 1,
-      networkMode: 'online',
     },
   },
 })

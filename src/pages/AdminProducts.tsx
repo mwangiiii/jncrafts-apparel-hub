@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,35 +11,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, Upload, Eye, EyeOff, Image, X, ChevronUp, ChevronDown, Package, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Eye, EyeOff, Image, X, ChevronUp, ChevronDown, Package } from 'lucide-react';
 import ProductMediaManager from '@/components/admin/ProductMediaManager';
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
-import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
-import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
   const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  
-  // Use infinite query for better performance
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = useAdminProducts({ enabled: !!user && isAdmin });
-  
-  const { refreshProducts } = useRefreshAdminProducts();
-  
-  // Flatten paginated data
-  const products = data?.pages.flatMap(page => page.products) || [];
 
   // Form state
   const [formData, setFormData] = useState({
@@ -62,16 +45,10 @@ const AdminProducts = () => {
 
   useEffect(() => {
     if (user && isAdmin) {
+      fetchProducts();
       fetchCategories();
     }
   }, [user, isAdmin]);
-
-  // Infinite scroll handler
-  const handleLoadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const fetchCategories = async () => {
     try {
@@ -101,9 +78,25 @@ const AdminProducts = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Error retry handler
-  const handleRetry = () => {
-    refetch();
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch products",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
   const resetForm = () => {
@@ -186,7 +179,7 @@ const AdminProducts = () => {
 
       setIsDialogOpen(false);
       resetForm();
-      refreshProducts();
+      fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
       toast({
@@ -206,7 +199,7 @@ const AdminProducts = () => {
 
       if (error) throw error;
       
-      refreshProducts();
+      fetchProducts();
       toast({
         title: "Success",
         description: `Product ${product.is_active ? 'hidden' : 'activated'}`,
@@ -232,7 +225,7 @@ const AdminProducts = () => {
 
       if (error) throw error;
       
-      refreshProducts();
+      fetchProducts();
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -448,23 +441,10 @@ const AdminProducts = () => {
           </div>
         </div>
 
-        {isError ? (
+        {loadingProducts ? (
           <div className="text-center py-12">
-            <Package className="h-16 w-16 text-destructive mx-auto mb-4" />
-            <p className="text-destructive text-lg mb-2">Failed to load products</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              {error?.message || "There was an error loading products"}
-            </p>
-            <Button onClick={handleRetry}>
-              <Loader2 className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
-        ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <AdminProductCardSkeleton key={index} />
-            ))}
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground text-lg">Loading products...</p>
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-12">
@@ -473,9 +453,8 @@ const AdminProducts = () => {
             <p className="text-sm text-muted-foreground mt-2">Create your first product to get started</p>
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map(product => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map(product => (
               <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''} shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -544,30 +523,8 @@ const AdminProducts = () => {
                   </div>
                 </CardContent>
               </Card>
-              ))}
-            </div>
-            
-            {/* Load More Button */}
-            {hasNextPage && (
-              <div className="flex justify-center mt-8">
-                <Button 
-                  onClick={handleLoadMore} 
-                  disabled={isFetchingNextPage}
-                  size="lg"
-                  variant="outline"
-                >
-                  {isFetchingNextPage ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    'Load More Products'
-                  )}
-                </Button>
-              </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </div>
     </div>
