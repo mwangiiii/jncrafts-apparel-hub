@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      about_media: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          media_type: string
+          media_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          media_type: string
+          media_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          media_type?: string
+          media_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_audit_log: {
         Row: {
           accessed_data: Json | null
@@ -306,6 +336,38 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_featured: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          product_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          product_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homepage_featured_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_receipts: {
         Row: {
           created_at: string
@@ -476,6 +538,7 @@ export type Database = {
           images: string[] | null
           is_active: boolean | null
           name: string
+          new_arrival_date: string | null
           price: number
           sizes: string[] | null
           stock_quantity: number | null
@@ -492,6 +555,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean | null
           name: string
+          new_arrival_date?: string | null
           price: number
           sizes?: string[] | null
           stock_quantity?: number | null
@@ -508,6 +572,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean | null
           name?: string
+          new_arrival_date?: string | null
           price?: number
           sizes?: string[] | null
           stock_quantity?: number | null
@@ -674,6 +739,10 @@ export type Database = {
       }
       is_admin: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_new_arrival: {
+        Args: { product_new_arrival_date: string }
         Returns: boolean
       }
       is_product_eligible_for_discount: {

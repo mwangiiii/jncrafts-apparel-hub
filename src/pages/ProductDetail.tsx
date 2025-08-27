@@ -72,10 +72,19 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return;
     
-    if (!selectedSize || !selectedColor) {
+    if (product.sizes.length > 0 && !selectedSize) {
       toast({
-        title: "Selection Required",
-        description: "Please select both size and color",
+        title: "Size Required",
+        description: "Please select a size before adding to cart",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (product.colors.length > 0 && !selectedColor) {
+      toast({
+        title: "Color Required",
+        description: "Please select a color before adding to cart", 
         variant: "destructive"
       });
       return;
