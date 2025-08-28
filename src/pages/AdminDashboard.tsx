@@ -382,11 +382,26 @@ const AdminDashboard = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, description, sizes, colors, videos, created_at, updated_at')
+        .select(`
+          id, name, price, category, stock_quantity, is_active, description, created_at, updated_at,
+          product_images!left(image_url, is_primary)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
+      
+      // Transform data to include thumbnail
+      const transformedData = (data || []).map(product => ({
+        ...product,
+        thumbnail_image: product.product_images?.find(img => img.is_primary)?.image_url || 
+                        product.product_images?.[0]?.image_url || null,
+        images: product.product_images?.map(img => img.image_url) || [],
+        colors: [],
+        sizes: [],
+        videos: []
+      }));
+      
+      setProducts(transformedData);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({

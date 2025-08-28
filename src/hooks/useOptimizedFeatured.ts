@@ -29,10 +29,13 @@ export const useOptimizedFeatured = () => {
             name,
             price,
             category,
-            images,
-            thumbnail_index,
             stock_quantity,
-            new_arrival_date
+            new_arrival_date,
+            product_images!left(
+              image_url,
+              is_primary,
+              display_order
+            )
           )
         `)
         .eq('is_active', true)
@@ -53,9 +56,8 @@ export const useOptimizedFeatured = () => {
         name: item.products.name,
         price: item.products.price,
         category: item.products.category,
-        thumbnail_image: item.products.images && item.products.images.length > 0 
-          ? item.products.images[item.products.thumbnail_index || 0] 
-          : null,
+        thumbnail_image: item.products.product_images?.find(img => img.is_primary)?.image_url || 
+                        item.products.product_images?.[0]?.image_url || null,
         stock_quantity: item.products.stock_quantity,
         new_arrival_date: item.products.new_arrival_date,
       }));

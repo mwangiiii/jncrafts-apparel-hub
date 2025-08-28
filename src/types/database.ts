@@ -19,6 +19,8 @@ export interface Product {
   // Additional flags for optimization
   has_colors?: boolean;
   has_sizes?: boolean;
+  // For optimized queries
+  thumbnail_image?: string | null;
 }
 
 // Simple color/size info for UI display

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/Header';
+import { getProductThumbnail, getProductSizes, getProductColors } from '@/components/ProductDisplayHelper';
 
 const Wishlist = () => {
   const { user, loading } = useAuth();
@@ -87,13 +88,11 @@ const Wishlist = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {item.product?.images && item.product.images.length > 0 && (
-                  <img
-                    src={item.product.images[0]}
-                    alt={item.product.name}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                  />
-                )}
+                <img
+                  src={getProductThumbnail(item.product)}
+                  alt={item.product?.name}
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                />
                 
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
@@ -118,8 +117,10 @@ const Wishlist = () => {
                         <SelectValue placeholder="Select size" />
                       </SelectTrigger>
                       <SelectContent>
-                        {item.product?.sizes.map(size => (
-                          <SelectItem key={size} value={size}>{size}</SelectItem>
+                        {getProductSizes(item.product).map(size => (
+                          <SelectItem key={typeof size === 'string' ? size : size.name} value={typeof size === 'string' ? size : size.name}>
+                            {typeof size === 'string' ? size : size.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -136,8 +137,10 @@ const Wishlist = () => {
                         <SelectValue placeholder="Select color" />
                       </SelectTrigger>
                       <SelectContent>
-                        {item.product?.colors.map(color => (
-                          <SelectItem key={color} value={color}>{color}</SelectItem>
+                        {getProductColors(item.product).map(color => (
+                          <SelectItem key={typeof color === 'string' ? color : color.name} value={typeof color === 'string' ? color : color.name}>
+                            {typeof color === 'string' ? color : color.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

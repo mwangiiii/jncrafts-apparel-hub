@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
 import { Product } from '@/types/database';
-import { useInfiniteProducts } from '@/hooks/useInfiniteProducts';
+import { useOptimizedProducts, useOptimizedCategories } from '@/hooks/useOptimizedProducts';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 
@@ -23,7 +23,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     isError,
     error,
     refetch
-  } = useInfiniteProducts({ 
+  } = useOptimizedProducts({ 
     category: selectedCategory,
     pageSize: 12 // Smaller batch for better performance
   });
@@ -113,9 +113,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
             <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
             <p className="text-destructive text-lg mb-2">Failed to load products</p>
             <p className="text-sm text-muted-foreground mb-4">
-              {error?.code === '57014' 
-                ? "Database is busy, please try again in a moment" 
-                : error?.message?.includes('Failed to fetch')
+              {error?.message?.includes('Failed to fetch')
                 ? "Connection issue, please check your internet and try again"
                 : error?.message || "There was an error loading products"
               }
@@ -134,7 +132,14 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
               {products.map((product) => (
                 <ProductCard
                   key={product.id}
-                  product={product}
+                  product={{
+                    ...product,
+                    images: product.thumbnail_image ? [product.thumbnail_image] : [],
+                    colors: [],
+                    sizes: [],
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }}
                   onAddToCart={onAddToCart}
                 />
               ))}

@@ -24,12 +24,24 @@ const NewArrivalsManager = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, new_arrival_date, sizes, colors, created_at, updated_at')
+        .select(`
+          id, name, price, category, stock_quantity, is_active, 
+          new_arrival_date, created_at, updated_at,
+          product_images!inner(image_url, is_primary)
+        `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
+      
+      // Transform data to include thumbnail
+      const transformedData = (data || []).map(product => ({
+        ...product,
+        thumbnail_image: product.product_images?.find(img => img.is_primary)?.image_url || 
+                        product.product_images?.[0]?.image_url || null
+      }));
+      
+      setProducts(transformedData);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -231,7 +243,7 @@ const NewArrivalsManager = () => {
                       {/* Product Preview */}
                       <div className="w-20 h-20 flex-shrink-0 relative">
                         <img
-                          src={product.images[0] || '/placeholder.svg'}
+                          src={(product as any).thumbnail_image || '/placeholder.svg'}
                           alt={product.name}
                           className="w-full h-full object-cover rounded"
                         />
