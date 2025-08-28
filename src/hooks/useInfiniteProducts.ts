@@ -23,37 +23,60 @@ export const useInfiniteProducts = ({
     queryKey: ['products', 'lightweight', category],
     queryFn: async ({ pageParam }: { pageParam?: ProductCursor }) => {
       try {
-        // Use lightweight RPC with keyset pagination for better performance
-        const { data, error } = await supabase.rpc('get_products_lightweight', {
-          p_category: category,
-          p_limit: pageSize,
-          p_cursor_created_at: pageParam?.created_at || null,
-          p_cursor_id: pageParam?.id || null
-        });
+        // Use direct Supabase query instead of RPC for better reliability
+        let query = supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            price,
+            category,
+            images,
+            thumbnail_index,
+            sizes,
+            colors,
+            stock_quantity,
+            new_arrival_date,
+            is_active,
+            created_at,
+            updated_at
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(pageSize);
+
+        // Add category filter if not 'all'
+        if (category !== 'all') {
+          query = query.eq('category', category);
+        }
+
+        // Add cursor-based pagination
+        if (pageParam?.created_at && pageParam?.id) {
+          query = query.or(`created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error('Error fetching products:', error);
-          // Handle timeout errors more gracefully
-          if (error.code === '57014') {
-            throw new Error('Products are loading slowly due to high demand. Please try again.');
-          }
           throw error;
         }
 
-        // Transform minimal data to match expected format
+        // Transform data to match expected format
         const products = (data || []).map((item: any) => ({
           id: item.id,
           name: item.name,
           price: item.price,
           category: item.category,
-          images: item.thumbnail_image ? [item.thumbnail_image] : [],
-          sizes: [], // Load on-demand when needed
-          colors: [], // Load on-demand when needed
+          images: item.images || [],
+          sizes: item.sizes || [],
+          colors: item.colors || [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
-          is_active: true,
+          is_active: item.is_active,
           created_at: item.created_at,
-          updated_at: item.created_at
+          updated_at: item.updated_at
         }));
 
         // Next page cursor is the last item's created_at and id
@@ -95,9 +118,15 @@ export const useProductCategories = () => {
   return {
     queryKey: ['categories', 'lightweight'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_categories_fast');
+      const { data, error } = await supabase
+        .from('products')
+        .select('category')
+        .eq('is_active', true);
+      
       if (error) throw error;
-      return ['all', ...(data || []).map((item: any) => item.category)];
+      
+      const uniqueCategories = [...new Set((data || []).map(item => item.category))];
+      return ['all', ...uniqueCategories];
     },
     staleTime: 15 * 60 * 1000, // 15 minutes - categories rarely change
     gcTime: 60 * 60 * 1000, // 1 hour
@@ -117,12 +146,35 @@ export const usePrefetchProducts = () => {
     queryClient.prefetchInfiniteQuery({
       queryKey: ['products', 'lightweight', category],
       queryFn: async () => {
-        const { data, error } = await supabase.rpc('get_products_lightweight', {
-          p_category: category,
-          p_limit: 8, // Minimal prefetch
-          p_cursor_created_at: null,
-          p_cursor_id: null
-        });
+        // Use direct Supabase query for prefetch too
+        let query = supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            price,
+            category,
+            images,
+            thumbnail_index,
+            sizes,
+            colors,
+            stock_quantity,
+            new_arrival_date,
+            is_active,
+            created_at,
+            updated_at
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(8); // Minimal prefetch
+
+        // Add category filter if not 'all'
+        if (category !== 'all') {
+          query = query.eq('category', category);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error('Error prefetching products:', error);
@@ -134,14 +186,14 @@ export const usePrefetchProducts = () => {
           name: item.name,
           price: item.price,
           category: item.category,
-          images: item.thumbnail_image ? [item.thumbnail_image] : [],
-          sizes: [],
-          colors: [],
+          images: item.images || [],
+          sizes: item.sizes || [],
+          colors: item.colors || [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
-          is_active: true,
+          is_active: item.is_active,
           created_at: item.created_at,
-          updated_at: item.created_at
+          updated_at: item.updated_at
         }));
 
         return {
