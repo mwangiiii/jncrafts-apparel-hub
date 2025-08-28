@@ -7,7 +7,7 @@ const Hero = () => {
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <OptimizedImage
-          src="/lovable-uploads/193c6e10-f163-46b8-93c9-76505e006c60.png"
+          src="/lovable-uploads/5b7537db-d7d8-4944-ae1b-bedf060e85cc.png"
           alt="jnCrafts streetwear models showcasing premium hoodies in beige and brown"
           className="w-full h-full object-cover object-center brightness-75 contrast-125 saturate-110"
           width={1920}
