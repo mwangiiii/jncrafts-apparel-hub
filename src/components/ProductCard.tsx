@@ -124,7 +124,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
             {isVisible && (
               <>
-                <img
+                {/* <img
                   src={product.images?.[0] || '/placeholder.svg'}
                   alt={product.name}
                   className={`w-full h-full object-cover transition-opacity duration-500 ${
@@ -134,7 +134,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                   loading="lazy"
                   decoding="async"
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
+                /> */}
                 {/* Preload next image for faster navigation */}
                 {product.images?.[1] && (
                   <link rel="preload" as="image" href={product.images[1]} />
