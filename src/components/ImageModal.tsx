@@ -120,58 +120,58 @@ const ImageModal = ({ isOpen, onClose, imageSrc, imageAlt }: ImageModalProps) =>
       onClick={onClose}
     >
       {/* Controls */}
-      <div className="absolute top-4 right-4 z-[10000] flex gap-2">
+      <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-[10000] flex flex-wrap gap-1 sm:gap-2">
         <Button
-          size="icon"
+          size="sm"
           variant="outline"
-          className="bg-background/90 backdrop-blur-sm hover:bg-background"
+          className="bg-background/90 backdrop-blur-sm hover:bg-background text-xs sm:text-sm h-8 w-8 sm:h-10 sm:w-10"
           onClick={(e) => {
             e.stopPropagation();
             handleZoomOut();
           }}
         >
-          <ZoomOut className="h-4 w-4" />
+          <ZoomOut className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
         <Button
-          size="icon"
+          size="sm"
           variant="outline"
-          className="bg-background/90 backdrop-blur-sm hover:bg-background"
+          className="bg-background/90 backdrop-blur-sm hover:bg-background text-xs sm:text-sm h-8 w-8 sm:h-10 sm:w-10"
           onClick={(e) => {
             e.stopPropagation();
             handleZoomIn();
           }}
         >
-          <ZoomIn className="h-4 w-4" />
+          <ZoomIn className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
         <Button
-          size="icon"
+          size="sm"
           variant="outline"
-          className="bg-background/90 backdrop-blur-sm hover:bg-background"
+          className="bg-background/90 backdrop-blur-sm hover:bg-background text-xs sm:text-sm h-8 w-8 sm:h-10 sm:w-10"
           onClick={(e) => {
             e.stopPropagation();
             handleRotate();
           }}
         >
-          <RotateCw className="h-4 w-4" />
+          <RotateCw className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
         <Button
-          size="icon"
+          size="sm"
           variant="outline"
-          className="bg-background/90 backdrop-blur-sm hover:bg-background"
+          className="bg-background/90 backdrop-blur-sm hover:bg-background text-xs sm:text-sm h-8 w-8 sm:h-10 sm:w-10"
           onClick={(e) => {
             e.stopPropagation();
             handleReset();
           }}
         >
-          <Maximize2 className="h-4 w-4" />
+          <Maximize2 className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
         <Button
-          size="icon"
+          size="sm"
           variant="outline"
-          className="bg-background/90 backdrop-blur-sm hover:bg-background"
+          className="bg-background/90 backdrop-blur-sm hover:bg-background text-xs sm:text-sm h-8 w-8 sm:h-10 sm:w-10"
           onClick={onClose}
         >
-          <X className="h-4 w-4" />
+          <X className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
       </div>
 
@@ -185,7 +185,7 @@ const ImageModal = ({ isOpen, onClose, imageSrc, imageAlt }: ImageModalProps) =>
           ref={imageRef}
           src={imageSrc}
           alt={imageAlt}
-          className={`max-w-[90vw] max-h-[90vh] object-contain transition-transform duration-300 ${
+          className={`w-full h-full max-w-[95vw] max-h-[95vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain transition-transform duration-300 ${
             isDragging ? 'cursor-grabbing' : 'cursor-grab'
           }`}
           style={{

@@ -290,9 +290,9 @@ const DynamicAboutSection = () => {
                     className="relative w-full"
                     style={{ height: imageHeight }}
                   >
-                     {/* Current Image with crossfade + zoom transitions */}
+                    {/* Current Image with crossfade + zoom transitions */}
                     <div 
-                      className={`absolute inset-0 transition-all duration-1000 ease-out transform ${
+                      className={`absolute inset-0 transition-all duration-1000 ease-out ${
                         isTransitioning 
                           ? 'opacity-0 scale-110' 
                           : 'opacity-100 scale-100'
@@ -303,7 +303,7 @@ const DynamicAboutSection = () => {
                           key={`current-${currentMedia.id}`}
                           src={currentMedia.media_url}
                           alt={currentMedia.alt_text}
-                          className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105 cursor-pointer"
+                          className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105 cursor-pointer"
                           loading={currentMediaIndex < 2 ? "eager" : "lazy"}
                           onClick={() => handleImageClick(currentMedia)}
                           style={{
@@ -313,15 +313,13 @@ const DynamicAboutSection = () => {
                             objectPosition: 'center'
                           }}
                         />
-                        {/* Subtle overlay effect on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-brand-beige/10 opacity-0 hover:opacity-100 transition-opacity duration-500" />
                       </div>
                     </div>
 
                     {/* Next Image with crossfade + zoom entrance */}
                     {isTransitioning && aboutMedia[nextImageIndex] && (
                       <div 
-                        className={`absolute inset-0 transition-all duration-1000 ease-out transform ${
+                        className={`absolute inset-0 transition-all duration-1000 ease-out ${
                           isTransitioning 
                             ? 'opacity-100 scale-100' 
                             : 'opacity-0 scale-90'
@@ -347,8 +345,7 @@ const DynamicAboutSection = () => {
                     )}
                   </div>
 
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-brand-beige/5 via-transparent to-transparent" />
+                  {/* Gradient Overlay - removed for cleaner transitions */}
                   
                   {/* Navigation Arrows - Hidden on small mobile */}
                   {hasMultipleMedia && !isMobile && (
