@@ -23,7 +23,19 @@ export const useInfiniteProducts = ({
     queryKey: ['products', 'lightweight', category],
     queryFn: async ({ pageParam }: { pageParam?: ProductCursor }) => {
       try {
-        // Use direct Supabase query instead of RPC for better reliability
+        // Check sessionStorage cache first
+        const cacheKey = `products_${category}_${pageParam?.created_at || 'first'}_${pageParam?.id || 'page'}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          // Cache for 5 minutes
+          if (Date.now() - timestamp < 300000) {
+            return data;
+          }
+        }
+
+        // Optimized query with specific columns only
         let query = supabase
           .from('products')
           .select(`
@@ -37,9 +49,7 @@ export const useInfiniteProducts = ({
             colors,
             stock_quantity,
             new_arrival_date,
-            is_active,
-            created_at,
-            updated_at
+            created_at
           `)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
@@ -74,9 +84,7 @@ export const useInfiniteProducts = ({
           colors: item.colors || [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
-          is_active: item.is_active,
-          created_at: item.created_at,
-          updated_at: item.updated_at
+          created_at: item.created_at
         }));
 
         // Next page cursor is the last item's created_at and id
@@ -84,11 +92,19 @@ export const useInfiniteProducts = ({
           ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
           : null;
 
-        return {
+        const result = {
           products,
           nextCursor,
           hasMore: products.length === pageSize
         };
+
+        // Cache the result in sessionStorage
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data: result,
+          timestamp: Date.now()
+        }));
+
+        return result;
       } catch (error: any) {
         // Simplified error handling - no complex fallbacks
         console.error('Products query failed:', error);
@@ -146,7 +162,7 @@ export const usePrefetchProducts = () => {
     queryClient.prefetchInfiniteQuery({
       queryKey: ['products', 'lightweight', category],
       queryFn: async () => {
-        // Use direct Supabase query for prefetch too
+        // Optimized prefetch query with specific columns only
         let query = supabase
           .from('products')
           .select(`
@@ -160,9 +176,7 @@ export const usePrefetchProducts = () => {
             colors,
             stock_quantity,
             new_arrival_date,
-            is_active,
-            created_at,
-            updated_at
+            created_at
           `)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
@@ -191,9 +205,7 @@ export const usePrefetchProducts = () => {
           colors: item.colors || [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
-          is_active: item.is_active,
-          created_at: item.created_at,
-          updated_at: item.updated_at
+          created_at: item.created_at
         }));
 
         return {
