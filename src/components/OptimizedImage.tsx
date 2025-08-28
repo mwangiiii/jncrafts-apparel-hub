@@ -12,6 +12,7 @@ interface OptimizedImageProps {
   lazy?: boolean;
   progressive?: boolean;
   fallbackSrc?: string;
+  fetchPriority?: 'high' | 'low' | 'auto';
   onLoad?: () => void;
   onError?: () => void;
 }
@@ -26,6 +27,7 @@ const OptimizedImage = ({
   lazy = true,
   progressive = true,
   fallbackSrc,
+  fetchPriority = 'auto',
   onLoad,
   onError,
 }: OptimizedImageProps) => {
@@ -108,6 +110,7 @@ const OptimizedImage = ({
                   isLoaded ? "opacity-100" : "opacity-0"
                 )}
                 loading={lazy ? "lazy" : "eager"}
+                fetchPriority={fetchPriority}
                 decoding="async"
                 onLoad={handleLoad}
                 onError={handleError}
@@ -124,6 +127,7 @@ const OptimizedImage = ({
                 isLoaded ? "opacity-100" : "opacity-0"
               )}
               loading={lazy ? "lazy" : "eager"}
+              fetchPriority={fetchPriority}
               decoding="async"
               onLoad={handleLoad}
               onError={handleError}
