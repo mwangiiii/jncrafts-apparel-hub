@@ -9,7 +9,7 @@ const Footer = () => {
   ];
 
   const footerLinks = {
-    Shop: ["All Products", "Tracksuits", "Hoodies", "Pants", "New Arrivals"],
+    Shop: ["Hoodies", "Jackets", "Pants", "Croptops", "Customized Tshirts", "2 Piece Set", "Skull Caps"],
     Support: ["Contact Us", "Size Guide", "Shipping Info", "Returns", "FAQ"],
     Company: ["About Us", "Careers", "Press", "Wholesale", "Sustainability"],
   };

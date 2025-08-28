@@ -57,7 +57,7 @@ const AdminProducts = () => {
   });
 
   const [categories, setCategories] = useState<string[]>([]);
-  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '4XL', '5XL'];
   const availableColors = ['Black', 'White', 'Grey', 'Red', 'Jungle Green', 'Baby Pink', 'Beige'];
 
   useEffect(() => {
