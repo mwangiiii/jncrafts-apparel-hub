@@ -23,19 +23,7 @@ export const useInfiniteProducts = ({
     queryKey: ['products', 'lightweight', category],
     queryFn: async ({ pageParam }: { pageParam?: ProductCursor }) => {
       try {
-        // Check sessionStorage cache first
-        const cacheKey = `products_${category}_${pageParam?.created_at || 'first'}_${pageParam?.id || 'page'}`;
-        const cached = sessionStorage.getItem(cacheKey);
-        
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          // Cache for 5 minutes
-          if (Date.now() - timestamp < 300000) {
-            return data;
-          }
-        }
-
-        // Optimized query with specific columns only
+        // Optimized query with specific columns only - no localStorage cache to avoid quota issues
         let query = supabase
           .from('products')
           .select(`
@@ -49,7 +37,9 @@ export const useInfiniteProducts = ({
             colors,
             stock_quantity,
             new_arrival_date,
-            created_at
+            created_at,
+            is_active,
+            updated_at
           `)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
@@ -84,7 +74,9 @@ export const useInfiniteProducts = ({
           colors: item.colors || [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
-          created_at: item.created_at
+          created_at: item.created_at,
+          is_active: item.is_active,
+          updated_at: item.updated_at
         }));
 
         // Next page cursor is the last item's created_at and id
@@ -97,12 +89,6 @@ export const useInfiniteProducts = ({
           nextCursor,
           hasMore: products.length === pageSize
         };
-
-        // Cache the result in sessionStorage
-        sessionStorage.setItem(cacheKey, JSON.stringify({
-          data: result,
-          timestamp: Date.now()
-        }));
 
         return result;
       } catch (error: any) {
@@ -176,7 +162,9 @@ export const usePrefetchProducts = () => {
             colors,
             stock_quantity,
             new_arrival_date,
-            created_at
+            created_at,
+            is_active,
+            updated_at
           `)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
@@ -205,7 +193,9 @@ export const usePrefetchProducts = () => {
           colors: item.colors || [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
-          created_at: item.created_at
+          created_at: item.created_at,
+          is_active: item.is_active,
+          updated_at: item.updated_at
         }));
 
         return {
