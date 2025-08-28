@@ -10,13 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/Header';
-import { getProductThumbnail, getProductSizes, getProductColors } from '@/components/ProductDisplayHelper';
+import { getPrimaryImage, hasRealSizes, hasRealColors, getSizeName, getColorName } from '@/components/ProductDisplayHelper';
+import { useToast } from '@/hooks/use-toast';
 
 const Wishlist = () => {
   const { user, loading } = useAuth();
   const { wishlistItems, isLoading, removeFromWishlist } = useWishlist();
-  const { addToCart } = usePersistentCart();
+  const { addToCart, cartItems } = usePersistentCart();
   const { formatPrice } = useCurrency();
+  const { toast } = useToast();
   const [selectedItems, setSelectedItems] = useState<{[key: string]: {size: string, color: string}}>({});
 
   if (loading || isLoading) {
@@ -28,13 +30,41 @@ const Wishlist = () => {
   }
 
   const handleAddToCart = async (item: any) => {
+    const product = item.product;
+    if (!product) return;
+
     const selection = selectedItems[item.id];
-    if (!selection?.size || !selection?.color) {
-      alert('Please select size and color first');
+    const requiresSize = hasRealSizes(product);
+    const requiresColor = hasRealColors(product);
+
+    if (requiresSize && !selection?.size) {
+      toast({
+        title: "Size Required",
+        description: "Please select a size before adding to cart",
+        variant: "destructive"
+      });
       return;
     }
 
-    await addToCart(item.product, 1, selection.size, selection.color);
+    if (requiresColor && !selection?.color) {
+      toast({
+        title: "Color Required", 
+        description: "Please select a color before adding to cart",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (product.stock_quantity === 0) {
+      toast({
+        title: "Out of Stock",
+        description: "This product is currently out of stock",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    await addToCart(product, 1, selection?.size || '', selection?.color || '');
   };
 
   const updateSelection = (itemId: string, type: 'size' | 'color', value: string) => {
@@ -47,7 +77,7 @@ const Wishlist = () => {
     }));
   };
 
-  const totalItems = 0; // Cart items count for header
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,71 +118,84 @@ const Wishlist = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <img
-                  src={getProductThumbnail(item.product)}
-                  alt={item.product?.name}
-                  className="w-full h-48 object-cover rounded-lg mb-4"
-                />
+                <div className="relative w-full h-48 bg-muted/50 rounded-lg mb-4 overflow-hidden">
+                  <img
+                    src={getPrimaryImage(item.product) || '/placeholder.svg'}
+                    alt={item.product?.name || 'Product image'}
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
                 
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <p className="text-2xl font-bold text-primary">
+                      <p className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                         {formatPrice(item.product?.price || 0)}
                       </p>
-                      <Badge variant="secondary">{item.product?.category}</Badge>
+                      <Badge variant="secondary" className="uppercase text-xs tracking-wide">{item.product?.category}</Badge>
                     </div>
 
-                  <p className="text-sm text-muted-foreground">
-                    {item.product?.description}
-                  </p>
+                  {item.product?.description && (
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                      {item.product.description}
+                    </p>
+                  )}
 
                   {/* Size Selection */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Size</label>
-                    <Select
-                      value={selectedItems[item.id]?.size || ''}
-                      onValueChange={(value) => updateSelection(item.id, 'size', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                       <SelectContent>
-                         {getProductSizes(item.product).map(size => (
-                           <SelectItem key={size} value={size}>
-                             {size}
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                    </Select>
-                  </div>
+                  {hasRealSizes(item.product) && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-foreground">Size</label>
+                      <Select
+                        value={selectedItems[item.id]?.size || ''}
+                        onValueChange={(value) => updateSelection(item.id, 'size', value)}
+                      >
+                        <SelectTrigger className="bg-background border-border hover:border-primary focus:border-primary">
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                         <SelectContent className="bg-background border border-border shadow-lg z-50">
+                           {item.product.sizes?.map((size, index) => (
+                             <SelectItem key={`${getSizeName(size)}-${index}`} value={getSizeName(size)} className="cursor-pointer hover:bg-muted">
+                               {getSizeName(size)}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Color Selection */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Color</label>
-                    <Select
-                      value={selectedItems[item.id]?.color || ''}
-                      onValueChange={(value) => updateSelection(item.id, 'color', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select color" />
-                      </SelectTrigger>
-                       <SelectContent>
-                         {getProductColors(item.product).map(color => (
-                           <SelectItem key={color} value={color}>
-                             {color}
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                    </Select>
-                  </div>
+                  {hasRealColors(item.product) && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-foreground">Color</label>
+                      <Select
+                        value={selectedItems[item.id]?.color || ''}
+                        onValueChange={(value) => updateSelection(item.id, 'color', value)}
+                      >
+                        <SelectTrigger className="bg-background border-border hover:border-primary focus:border-primary">
+                          <SelectValue placeholder="Select color" />
+                        </SelectTrigger>
+                         <SelectContent className="bg-background border border-border shadow-lg z-50">
+                           {item.product.colors?.map((color, index) => (
+                             <SelectItem key={`${getColorName(color)}-${index}`} value={getColorName(color)} className="cursor-pointer hover:bg-muted capitalize">
+                               {getColorName(color)}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <Button
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant"
                     onClick={() => handleAddToCart(item)}
-                    disabled={!selectedItems[item.id]?.size || !selectedItems[item.id]?.color}
+                    disabled={
+                      item.product?.stock_quantity === 0 || 
+                      (hasRealSizes(item.product) && !selectedItems[item.id]?.size) ||
+                      (hasRealColors(item.product) && !selectedItems[item.id]?.color)
+                    }
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to Cart
+                    {item.product?.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
                   </Button>
                 </div>
               </CardContent>
