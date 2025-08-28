@@ -39,7 +39,12 @@ export const useSessionId = () => {
             });
 
           if (error) {
-            console.error('Failed to register guest session:', error);
+            // Handle duplicate session ID gracefully
+            if (error.code === '23505') {
+              console.log('Session already exists - continuing with stored session');
+            } else {
+              console.error('Failed to register guest session:', error);
+            }
             // Continue with session even if DB registration fails
           }
         } else {

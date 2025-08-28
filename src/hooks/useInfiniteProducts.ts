@@ -33,6 +33,10 @@ export const useInfiniteProducts = ({
 
         if (error) {
           console.error('Error fetching products:', error);
+          // Handle timeout errors more gracefully
+          if (error.code === '57014') {
+            throw new Error('Products are loading slowly due to high demand. Please try again.');
+          }
           throw error;
         }
 
@@ -120,7 +124,10 @@ export const usePrefetchProducts = () => {
           p_cursor_id: null
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error prefetching products:', error);
+          return; // Fail silently for prefetch
+        }
 
         const products = (data || []).map((item: any) => ({
           id: item.id,
