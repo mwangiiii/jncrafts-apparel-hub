@@ -7,6 +7,7 @@ import { WhatsAppChatWindow } from "@/components/WhatsAppChatWindow";
 import { UserProfileView } from "@/components/UserProfileView";
 import { Conversation } from "@/types/database";
 import AdminHeader from "@/components/AdminHeader";
+import { ComingSoonOverlay } from "@/components/ComingSoonOverlay";
 
 const AdminMessages = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -64,7 +65,11 @@ const AdminMessages = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       <AdminHeader />
-      <div className="flex h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+      <ComingSoonOverlay 
+        title="Admin Messaging Coming Soon"
+        description="We're building a powerful admin messaging dashboard to manage customer conversations and support tickets!"
+      >
+        <div className="flex h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Sidebar with chat list or back button when showing profile */}
       <div className="w-1/3 border-r bg-white/70 backdrop-blur-sm shadow-lg">
         {selectedUserId && !showProfile ? (
@@ -151,7 +156,8 @@ const AdminMessages = () => {
           </div>
         )}
       </div>
-    </div>
+        </div>
+      </ComingSoonOverlay>
     </div>
   );
 };

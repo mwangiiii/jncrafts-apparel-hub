@@ -9,6 +9,7 @@ import { useMessaging } from "@/hooks/useMessaging";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList } from "./ConversationList";
 import { MessagesList } from "./MessagesList";
+import { ComingSoonOverlay } from "@/components/ComingSoonOverlay";
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -78,7 +79,11 @@ export const ChatWindow = ({ onClose, productId, productName }: ChatWindowProps)
   const activeConv = conversations.find(c => c.id === activeConversation);
 
   return (
-    <Card className="w-80 h-96 flex flex-col shadow-xl">
+    <ComingSoonOverlay 
+      title="Chat System Coming Soon"
+      description="We're building a powerful messaging system to connect you with our support team!"
+    >
+      <Card className="w-80 h-96 flex flex-col shadow-xl">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b bg-primary text-primary-foreground rounded-t-lg">
         <div className="flex items-center gap-2">
@@ -209,5 +214,6 @@ export const ChatWindow = ({ onClose, productId, productName }: ChatWindowProps)
         )}
       </div>
     </Card>
+    </ComingSoonOverlay>
   );
 };

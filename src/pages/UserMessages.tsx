@@ -15,6 +15,7 @@ import { ConversationList } from "@/components/ConversationList";
 import { MessagesList } from "@/components/MessagesList";
 import ProductReferenceCard from "@/components/ProductReferenceCard";
 import Header from "@/components/Header";
+import { ComingSoonOverlay } from "@/components/ComingSoonOverlay";
 
 const UserMessages = () => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -93,7 +94,11 @@ const UserMessages = () => {
         cartItems={0} 
         onCartClick={() => {}} 
       />
-      <div className="flex h-screen bg-background">
+      <ComingSoonOverlay 
+        title="Messages Coming Soon"
+        description="We're building a comprehensive messaging system where you can chat with our support team about products and orders!"
+      >
+        <div className="flex h-screen bg-background">
       {/* Conversations List */}
       <div className="w-1/3 border-r">
         <div className="p-4 border-b">
@@ -254,7 +259,8 @@ const UserMessages = () => {
           </div>
         )}
       </div>
-    </div>
+        </div>
+      </ComingSoonOverlay>
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useMessaging } from "@/hooks/useMessaging";
+import { ComingSoonOverlay } from "@/components/ComingSoonOverlay";
 
 interface ChatWidgetProps {
   productId?: string;
@@ -31,14 +32,19 @@ const ChatWidget = ({ productId, productName }: ChatWidgetProps) => {
   };
 
   return (
-    <Button
-      onClick={handleStartConversation}
-      size="lg"
-      className="rounded-full h-12 w-12 shadow-lg bg-primary hover:bg-primary/90"
-      title={productName ? `Message about ${productName}` : "Start conversation"}
+    <ComingSoonOverlay 
+      title="Chat Feature Coming Soon"
+      description="We're building an amazing chat experience to help you with product inquiries!"
     >
-      <MessageCircle size={20} />
-    </Button>
+      <Button
+        onClick={handleStartConversation}
+        size="lg"
+        className="rounded-full h-12 w-12 shadow-lg bg-primary hover:bg-primary/90"
+        title={productName ? `Message about ${productName}` : "Start conversation"}
+      >
+        <MessageCircle size={20} />
+      </Button>
+    </ComingSoonOverlay>
   );
 };
 
