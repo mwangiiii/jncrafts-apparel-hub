@@ -163,6 +163,33 @@ export type Database = {
         }
         Relationships: []
       }
+      colors: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          hex_code: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          hex_code?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          hex_code?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -528,6 +555,198 @@ export type Database = {
         }
         Relationships: []
       }
+      product_colors: {
+        Row: {
+          additional_price: number | null
+          color_id: string
+          created_at: string | null
+          id: string
+          is_available: boolean | null
+          product_id: string
+          stock_quantity: number | null
+        }
+        Insert: {
+          additional_price?: number | null
+          color_id: string
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          product_id: string
+          stock_quantity?: number | null
+        }
+        Update: {
+          additional_price?: number | null
+          color_id?: string
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          product_id?: string
+          stock_quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_colors_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_colors_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          image_url: string
+          is_primary: boolean | null
+          product_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url: string
+          is_primary?: boolean | null
+          product_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          is_primary?: boolean | null
+          product_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_inventory: {
+        Row: {
+          color_id: string | null
+          created_at: string | null
+          id: string
+          last_restocked: string | null
+          product_id: string
+          reorder_level: number | null
+          reserved_quantity: number | null
+          size_id: string | null
+          stock_quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          color_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_restocked?: string | null
+          product_id: string
+          reorder_level?: number | null
+          reserved_quantity?: number | null
+          size_id?: string | null
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          color_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_restocked?: string | null
+          product_id?: string
+          reorder_level?: number | null
+          reserved_quantity?: number | null
+          size_id?: string | null
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_inventory_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_inventory_size_id_fkey"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "sizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_sizes: {
+        Row: {
+          additional_price: number | null
+          created_at: string | null
+          id: string
+          is_available: boolean | null
+          product_id: string
+          size_id: string
+          stock_quantity: number | null
+        }
+        Insert: {
+          additional_price?: number | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          product_id: string
+          size_id: string
+          stock_quantity?: number | null
+        }
+        Update: {
+          additional_price?: number | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          product_id?: string
+          size_id?: string
+          stock_quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sizes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sizes_size_id_fkey"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "sizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -636,6 +855,33 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json
+        }
+        Relationships: []
+      }
+      sizes: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          display_order: number
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          display_order: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
         }
         Relationships: []
       }
