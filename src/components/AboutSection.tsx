@@ -1,7 +1,7 @@
 import { Users, Award, Truck, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import OptimizedImage from "@/components/OptimizedImage";
+import OptimizedImage from "./OptimizedImage";
 
 const AboutSection = () => {
   const features = [

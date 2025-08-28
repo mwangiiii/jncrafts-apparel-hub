@@ -3,8 +3,10 @@ import { Users, Award, Truck, Shield, Play, Pause } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import OptimizedImage from "@/components/OptimizedImage";
 import { supabase } from '@/integrations/supabase/client';
+
+// Import OptimizedImage with explicit path
+import OptimizedImage from "./OptimizedImage";
 
 interface AboutMedia {
   id: string;
