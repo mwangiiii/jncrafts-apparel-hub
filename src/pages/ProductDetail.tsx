@@ -27,7 +27,7 @@ const ProductDetail = () => {
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
-  const { addToCart } = usePersistentCart();
+  const { addToCart, cartItems } = usePersistentCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,10 +146,6 @@ const ProductDetail = () => {
     }
 
     addToCart(product, quantity, selectedSize, selectedColor);
-    toast({
-      title: "Added to Cart",
-      description: `${product.name} has been added to your cart`,
-    });
   };
 
   const handleWishlistToggle = () => {
@@ -230,7 +226,7 @@ const ProductDetail = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header 
-          cartItems={0} 
+          cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
           onCartClick={() => {}} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -244,7 +240,7 @@ const ProductDetail = () => {
     return (
       <div className="min-h-screen bg-background">
         <Header 
-          cartItems={0} 
+          cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
           onCartClick={() => {}} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -258,10 +254,10 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header 
-        cartItems={0} 
-        onCartClick={() => {}} 
-      />
+        <Header 
+          cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
+          onCartClick={() => {}} 
+        />
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
         <Button 
@@ -337,10 +333,10 @@ const ProductDetail = () => {
           {/* Product Details */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{product.name}</h1>
-              <p className="text-lg text-muted-foreground">{product.category}</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{product.name}</h1>
+              <p className="text-lg text-muted-foreground uppercase tracking-wide">{product.category}</p>
               <div className="flex items-center gap-3 mt-2">
-                <p className="text-3xl font-bold text-primary">{formatPrice(product.price)}</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{formatPrice(product.price)}</p>
                 {stockStatus && (
                   <Badge variant={stockStatus.variant} className="flex items-center gap-1">
                     {stockStatus.status === 'out' && <AlertTriangle className="h-3 w-3" />}
@@ -352,15 +348,15 @@ const ProductDetail = () => {
 
             {product.description && (
               <div>
-                <h3 className="text-lg font-semibold mb-2">Description</h3>
-                <p className="text-muted-foreground">{product.description}</p>
+                <h3 className="text-lg font-semibold mb-2 text-foreground">Description</h3>
+                <p className="text-muted-foreground leading-relaxed">{product.description}</p>
               </div>
             )}
 
             {/* Size Selection */}
             {hasRealSizes(product) && (
               <div>
-                <Label className="text-base font-semibold">Size</Label>
+                <Label className="text-base font-semibold text-foreground">Size</Label>
                 <div className="flex gap-2 mt-2">
                   {product.sizes!.map((size) => (
                     <Button
@@ -379,7 +375,7 @@ const ProductDetail = () => {
             {/* Color Selection */}
             {hasRealColors(product) && (
               <div>
-                <Label className="text-base font-semibold">Color</Label>
+                <Label className="text-base font-semibold text-foreground">Color</Label>
                 <div className="flex gap-2 mt-2">
                   {product.colors!.map((color) => (
                     <Button
@@ -397,7 +393,7 @@ const ProductDetail = () => {
 
             {/* Quantity */}
             <div>
-              <Label className="text-base font-semibold">Quantity</Label>
+              <Label className="text-base font-semibold text-foreground">Quantity</Label>
               <div className="flex items-center gap-3 mt-2">
                 <Button
                   variant="outline"
@@ -423,7 +419,7 @@ const ProductDetail = () => {
             <div className="space-y-3">
               <Button 
                 onClick={handleAddToCart}
-                className="w-full"
+                className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant"
                 size="lg"
                 disabled={product.stock_quantity === 0}
               >
