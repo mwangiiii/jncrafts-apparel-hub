@@ -47,11 +47,11 @@ const AdminProducts = () => {
     price: '',
     description: '',
     category: '',
-    images: [] as string[],
-    videos: [] as string[],
-    thumbnailIndex: 0,
-    sizes: [] as string[],
-    colors: [] as string[],
+      images: [] as ProductImage[],
+      videos: [] as string[],
+      thumbnailIndex: 0,
+      sizes: [] as ProductSizeInfo[],
+      colors: [] as ProductColorInfo[],
     stock_quantity: '',
     is_active: true
   });

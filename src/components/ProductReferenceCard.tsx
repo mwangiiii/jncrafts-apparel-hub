@@ -9,6 +9,7 @@ import { usePersistentCart } from "@/hooks/usePersistentCart";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types/database";
+import { getPrimaryImage, getSizeName, getColorName, hasRealSizes, hasRealColors } from "@/components/ProductDisplayHelper";
 
 interface ProductReferenceCardProps {
   productId: string;
@@ -28,15 +29,61 @@ const ProductReferenceCard = ({ productId }: ProductReferenceCardProps) => {
     const fetchProduct = async () => {
       try {
         const { data, error } = await supabase
-          .from('products')
-          .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, sizes, colors, created_at, updated_at')
-          .eq('id', productId)
-          .single();
+          .rpc('get_product_complete', { p_product_id: productId });
 
         if (error) throw error;
-        setProduct(data);
-        if (data.sizes.length > 0) setSelectedSize(data.sizes[0]);
-        if (data.colors.length > 0) setSelectedColor(data.colors[0]);
+        
+        if (!data || data.length === 0) {
+          console.error('Product not found:', productId);
+          return;
+        }
+
+        const productData = data[0];
+        const product = {
+          id: productData.id,
+          name: productData.name,
+          price: productData.price,
+          description: productData.description,
+          category: productData.category,
+          stock_quantity: productData.stock_quantity,
+          is_active: productData.is_active,
+          new_arrival_date: productData.new_arrival_date,
+          thumbnail_index: productData.thumbnail_index,
+          created_at: productData.created_at,
+          updated_at: productData.updated_at,
+          images: Array.isArray(productData.images) 
+            ? productData.images.map((img: any) => ({
+                id: img.id || 'temp',
+                image_url: img.url || img.image_url || img,
+                is_primary: img.is_primary || false,
+                display_order: img.order || img.display_order || 0,
+                product_id: productId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }))
+            : [],
+          colors: Array.isArray(productData.colors) 
+            ? productData.colors.map((color: any) => ({
+                id: color.id,
+                name: color.name,
+                hex: color.hex || color.hex_code,
+                available: color.available !== false
+              }))
+            : [],
+          sizes: Array.isArray(productData.sizes) 
+            ? productData.sizes.map((size: any) => ({
+                id: size.id,
+                name: size.name,
+                category: size.category,
+                available: size.available !== false
+              }))
+            : [],
+          videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
+        };
+
+        setProduct(product);
+        if (product.sizes.length > 0) setSelectedSize(product.sizes[0].name);
+        if (product.colors.length > 0) setSelectedColor(product.colors[0].name);
       } catch (error) {
         console.error('Error fetching product:', error);
       }
@@ -107,7 +154,7 @@ const ProductReferenceCard = ({ productId }: ProductReferenceCardProps) => {
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <img
-            src={product.images[0] || '/placeholder.svg'}
+            src={getPrimaryImage(product)}
             alt={product.name}
             className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
           />
@@ -141,7 +188,7 @@ const ProductReferenceCard = ({ productId }: ProductReferenceCardProps) => {
             <div className="mt-3 space-y-2">
               <div className="flex gap-2 text-xs">
                 {/* Size Selection */}
-                {product.sizes.length > 0 && (
+                {hasRealSizes(product) && (
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Size:</span>
                     <select
@@ -149,15 +196,15 @@ const ProductReferenceCard = ({ productId }: ProductReferenceCardProps) => {
                       onChange={(e) => setSelectedSize(e.target.value)}
                       className="text-xs bg-background border rounded px-1 py-0.5"
                     >
-                      {product.sizes.map((size) => (
-                        <option key={size} value={size}>{size}</option>
+                      {product.sizes!.map((size) => (
+                        <option key={getSizeName(size)} value={getSizeName(size)}>{getSizeName(size)}</option>
                       ))}
                     </select>
                   </div>
                 )}
                 
                 {/* Color Selection */}
-                {product.colors.length > 0 && (
+                {hasRealColors(product) && (
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Color:</span>
                     <select
@@ -165,8 +212,8 @@ const ProductReferenceCard = ({ productId }: ProductReferenceCardProps) => {
                       onChange={(e) => setSelectedColor(e.target.value)}
                       className="text-xs bg-background border rounded px-1 py-0.5 capitalize"
                     >
-                      {product.colors.map((color) => (
-                        <option key={color} value={color}>{color}</option>
+                      {product.colors!.map((color) => (
+                        <option key={getColorName(color)} value={getColorName(color)}>{getColorName(color)}</option>
                       ))}
                     </select>
                   </div>

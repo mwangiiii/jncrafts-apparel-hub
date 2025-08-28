@@ -24,7 +24,6 @@ export const useMessaging = () => {
           products:product_id (
             id,
             name,
-            images,
             price
           )
         `)
@@ -44,7 +43,7 @@ export const useMessaging = () => {
         product: conv.products ? {
           id: conv.products.id,
           name: conv.products.name,
-          images: conv.products.images,
+          images: [],
           price: conv.products.price,
           description: '',
           category: '',

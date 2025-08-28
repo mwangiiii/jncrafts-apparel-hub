@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSessionId } from './useSessionId';
 import { CartItem, Product } from '@/types/database';
+import { getPrimaryImage } from '@/components/ProductDisplayHelper';
 import { useToast } from '@/hooks/use-toast';
 
 export const usePersistentCart = () => {
@@ -53,7 +54,7 @@ export const usePersistentCart = () => {
         session_id: user ? null : sessionId,
         product_id: product.id,
         product_name: product.name,
-        product_image: product.images[0] || null,
+        product_image: getPrimaryImage(product),
         quantity,
         size,
         color,

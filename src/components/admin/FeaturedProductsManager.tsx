@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
+import { getPrimaryImage } from '@/components/ProductDisplayHelper';
 
 interface FeaturedProduct {
   id: string;
@@ -43,16 +44,26 @@ const FeaturedProductsManager = () => {
       if (featuredError) throw featuredError;
 
       // Fetch all products for dropdown
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, sizes, colors, created_at, updated_at')
-        .eq('is_active', true)
-        .order('name', { ascending: true });
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('id, name, price, category, stock_quantity, is_active, created_at, updated_at')
+          .eq('is_active', true)
+          .order('name', { ascending: true });
 
       if (productsError) throw productsError;
 
+      // Transform products with empty relations
+      const transformedProducts = (productsData || []).map(p => ({
+        ...p,
+        images: [], // Will be loaded on demand
+        sizes: [],
+        colors: [],
+        videos: [],
+        description: null
+      }));
+
       setFeaturedProducts(featuredData || []);
-      setAllProducts(productsData || []);
+      setAllProducts(transformedProducts);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -250,7 +261,7 @@ const FeaturedProductsManager = () => {
                       {/* Product Preview */}
                       <div className="w-20 h-20 flex-shrink-0">
                         <img
-                          src={product.images[0] || '/placeholder.svg'}
+                          src={product ? getPrimaryImage(product) : '/placeholder.svg'}
                           alt={product.name}
                           className="w-full h-full object-cover rounded"
                         />

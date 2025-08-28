@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
+import { getPrimaryImage, hasRealSizes, hasRealColors, getSizeName, getColorName } from '@/components/ProductDisplayHelper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -47,15 +48,60 @@ const ProductDetail = () => {
   const fetchProduct = async () => {
     try {
       const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, description, sizes, colors, videos, new_arrival_date, created_at, updated_at')
-        .eq('id', id)
-        .single();
+        .rpc('get_product_complete', { p_product_id: id });
 
       if (error) throw error;
-      setProduct(data);
-      if (data.sizes.length > 0) setSelectedSize(data.sizes[0]);
-      if (data.colors.length > 0) setSelectedColor(data.colors[0]);
+      
+      if (!data || data.length === 0) {
+        throw new Error('Product not found');
+      }
+
+      const productData = data[0];
+      const product = {
+        id: productData.id,
+        name: productData.name,
+        price: productData.price,
+        description: productData.description,
+        category: productData.category,
+        stock_quantity: productData.stock_quantity,
+        is_active: productData.is_active,
+        new_arrival_date: productData.new_arrival_date,
+        thumbnail_index: productData.thumbnail_index,
+        created_at: productData.created_at,
+        updated_at: productData.updated_at,
+        images: Array.isArray(productData.images) 
+          ? productData.images.map((img: any) => ({
+              id: img.id || 'temp',
+              image_url: img.url || img.image_url || img,
+              is_primary: img.is_primary || false,
+              display_order: img.order || img.display_order || 0,
+              product_id: productData.id,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }))
+          : [],
+        colors: Array.isArray(productData.colors) 
+          ? productData.colors.map((color: any) => ({
+              id: color.id,
+              name: color.name,
+              hex: color.hex || color.hex_code,
+              available: color.available !== false
+            }))
+          : [],
+        sizes: Array.isArray(productData.sizes) 
+          ? productData.sizes.map((size: any) => ({
+              id: size.id,
+              name: size.name,
+              category: size.category,
+              available: size.available !== false
+            }))
+          : [],
+        videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
+      };
+
+      setProduct(product);
+      if (product.sizes.length > 0) setSelectedSize(product.sizes[0].name);
+      if (product.colors.length > 0) setSelectedColor(product.colors[0].name);
     } catch (error) {
       console.error('Error fetching product:', error);
       toast({
@@ -72,7 +118,7 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return;
     
-    if (product.sizes.length > 0 && !selectedSize) {
+    if (hasRealSizes(product) && !selectedSize) {
       toast({
         title: "Size Required",
         description: "Please select a size before adding to cart",
@@ -81,7 +127,7 @@ const ProductDetail = () => {
       return;
     }
     
-    if (product.colors.length > 0 && !selectedColor) {
+    if (hasRealColors(product) && !selectedColor) {
       toast({
         title: "Color Required",
         description: "Please select a color before adding to cart", 
@@ -235,26 +281,26 @@ const ProductDetail = () => {
               <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogTrigger asChild>
                   <img
-                    src={product.images[selectedImage] || '/placeholder.svg'}
-                    alt={product.name}
-                    className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform duration-300"
+                     src={getPrimaryImage(product)}
+                     alt={product.name}
+                     className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform duration-300"
                   />
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[90vh] p-0">
                   <div className="relative bg-background/80 backdrop-blur-sm">
                     <Carousel className="w-full">
                       <CarouselContent>
-                        {product.images.map((image, index) => (
-                          <CarouselItem key={index}>
-                            <div className="aspect-square flex items-center justify-center p-6">
-                              <img
-                                src={image}
-                                alt={`${product.name} - Image ${index + 1}`}
-                                className="max-w-full max-h-full object-contain"
-                              />
-                            </div>
-                          </CarouselItem>
-                        ))}
+                         {product.images.map((image, index) => (
+                           <CarouselItem key={index}>
+                             <div className="aspect-square flex items-center justify-center p-6">
+                               <img
+                                 src={getPrimaryImage({ images: [image] } as Product)}
+                                 alt={`${product.name} - Image ${index + 1}`}
+                                 className="max-w-full max-h-full object-contain"
+                               />
+                             </div>
+                           </CarouselItem>
+                         ))}
                       </CarouselContent>
                       <CarouselPrevious />
                       <CarouselNext />
@@ -277,11 +323,11 @@ const ProductDetail = () => {
                         : 'border-transparent hover:border-muted-foreground'
                     }`}
                   >
-                    <img
-                      src={image}
-                      alt={`${product.name} thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                     <img
+                       src={getPrimaryImage({ images: [image] } as Product)}
+                       alt={`${product.name} thumbnail ${index + 1}`}
+                       className="w-full h-full object-cover"
+                     />
                   </button>
                 ))}
               </div>
@@ -312,18 +358,18 @@ const ProductDetail = () => {
             )}
 
             {/* Size Selection */}
-            {product.sizes.length > 0 && (
+            {hasRealSizes(product) && (
               <div>
                 <Label className="text-base font-semibold">Size</Label>
                 <div className="flex gap-2 mt-2">
-                  {product.sizes.map((size) => (
+                  {product.sizes!.map((size) => (
                     <Button
-                      key={size}
-                      variant={selectedSize === size ? "default" : "outline"}
-                      onClick={() => setSelectedSize(size)}
+                      key={getSizeName(size)}
+                      variant={selectedSize === getSizeName(size) ? "default" : "outline"}
+                      onClick={() => setSelectedSize(getSizeName(size))}
                       className="min-w-[3rem]"
                     >
-                      {size}
+                      {getSizeName(size)}
                     </Button>
                   ))}
                 </div>
@@ -331,18 +377,18 @@ const ProductDetail = () => {
             )}
 
             {/* Color Selection */}
-            {product.colors.length > 0 && (
+            {hasRealColors(product) && (
               <div>
                 <Label className="text-base font-semibold">Color</Label>
                 <div className="flex gap-2 mt-2">
-                  {product.colors.map((color) => (
+                  {product.colors!.map((color) => (
                     <Button
-                      key={color}
-                      variant={selectedColor === color ? "default" : "outline"}
-                      onClick={() => setSelectedColor(color)}
+                      key={getColorName(color)}
+                      variant={selectedColor === getColorName(color) ? "default" : "outline"}
+                      onClick={() => setSelectedColor(getColorName(color))}
                       className="capitalize"
                     >
-                      {color}
+                      {getColorName(color)}
                     </Button>
                   ))}
                 </div>

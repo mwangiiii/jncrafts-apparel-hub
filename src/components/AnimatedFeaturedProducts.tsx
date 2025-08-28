@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useOptimizedFeatured } from '@/hooks/useOptimizedFeatured';
 import { Product } from '@/types/database';
+import { getPrimaryImage } from '@/components/ProductDisplayHelper';
 
 const AnimatedFeaturedProducts = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -74,7 +75,15 @@ const AnimatedFeaturedProducts = () => {
                 name: featured.name,
                 price: featured.price,
                 category: featured.category,
-                images: featured.thumbnail_image ? [featured.thumbnail_image] : [],
+                images: featured.thumbnail_image ? [{
+                  id: 'thumb',
+                  image_url: featured.thumbnail_image,
+                  is_primary: true,
+                  display_order: 0,
+                  product_id: featured.product_id,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }] : [],
                 sizes: [], // Load on demand
                 colors: [], // Load on demand
                 stock_quantity: featured.stock_quantity,
@@ -93,7 +102,7 @@ const AnimatedFeaturedProducts = () => {
                       {/* Product Image */}
                       <div className="relative overflow-hidden h-96 md:h-full">
                         <img
-                          src={product.images?.[0] || '/placeholder.svg'}
+                          src={getPrimaryImage(product)}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                         />

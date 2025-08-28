@@ -61,7 +61,7 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
               available: size.available !== false
             }))
           : [],
-        videos: Array.isArray(productData.videos) ? productData.videos : []
+        videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
       };
     },
     enabled: enabled && !!productId,
@@ -85,9 +85,6 @@ export const useProductBatch = (productIds: string[], enabled: boolean = true) =
           name,
           price,
           category,
-          images,
-          sizes,
-          colors,
           stock_quantity,
           is_active,
           created_at,
@@ -101,7 +98,14 @@ export const useProductBatch = (productIds: string[], enabled: boolean = true) =
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(p => ({
+        ...p,
+        images: [],
+        sizes: [],
+        colors: [],
+        videos: [],
+        description: null
+      }));
     },
     enabled: enabled && productIds.length > 0,
     staleTime: 3 * 60 * 1000, // 3 minutes

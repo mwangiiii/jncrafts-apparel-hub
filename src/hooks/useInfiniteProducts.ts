@@ -38,7 +38,6 @@ export const useInfiniteProducts = ({
           throw error;
         }
 
-        // Transform data to match expected format
         const products = (data || []).map((item: any) => ({
           id: item.id,
           name: item.name,
@@ -48,7 +47,10 @@ export const useInfiniteProducts = ({
             id: 'thumb', 
             image_url: item.thumbnail_image, 
             is_primary: true, 
-            display_order: 0 
+            display_order: 0,
+            product_id: item.id,
+            created_at: item.created_at,
+            updated_at: item.created_at
           }] : [],
           sizes: [], // Will be loaded on demand
           colors: [], // Will be loaded on demand
@@ -58,7 +60,9 @@ export const useInfiniteProducts = ({
           is_active: true,
           updated_at: item.created_at,
           has_colors: item.has_colors,
-          has_sizes: item.has_sizes
+          has_sizes: item.has_sizes,
+          description: null,
+          videos: []
         }));
 
         const result = {
@@ -146,7 +150,10 @@ export const usePrefetchProducts = () => {
             id: 'thumb', 
             image_url: item.thumbnail_image, 
             is_primary: true, 
-            display_order: 0 
+            display_order: 0,
+            product_id: item.id,
+            created_at: item.created_at,
+            updated_at: item.created_at
           }] : [],
           sizes: [],
           colors: [],
@@ -156,7 +163,9 @@ export const usePrefetchProducts = () => {
           is_active: true,
           updated_at: item.created_at,
           has_colors: item.has_colors,
-          has_sizes: item.has_sizes
+          has_sizes: item.has_sizes,
+          description: null,
+          videos: []
         }));
 
         return {

@@ -20,7 +20,7 @@ export const useAdminProducts = ({
   return useInfiniteQuery({
     queryKey: ['admin-products', 'keyset'],
     queryFn: async ({ pageParam }: { pageParam?: AdminProductCursor }) => {
-      // Use lightweight select but include essential fields for admin
+      // Use direct query instead of non-existent RPC function
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -29,17 +29,15 @@ export const useAdminProducts = ({
           price,
           category,
           description,
-          images,
-          sizes,
-          colors,
           stock_quantity,
           is_active,
+          new_arrival_date,
+          thumbnail_index,
           created_at,
           updated_at
         `)
+        .eq('is_active', true)
         .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .lt('created_at', pageParam?.created_at || '2099-12-31T23:59:59.999Z')
         .limit(pageSize);
 
       if (error) {
@@ -47,7 +45,16 @@ export const useAdminProducts = ({
         throw error;
       }
 
-      const products = data || [];
+      // Transform data with empty arrays for relations
+      const products = (data || []).map((item: any) => ({
+        ...item,
+        images: [], // Will be loaded on demand
+        colors: [], // Will be loaded on demand
+        sizes: [], // Will be loaded on demand
+        videos: [], // Will be loaded on demand
+        description: item.description || null
+      }));
+
       const nextCursor = products.length === pageSize && products.length > 0
         ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
         : null;
