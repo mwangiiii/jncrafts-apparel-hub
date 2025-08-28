@@ -82,6 +82,7 @@ const DynamicAboutSection = () => {
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [nextImageIndex, setNextImageIndex] = useState(1);
 
   // Auto-rotate media every 4 seconds
   useEffect(() => {
@@ -95,28 +96,35 @@ const DynamicAboutSection = () => {
   }, [isPlaying, currentMediaIndex]);
 
   const handleNextImage = () => {
+    const nextIndex = (currentMediaIndex + 1) % aboutMedia.length;
+    setNextImageIndex(nextIndex);
     setIsTransitioning(true);
+    
     setTimeout(() => {
-      setCurrentMediaIndex((prev) => (prev + 1) % aboutMedia.length);
+      setCurrentMediaIndex(nextIndex);
       setIsTransitioning(false);
-    }, 150);
+    }, 300);
   };
 
   const handlePrevImage = () => {
+    const prevIndex = (currentMediaIndex - 1 + aboutMedia.length) % aboutMedia.length;
+    setNextImageIndex(prevIndex);
     setIsTransitioning(true);
+    
     setTimeout(() => {
-      setCurrentMediaIndex((prev) => (prev - 1 + aboutMedia.length) % aboutMedia.length);
+      setCurrentMediaIndex(prevIndex);
       setIsTransitioning(false);
-    }, 150);
+    }, 300);
   };
 
   const handleDotClick = (index: number) => {
     if (index !== currentMediaIndex) {
+      setNextImageIndex(index);
       setIsTransitioning(true);
       setTimeout(() => {
         setCurrentMediaIndex(index);
         setIsTransitioning(false);
-      }, 150);
+      }, 300);
     }
   };
 
@@ -147,26 +155,26 @@ const DynamicAboutSection = () => {
   ];
 
   return (
-    <section id="about" className="py-20">
+    <section id="about" className="py-20 overflow-hidden">
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Content */}
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               About <span className="text-brand-beige">jnCRAFTS</span>
             </h2>
             <div className="space-y-6 text-lg text-muted-foreground">
-              <p>
+              <p className="leading-relaxed">
                 jnCrafts is more than just a clothing brand - we're a lifestyle. Founded with 
                 the vision of creating premium streetwear that combines comfort, style, and 
                 durability, we've been crafting exceptional pieces for the modern individual.
               </p>
-              <p>
+              <p className="leading-relaxed">
                 Our collection features carefully designed tracksuits, hoodies, and apparel 
                 that reflect contemporary urban culture while maintaining the highest standards 
                 of quality and craftsmanship.
               </p>
-              <p>
+              <p className="leading-relaxed">
                 Every piece in our collection is a testament to our commitment to excellence, 
                 from the initial design concept to the final stitch. We believe that great 
                 style should be accessible, comfortable, and built to last.
@@ -176,27 +184,48 @@ const DynamicAboutSection = () => {
 
           {/* Dynamic Media Section */}
           <div className="relative">
-            <div className="relative overflow-hidden rounded-lg shadow-2xl group">
-              <div 
-                className={`transition-all duration-500 ease-in-out ${
-                  isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-                }`}
-              >
-                <OptimizedImage
-                  key={currentMedia.id}
-                  src={currentMedia.media_url}
-                  alt={currentMedia.alt_text}
-                  className="w-full h-[600px] object-cover"
-                  width={800}
-                  height={600}
-                  quality={90}
-                  lazy={false}
-                  progressive={true}
-                  fetchPriority="high"
-                />
+            <div className="relative overflow-hidden rounded-2xl shadow-2xl group bg-gradient-to-br from-muted/50 to-background">
+              {/* Main Image Container with smooth transitions */}
+              <div className="relative w-full h-[600px]">
+                {/* Current Image */}
+                <div 
+                  className={`absolute inset-0 transition-all duration-500 ease-out transform ${
+                    isTransitioning 
+                      ? 'opacity-0 scale-95 translate-x-8' 
+                      : 'opacity-100 scale-100 translate-x-0'
+                  }`}
+                >
+                  <img
+                    key={`current-${currentMedia.id}`}
+                    src={currentMedia.media_url}
+                    alt={currentMedia.alt_text}
+                    className="w-full h-full object-cover object-center"
+                    loading="eager"
+                  />
+                </div>
+
+                {/* Next Image for smooth transitions */}
+                {isTransitioning && (
+                  <div 
+                    className={`absolute inset-0 transition-all duration-500 ease-out transform ${
+                      isTransitioning 
+                        ? 'opacity-100 scale-100 translate-x-0' 
+                        : 'opacity-0 scale-95 -translate-x-8'
+                    }`}
+                  >
+                    <img
+                      key={`next-${aboutMedia[nextImageIndex]?.id}`}
+                      src={aboutMedia[nextImageIndex]?.media_url}
+                      alt={aboutMedia[nextImageIndex]?.alt_text}
+                      className="w-full h-full object-cover object-center"
+                      loading="eager"
+                    />
+                  </div>
+                )}
               </div>
-              
-              <div className="absolute inset-0 bg-gradient-to-tr from-brand-beige/20 to-transparent" />
+
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-brand-beige/10 via-transparent to-transparent" />
               
               {/* Navigation Arrows */}
               {hasMultipleMedia && (
@@ -204,29 +233,29 @@ const DynamicAboutSection = () => {
                   <Button
                     size="icon"
                     variant="outline"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md border-white/20 text-foreground hover:bg-background hover:scale-110 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
                     onClick={handlePrevImage}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md border-white/20 text-foreground hover:bg-background hover:scale-110 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
                     onClick={handleNextImage}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-5 w-5" />
                   </Button>
                 </>
               )}
 
-              {/* Media Controls */}
+              {/* Play/Pause Control */}
               {hasMultipleMedia && (
-                <div className="absolute top-4 right-4 flex gap-2">
+                <div className="absolute top-4 right-4">
                   <Button
                     size="icon"
                     variant="outline"
-                    className="bg-background/80 backdrop-blur-sm"
+                    className="bg-background/90 backdrop-blur-md border-white/20 hover:bg-background hover:scale-110 transition-all duration-300 shadow-lg"
                     onClick={() => setIsPlaying(!isPlaying)}
                   >
                     {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -234,16 +263,23 @@ const DynamicAboutSection = () => {
                 </div>
               )}
 
-              {/* Media Indicators */}
+              {/* Image Counter */}
+              {hasMultipleMedia && (
+                <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-md rounded-full px-4 py-2 text-sm font-medium shadow-lg border border-white/20">
+                  {currentMediaIndex + 1} / {aboutMedia.length}
+                </div>
+              )}
+
+              {/* Dot Indicators */}
               {hasMultipleMedia && (
                 <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3">
                   {aboutMedia.map((_, index) => (
                     <button
                       key={index}
-                      className={`transition-all duration-300 hover:scale-125 ${
+                      className={`transition-all duration-300 hover:scale-125 rounded-full ${
                         index === currentMediaIndex 
-                          ? 'w-8 h-3 bg-white shadow-lg rounded-full' 
-                          : 'w-3 h-3 bg-white/60 hover:bg-white/80 rounded-full'
+                          ? 'w-10 h-3 bg-white shadow-lg' 
+                          : 'w-3 h-3 bg-white/60 hover:bg-white/80'
                       }`}
                       onClick={() => handleDotClick(index)}
                       aria-label={`View image ${index + 1}`}
@@ -251,29 +287,32 @@ const DynamicAboutSection = () => {
                   ))}
                 </div>
               )}
-
-              {/* Image Counter */}
-              {hasMultipleMedia && (
-                <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-medium">
-                  {currentMediaIndex + 1} / {aboutMedia.length}
-                </div>
-              )}
             </div>
           </div>
         </div>
 
         {/* Features Grid */}
-        <div className="mt-20">
-          <h3 className="text-3xl font-bold text-center mb-12">Why Choose jnCrafts?</h3>
+        <div className="mt-24">
+          <h3 className="text-3xl font-bold text-center mb-12 animate-fade-in">
+            Why Choose jnCrafts?
+          </h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-beige/10 text-brand-beige rounded-full mb-4">
+              <Card 
+                key={index} 
+                className="text-center hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group border-muted/50 hover:border-brand-beige/30 animate-fade-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <CardContent className="p-8">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-brand-beige/10 text-brand-beige rounded-full mb-6 group-hover:scale-110 group-hover:bg-brand-beige/20 transition-all duration-300 group-hover:shadow-lg">
                     {feature.icon}
                   </div>
-                  <h4 className="text-xl font-semibold mb-3">{feature.title}</h4>
-                  <p className="text-muted-foreground">{feature.description}</p>
+                  <h4 className="text-xl font-semibold mb-4 group-hover:text-brand-beige transition-colors duration-300">
+                    {feature.title}
+                  </h4>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
                 </CardContent>
               </Card>
             ))}
