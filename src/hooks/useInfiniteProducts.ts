@@ -21,42 +21,17 @@ export const useInfiniteProducts = ({
 }: UseInfiniteProductsOptions = {}) => {
   return useInfiniteQuery({
     queryKey: ['products', 'lightweight', category],
-    queryFn: async ({ pageParam }: { pageParam?: ProductCursor }) => {
+    queryFn: async ({ pageParam }: { pageParam?: number }) => {
       try {
-        // Optimized query with specific columns only - no localStorage cache to avoid quota issues
-        let query = supabase
-          .from('products')
-          .select(`
-            id,
-            name,
-            price,
-            category,
-            images,
-            thumbnail_index,
-            sizes,
-            colors,
-            stock_quantity,
-            new_arrival_date,
-            created_at,
-            is_active,
-            updated_at
-          `)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false })
-          .limit(pageSize);
-
-        // Add category filter if not 'all'
-        if (category !== 'all') {
-          query = query.eq('category', category);
-        }
-
-        // Add cursor-based pagination
-        if (pageParam?.created_at && pageParam?.id) {
-          query = query.or(`created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`);
-        }
-
-        const { data, error } = await query;
+        // Use the new optimized function for lightweight product listing
+        const offset = pageParam || 0;
+        
+        const { data, error } = await supabase
+          .rpc('get_products_lightweight_v2', {
+            p_category: category,
+            p_limit: pageSize,
+            p_offset: offset
+          });
 
         if (error) {
           console.error('Error fetching products:', error);
@@ -69,36 +44,37 @@ export const useInfiniteProducts = ({
           name: item.name,
           price: item.price,
           category: item.category,
-          images: item.images || [],
-          sizes: item.sizes || [],
-          colors: item.colors || [],
+          images: item.thumbnail_image ? [{ 
+            id: 'thumb', 
+            image_url: item.thumbnail_image, 
+            is_primary: true, 
+            display_order: 0 
+          }] : [],
+          sizes: [], // Will be loaded on demand
+          colors: [], // Will be loaded on demand
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
           created_at: item.created_at,
-          is_active: item.is_active,
-          updated_at: item.updated_at
+          is_active: true,
+          updated_at: item.created_at,
+          has_colors: item.has_colors,
+          has_sizes: item.has_sizes
         }));
-
-        // Next page cursor is the last item's created_at and id
-        const nextCursor = products.length === pageSize && products.length > 0 
-          ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
-          : null;
 
         const result = {
           products,
-          nextCursor,
+          nextCursor: products.length === pageSize ? offset + pageSize : null,
           hasMore: products.length === pageSize
         };
 
         return result;
       } catch (error: any) {
-        // Simplified error handling - no complex fallbacks
         console.error('Products query failed:', error);
         throw error;
       }
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    initialPageParam: undefined,
+    initialPageParam: 0,
     staleTime: 10 * 60 * 1000, // 10 minutes - aggressive caching
     gcTime: 30 * 60 * 1000, // 30 minutes
     enabled,
@@ -148,35 +124,13 @@ export const usePrefetchProducts = () => {
     queryClient.prefetchInfiniteQuery({
       queryKey: ['products', 'lightweight', category],
       queryFn: async () => {
-        // Optimized prefetch query with specific columns only
-        let query = supabase
-          .from('products')
-          .select(`
-            id,
-            name,
-            price,
-            category,
-            images,
-            thumbnail_index,
-            sizes,
-            colors,
-            stock_quantity,
-            new_arrival_date,
-            created_at,
-            is_active,
-            updated_at
-          `)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false })
-          .limit(8); // Minimal prefetch
-
-        // Add category filter if not 'all'
-        if (category !== 'all') {
-          query = query.eq('category', category);
-        }
-
-        const { data, error } = await query;
+        // Use the new optimized function for prefetch
+        const { data, error } = await supabase
+          .rpc('get_products_lightweight_v2', {
+            p_category: category,
+            p_limit: 8, // Minimal prefetch
+            p_offset: 0
+          });
 
         if (error) {
           console.error('Error prefetching products:', error);
@@ -188,25 +142,30 @@ export const usePrefetchProducts = () => {
           name: item.name,
           price: item.price,
           category: item.category,
-          images: item.images || [],
-          sizes: item.sizes || [],
-          colors: item.colors || [],
+          images: item.thumbnail_image ? [{ 
+            id: 'thumb', 
+            image_url: item.thumbnail_image, 
+            is_primary: true, 
+            display_order: 0 
+          }] : [],
+          sizes: [],
+          colors: [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
           created_at: item.created_at,
-          is_active: item.is_active,
-          updated_at: item.updated_at
+          is_active: true,
+          updated_at: item.created_at,
+          has_colors: item.has_colors,
+          has_sizes: item.has_sizes
         }));
 
         return {
           products,
-          nextCursor: products.length > 0 
-            ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
-            : null,
+          nextCursor: products.length === 8 ? 8 : null,
           hasMore: products.length === 8
         };
       },
-      initialPageParam: undefined,
+      initialPageParam: 0,
       staleTime: 10 * 60 * 1000,
     });
   };

@@ -2,40 +2,67 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
 
-// Hook for loading full product details on demand
+// Hook for loading full product details on demand using normalized structure
 export const useProductDetail = (productId: string, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['product', 'detail', productId],
     queryFn: async (): Promise<Product | null> => {
       const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          price,
-          description,
-          category,
-          images,
-          videos,
-          thumbnail_index,
-          sizes,
-          colors,
-          stock_quantity,
-          new_arrival_date,
-          is_active,
-          created_at,
-          updated_at
-        `)
-        .eq('id', productId)
-        .eq('is_active', true)
-        .single();
+        .rpc('get_product_complete', { p_product_id: productId });
 
       if (error) {
         console.error('Error fetching product detail:', error);
         throw error;
       }
 
-      return data;
+      if (!data || data.length === 0) {
+        return null;
+      }
+
+      const productData = data[0];
+      
+      // Transform the response to match our Product interface
+      return {
+        id: productData.id,
+        name: productData.name,
+        price: productData.price,
+        description: productData.description,
+        category: productData.category,
+        stock_quantity: productData.stock_quantity,
+        is_active: productData.is_active,
+        new_arrival_date: productData.new_arrival_date,
+        thumbnail_index: productData.thumbnail_index,
+        created_at: productData.created_at,
+        updated_at: productData.updated_at,
+        images: Array.isArray(productData.images) 
+          ? productData.images.map((img: any) => ({
+              id: img.id || 'temp',
+              image_url: img.url || img.image_url || img,
+              is_primary: img.is_primary || false,
+              display_order: img.order || img.display_order || 0,
+              product_id: productId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }))
+          : [],
+        colors: Array.isArray(productData.colors) 
+          ? productData.colors.map((color: any) => ({
+              id: color.id,
+              name: color.name,
+              hex: color.hex || color.hex_code,
+              available: color.available !== false
+            }))
+          : [],
+        sizes: Array.isArray(productData.sizes) 
+          ? productData.sizes.map((size: any) => ({
+              id: size.id,
+              name: size.name,
+              category: size.category,
+              available: size.available !== false
+            }))
+          : [],
+        videos: Array.isArray(productData.videos) ? productData.videos : []
+      };
     },
     enabled: enabled && !!productId,
     staleTime: 5 * 60 * 1000, // 5 minutes

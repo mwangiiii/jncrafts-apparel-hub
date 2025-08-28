@@ -1,17 +1,104 @@
+// Updated Product interface for normalized structure with backward compatibility
 export interface Product {
   id: string;
   name: string;
   price: number;
   description?: string;
   category: string;
-  images: string[];
-  videos?: string[];
-  thumbnail_index?: number;
-  sizes: string[];
-  colors: string[];
   stock_quantity: number;
   is_active: boolean;
   new_arrival_date?: string;
+  thumbnail_index?: number;
+  created_at: string;
+  updated_at: string;
+  // Support both old and new image formats for compatibility
+  images?: (string | ProductImage)[];
+  colors?: (string | ProductColorInfo)[];
+  sizes?: (string | ProductSizeInfo)[];
+  videos?: string[];
+  // Additional flags for optimization
+  has_colors?: boolean;
+  has_sizes?: boolean;
+}
+
+// Simple color/size info for UI display
+export interface ProductColorInfo {
+  id?: string;
+  name: string;
+  hex?: string;
+  stock?: number;
+  available?: boolean;
+}
+
+export interface ProductSizeInfo {
+  id?: string;
+  name: string;
+  category?: string;
+  stock?: number;
+  available?: boolean;
+}
+
+// New interfaces for normalized tables
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  image_url: string;
+  alt_text?: string;
+  display_order: number;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Color {
+  id: string;
+  name: string;
+  hex_code?: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Size {
+  id: string;
+  name: string;
+  category: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ProductColor {
+  id: string;
+  product_id: string;
+  color_id: string;
+  stock_quantity: number;
+  additional_price: number;
+  is_available: boolean;
+  created_at: string;
+  color?: Color;
+}
+
+export interface ProductSize {
+  id: string;
+  product_id: string;
+  size_id: string;
+  stock_quantity: number;
+  additional_price: number;
+  is_available: boolean;
+  created_at: string;
+  size?: Size;
+}
+
+export interface ProductInventory {
+  id: string;
+  product_id: string;
+  color_id?: string;
+  size_id?: string;
+  stock_quantity: number;
+  reserved_quantity: number;
+  reorder_level: number;
+  last_restocked?: string;
   created_at: string;
   updated_at: string;
 }

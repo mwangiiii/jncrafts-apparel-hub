@@ -81,7 +81,6 @@ const AnimatedFeaturedProducts = () => {
                 new_arrival_date: featured.new_arrival_date,
                 is_active: true,
                 description: null,
-                videos: null,
                 thumbnail_index: 0,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -94,7 +93,7 @@ const AnimatedFeaturedProducts = () => {
                       {/* Product Image */}
                       <div className="relative overflow-hidden h-96 md:h-full">
                         <img
-                          src={product.images[0] || '/placeholder.svg'}
+                          src={product.images?.[0] || '/placeholder.svg'}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                         />

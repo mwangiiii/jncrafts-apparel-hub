@@ -3,7 +3,7 @@ import { Plus, Minus, Heart, Eye, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Product } from '@/types/database';
+import { Product, ProductImage, ProductSizeInfo, ProductColorInfo } from '@/types/database';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
@@ -17,8 +17,25 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0] || '');
-  const [selectedColor, setSelectedColor] = useState(product.colors[0] || '');
+  // Helper functions to get display values from mixed data types
+  const getImageUrl = (image: string | ProductImage) => {
+    return typeof image === 'string' ? image : image.image_url;
+  };
+
+  const getSizeName = (size: string | ProductSizeInfo) => {
+    return typeof size === 'string' ? size : size.name;
+  };
+
+  const getColorName = (color: string | ProductColorInfo) => {
+    return typeof color === 'string' ? color : color.name;
+  };
+
+  // Get first available options or empty strings
+  const firstSize = product.sizes?.[0] ? getSizeName(product.sizes[0]) : '';
+  const firstColor = product.colors?.[0] ? getColorName(product.colors[0]) : '';
+  
+  const [selectedSize, setSelectedSize] = useState(firstSize);
+  const [selectedColor, setSelectedColor] = useState(firstColor);
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -49,7 +66,10 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   }, []);
 
   const handleAddToCart = () => {
-    if (product.sizes.length > 0 && !selectedSize) {
+    const hasRealSizes = product.sizes && product.sizes.length > 0;
+    const hasRealColors = product.colors && product.colors.length > 0;
+    
+    if (hasRealSizes && !selectedSize) {
       toast({
         title: "Size Required",
         description: "Please select a size before adding to cart",
@@ -57,7 +77,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
       });
       return;
     }
-    if (product.colors.length > 0 && !selectedColor) {
+    if (hasRealColors && !selectedColor) {
       toast({
         title: "Color Required", 
         description: "Please select a color before adding to cart",
@@ -124,8 +144,8 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
             {isVisible && (
               <>
-                {/* <img
-                  src={product.images?.[0] || '/placeholder.svg'}
+                <img
+                  src={getImageUrl(product.images?.[0] || '/placeholder.svg')}
                   alt={product.name}
                   className={`w-full h-full object-cover transition-opacity duration-500 ${
                     imageLoaded ? 'opacity-100' : 'opacity-0'
@@ -134,10 +154,10 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                   loading="lazy"
                   decoding="async"
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                /> */}
+                />
                 {/* Preload next image for faster navigation */}
                 {product.images?.[1] && (
-                  <link rel="preload" as="image" href={product.images[1]} />
+                  <link rel="preload" as="image" href={getImageUrl(product.images[1])} />
                 )}
               </>
             )}
@@ -214,50 +234,60 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Size Selection */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <label className="text-sm font-medium text-foreground block mb-2">Size</label>
-            <div className="flex gap-2">
-              {product.sizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedSize(size);
-                  }}
-                  className={`px-3 py-1 border rounded text-sm transition-colors ${
-                    selectedSize === size
-                      ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
-                      : "border-border hover:border-brand-beige"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+          {product.sizes && product.sizes.length > 0 && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <label className="text-sm font-medium text-foreground block mb-2">Size</label>
+              <div className="flex gap-2">
+                {product.sizes.map((size, index) => {
+                  const sizeName = getSizeName(size);
+                  return (
+                    <button
+                      key={`${sizeName}-${index}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSize(sizeName);
+                      }}
+                      className={`px-3 py-1 border rounded text-sm transition-colors ${
+                        selectedSize === sizeName
+                          ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
+                          : "border-border hover:border-brand-beige"
+                      }`}
+                    >
+                      {sizeName}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Color Selection */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <label className="text-sm font-medium text-foreground block mb-2">Color</label>
-            <div className="flex gap-2">
-              {product.colors.map((color) => (
-                <button
-                  key={color}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedColor(color);
-                  }}
-                  className={`px-3 py-1 border rounded text-sm transition-colors capitalize ${
-                    selectedColor === color
-                      ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
-                      : "border-border hover:border-brand-beige"
-                  }`}
-                >
-                  {color}
-                </button>
-              ))}
+          {product.colors && product.colors.length > 0 && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <label className="text-sm font-medium text-foreground block mb-2">Color</label>
+              <div className="flex gap-2">
+                {product.colors.map((color, index) => {
+                  const colorName = getColorName(color);
+                  return (
+                    <button
+                      key={`${colorName}-${index}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedColor(colorName);
+                      }}
+                      className={`px-3 py-1 border rounded text-sm transition-colors capitalize ${
+                        selectedColor === colorName
+                          ? "bg-brand-beige text-brand-beige-foreground border-brand-beige"
+                          : "border-border hover:border-brand-beige"
+                      }`}
+                    >
+                      {colorName}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Quantity */}
           <div onClick={(e) => e.stopPropagation()}>
