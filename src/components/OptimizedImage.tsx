@@ -110,7 +110,7 @@ const OptimizedImage = ({
                   isLoaded ? "opacity-100" : "opacity-0"
                 )}
                 loading={lazy ? "lazy" : "eager"}
-                fetchPriority={fetchPriority}
+                {...({ fetchpriority: fetchPriority } as any)}
                 decoding="async"
                 onLoad={handleLoad}
                 onError={handleError}
@@ -127,7 +127,7 @@ const OptimizedImage = ({
                 isLoaded ? "opacity-100" : "opacity-0"
               )}
               loading={lazy ? "lazy" : "eager"}
-              fetchPriority={fetchPriority}
+              {...({ fetchpriority: fetchPriority } as any)}
               decoding="async"
               onLoad={handleLoad}
               onError={handleError}
