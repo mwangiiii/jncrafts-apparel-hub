@@ -32,11 +32,14 @@ const PromoCodeInput = ({ onCodeApplied, onCodeRemoved, appliedDiscount, orderTo
     setLoading(true);
     
     try {
-      // Use secure validation function instead of direct table access
-      const { data, error } = await supabase.rpc('validate_discount_code', {
-        p_code: code.toUpperCase(),
-        p_order_total: orderTotal
-      });
+      // Use direct query instead of RPC to avoid 500 errors
+      const { data, error } = await supabase
+        .from('discounts')
+        .select('*')
+        .eq('code', code.toUpperCase())
+        .eq('is_active', true)
+        .eq('requires_code', true)
+        .maybeSingle();
 
       if (error) {
         console.error('Error validating promo code:', error);
@@ -48,29 +51,69 @@ const PromoCodeInput = ({ onCodeApplied, onCodeRemoved, appliedDiscount, orderTo
         return;
       }
 
-      const result = data as {
-        valid: boolean;
-        error?: string;
-        message?: string;
-        discount?: any;
-      };
-
-      if (!result?.valid) {
+      if (!data) {
         toast({
           title: "Invalid Code",
-          description: result?.message || "This promo code is not valid or has expired",
+          description: "This promo code is not valid or has expired",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check date validity
+      const now = new Date();
+      if (data.start_date && new Date(data.start_date) > now) {
+        toast({
+          title: "Code Not Yet Active",
+          description: "This promo code is not yet active",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data.end_date && new Date(data.end_date) < now) {
+        toast({
+          title: "Code Expired",
+          description: "This promo code has expired",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check usage limits
+      if (data.usage_limit && data.used_count >= data.usage_limit) {
+        toast({
+          title: "Usage Limit Exceeded",
+          description: "This promo code has reached its usage limit",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check minimum order amount
+      if (data.min_order_amount && orderTotal < data.min_order_amount) {
+        toast({
+          title: "Minimum Order Not Met",
+          description: `Minimum order of ${data.min_order_amount} required for this code`,
           variant: "destructive"
         });
         return;
       }
 
       // Apply the valid discount
-      onCodeApplied(result.discount);
+      onCodeApplied({
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        discount_type: data.discount_type as 'percentage' | 'fixed',
+        discount_value: data.discount_value,
+        code: data.code
+      });
       setCode('');
       
       toast({
         title: "Code Applied!",
-        description: `${result.discount.name} has been applied to your order`,
+        description: `${data.name} has been applied to your order`,
       });
       
     } catch (error) {

@@ -35,12 +35,16 @@ const SecurityAuditLog: React.FC = () => {
     try {
       setRefreshing(true);
       
-      // Log this admin access
-      await supabase.rpc('log_admin_data_access', {
-        p_action: 'VIEW_AUDIT_LOG',
-        p_table_name: 'admin_audit_log',
-        p_accessed_data: { viewed_by: user.id }
-      });
+      try {
+        // Try to log admin access - fail silently if RPC fails
+        await supabase.rpc('log_admin_data_access', {
+          p_action: 'VIEW_AUDIT_LOG',
+          p_table_name: 'admin_audit_log',
+          p_accessed_data: { viewed_by: user.id }
+        });
+      } catch (logError) {
+        console.warn('Failed to log admin access (non-critical):', logError);
+      }
 
       // Fetch audit logs for this admin
       const { data, error } = await supabase

@@ -206,8 +206,9 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const handlePaymentConfirm = async (transactionCode: string) => {
     setIsPlacingOrder(true);
     try {
-      // Generate order number
-      const { data: orderNumber } = await supabase.rpc('generate_order_number');
+      // Generate order number client-side to avoid RPC issues
+      const timestamp = Date.now();
+      const orderNumber = `JNC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${timestamp.toString().slice(-10)}`;
 
       // Create order with transaction code
       const { data: order, error: orderError } = await supabase
