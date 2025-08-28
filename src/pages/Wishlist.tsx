@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useWishlist } from '@/hooks/useWishlist';
-import { usePersistentCart } from '@/hooks/usePersistentCart';
+import { useGlobalCart } from '@/hooks/useGlobalCart';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Header from '@/components/Header';
 import { getPrimaryImage, hasRealSizes, hasRealColors, getSizeName, getColorName } from '@/components/ProductDisplayHelper';
 import { useToast } from '@/hooks/use-toast';
+import BackButton from '@/components/BackButton';
+import Cart from '@/components/Cart';
 
 const Wishlist = () => {
   const { user, loading } = useAuth();
   const { wishlistItems, isLoading, removeFromWishlist } = useWishlist();
-  const { addToCart, cartItems } = usePersistentCart();
+  const {
+    addToCart,
+    cartItems,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    isCartOpen,
+    openCart,
+    closeCart
+  } = useGlobalCart();
   const { formatPrice } = useCurrency();
   const { toast } = useToast();
   const [selectedItems, setSelectedItems] = useState<{[key: string]: {size: string, color: string}}>({});
@@ -116,9 +127,12 @@ const Wishlist = () => {
     <div className="min-h-screen bg-background">
       <Header 
         cartItems={totalItems} 
-        onCartClick={() => {}} 
+        onCartClick={openCart} 
       />
       <div className="container mx-auto px-4 py-8">
+        {/* Back Button */}
+        <BackButton className="mb-6" />
+        
       <div className="flex items-center gap-2 mb-8">
         <Heart className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">My Wishlist</h1>
@@ -245,8 +259,17 @@ const Wishlist = () => {
             </Card>
           ))}
         </div>
-      )}
-    </div>
+        )}
+      </div>
+      
+      <Cart
+        isOpen={isCartOpen}
+        onClose={closeCart}
+        items={cartItems}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeItem}
+        onClearCart={clearCart}
+      />
     </div>
   );
 };

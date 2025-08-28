@@ -13,14 +13,24 @@ import Cart from "@/components/Cart";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePersistentCart } from '@/hooks/usePersistentCart';
+import { useGlobalCart } from '@/hooks/useGlobalCart';
 import { Product } from '@/types/database';
 
 const Index = () => {
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const { cartItems, addToCart, updateQuantity, removeItem, clearCart, migrateGuestCart } = usePersistentCart();
+  const {
+    cartItems,
+    addToCart,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    migrateGuestCart,
+    isCartOpen,
+    openCart,
+    closeCart,
+    totalItems
+  } = useGlobalCart();
 
   useEffect(() => {
     if (user && user.id) {
@@ -32,13 +42,11 @@ const Index = () => {
     await addToCart(product, quantity, size, color);
   };
 
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-
   return (
     <div className="min-h-screen bg-background">
       <Header 
         cartItems={totalItems} 
-        onCartClick={() => setIsCartOpen(true)} 
+        onCartClick={openCart} 
       />
       <Hero />
       <AnimatedFeaturedProducts />
@@ -77,7 +85,7 @@ const Index = () => {
       
       <Cart
         isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
+        onClose={closeCart}
         items={cartItems}
         onUpdateQuantity={updateQuantity}
         onRemoveItem={removeItem}

@@ -14,7 +14,9 @@ import { getPrimaryImage, hasRealSizes, hasRealColors, getSizeName, getColorName
 import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { usePersistentCart } from '@/hooks/usePersistentCart';
+import { useGlobalCart } from '@/hooks/useGlobalCart';
+import BackButton from '@/components/BackButton';
+import Cart from '@/components/Cart';
 
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import ProductVideoPlayer from '@/components/admin/ProductVideoPlayer';
@@ -27,7 +29,16 @@ const ProductDetail = () => {
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
-  const { addToCart, cartItems } = usePersistentCart();
+  const {
+    addToCart,
+    cartItems,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    isCartOpen,
+    openCart,
+    closeCart
+  } = useGlobalCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -227,7 +238,7 @@ const ProductDetail = () => {
       <div className="min-h-screen bg-background">
         <Header 
           cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
-          onCartClick={() => {}} 
+          onCartClick={openCart} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           <div className="text-center">Loading product...</div>
@@ -241,7 +252,7 @@ const ProductDetail = () => {
       <div className="min-h-screen bg-background">
         <Header 
           cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
-          onCartClick={() => {}} 
+          onCartClick={openCart} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           <div className="text-center">Product not found</div>
@@ -256,18 +267,11 @@ const ProductDetail = () => {
     <div className="min-h-screen bg-background">
         <Header 
           cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
-          onCartClick={() => {}} 
+          onCartClick={openCart} 
         />
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/')}
-          className="mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Products
-        </Button>
+        <BackButton className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Image Gallery */}
@@ -490,6 +494,15 @@ const ProductDetail = () => {
         )}
 
       </div>
+      
+      <Cart
+        isOpen={isCartOpen}
+        onClose={closeCart}
+        items={cartItems}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeItem}
+        onClearCart={clearCart}
+      />
     </div>
   );
 };

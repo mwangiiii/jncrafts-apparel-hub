@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingBag, Menu, X, User, Settings, LogOut, Heart } from "lucide-react";
+import { ShoppingBag, Menu, X, User, Settings, LogOut, Heart, Home, Package, Info, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -15,13 +15,6 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-
-  const navigation = [
-    { name: "Home", href: "#home" },
-    { name: "Products", href: "#products" },
-    { name: "About", href: "#about" },
-    { name: "Contact", href: "#contact" },
-  ];
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b border-border">
@@ -38,15 +31,30 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex space-x-6 xl:space-x-8">
-            {navigation.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base"
-              >
-                {item.name}
-              </a>
-            ))}
+            <Link
+              to="/#home"
+              className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base"
+            >
+              Home
+            </Link>
+            <Link
+              to="/#products"
+              className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base"
+            >
+              Products
+            </Link>
+            <Link
+              to="/#about"
+              className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base"
+            >
+              About
+            </Link>
+            <Link
+              to="/#contact"
+              className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base"
+            >
+              Contact
+            </Link>
             {isAdmin && (
               <Link to="/admin" className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base">
                 Admin
@@ -153,16 +161,34 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
         {isMobileMenuOpen && (
           <div className="lg:hidden border-t border-border bg-background/95 backdrop-blur-sm">
             <nav className="py-3 space-y-1 px-2">
-              {navigation.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.name}
-                </a>
-              ))}
+              <Link
+                to="/#home"
+                className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                to="/#products"
+                className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Products
+              </Link>
+              <Link
+                to="/#about"
+                className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                About
+              </Link>
+              <Link
+                to="/#contact"
+                className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Contact
+              </Link>
               {isAdmin && (
                 <Link 
                   to="/admin" 

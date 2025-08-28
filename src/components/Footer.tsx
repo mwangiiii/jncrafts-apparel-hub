@@ -1,18 +1,13 @@
-import { Instagram, Facebook, Twitter, Youtube } from "lucide-react";
+import { Instagram, Facebook, Twitter, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   const socialLinks = [
-    { icon: <Instagram className="h-5 w-5" />, href: "#", label: "Instagram" },
-    { icon: <Facebook className="h-5 w-5" />, href: "#", label: "Facebook" },
-    { icon: <Twitter className="h-5 w-5" />, href: "#", label: "Twitter" },
-    { icon: <Youtube className="h-5 w-5" />, href: "#", label: "YouTube" },
+    { icon: <Instagram className="h-5 w-5" />, href: "https://instagram.com/jncrafts", label: "Instagram" },
+    { icon: <Facebook className="h-5 w-5" />, href: "https://facebook.com/jncrafts", label: "Facebook" },
+    { icon: <Twitter className="h-5 w-5" />, href: "https://twitter.com/jncrafts", label: "Twitter" },
+    { icon: <Youtube className="h-5 w-5" />, href: "https://youtube.com/jncrafts", label: "YouTube" },
   ];
-
-  const footerLinks = {
-    Shop: ["Hoodies", "Jackets", "Pants", "Croptops", "Customized Tshirts", "2 Piece Set", "Skull Caps"],
-    Support: ["Contact Us", "Size Guide", "Shipping Info", "Returns", "FAQ"],
-    Company: ["About Us", "Careers", "Press", "Wholesale", "Sustainability"],
-  };
 
   return (
     <footer className="bg-foreground text-background w-full">
@@ -42,23 +37,38 @@ const Footer = () => {
           </div>
 
           {/* Footer Links */}
-          {Object.entries(footerLinks).map(([category, links]) => (
-            <div key={category}>
-              <h4 className="font-semibold text-lg mb-4">{category}</h4>
-              <ul className="space-y-2">
-                {links.map((link, index) => (
-                  <li key={index}>
-                    <a
-                      href="#"
-                      className="text-background/80 hover:text-brand-beige transition-colors duration-300"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div>
+            <h4 className="font-semibold text-lg mb-4">Shop</h4>
+            <ul className="space-y-2">
+              <li><Link to="/#products" className="text-background/80 hover:text-brand-beige transition-colors duration-300">All Products</Link></li>
+              <li><Link to="/#products" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Hoodies</Link></li>
+              <li><Link to="/#products" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Jackets</Link></li>
+              <li><Link to="/#products" className="text-background/80 hover:text-brand-beige transition-colors duration-300">T-Shirts</Link></li>
+              <li><Link to="/#products" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Accessories</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-lg mb-4">Support</h4>
+            <ul className="space-y-2">
+              <li><Link to="/#contact" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Contact Us</Link></li>
+              <li><a href="tel:+1234567890" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Call Support</a></li>
+              <li><a href="mailto:support@jncrafts.com" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Email Support</a></li>
+              <li><Link to="/auth" className="text-background/80 hover:text-brand-beige transition-colors duration-300">My Account</Link></li>
+              <li><Link to="/wishlist" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Wishlist</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-lg mb-4">Company</h4>
+            <ul className="space-y-2">
+              <li><Link to="/#about" className="text-background/80 hover:text-brand-beige transition-colors duration-300">About Us</Link></li>
+              <li><Link to="/#contact" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Contact</Link></li>
+              <li><a href="#" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Privacy Policy</a></li>
+              <li><a href="#" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Terms of Service</a></li>
+              <li><a href="#" className="text-background/80 hover:text-brand-beige transition-colors duration-300">Shipping Info</a></li>
+            </ul>
+          </div>
         </div>
 
         {/* Newsletter Signup */}
@@ -83,7 +93,7 @@ const Footer = () => {
 
         {/* Copyright */}
         <div className="border-t border-background/20 mt-8 pt-8 text-center text-background/60">
-          <p>&copy; 2024 jnCrafts. All rights reserved. | Privacy Policy | Terms of Service</p>
+          <p>&copy; 2024 jnCrafts. All rights reserved. | <a href="#" className="hover:text-brand-beige transition-colors">Privacy Policy</a> | <a href="#" className="hover:text-brand-beige transition-colors">Terms of Service</a></p>
         </div>
       </div>
     </footer>
