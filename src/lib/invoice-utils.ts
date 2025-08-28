@@ -885,16 +885,24 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
       }
     });
     
-    // Force layout calculation
-    container.offsetHeight;
-    
-    // Get actual content dimensions
-    const actualHeight = Math.max(
-      container.scrollHeight, 
-      container.offsetHeight, 
-      container.getBoundingClientRect().height,
-      1200
-    );
+    // Use ResizeObserver to avoid forced reflow
+    const actualHeight = await new Promise<number>(resolve => {
+      const resizeObserver = new ResizeObserver(entries => {
+        const entry = entries[0];
+        if (entry) {
+          const height = Math.max(entry.contentRect.height, 1200);
+          resizeObserver.disconnect();
+          resolve(height);
+        }
+      });
+      resizeObserver.observe(container);
+      
+      // Fallback after timeout
+      setTimeout(() => {
+        resizeObserver.disconnect();
+        resolve(1200);
+      }, 100);
+    });
     
     console.log('Container dimensions:', { 
       scrollHeight: container.scrollHeight,
@@ -1071,16 +1079,24 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
       }
     });
     
-    // Force layout calculation
-    container.offsetHeight;
-    
-    // Get actual content dimensions
-    const actualHeight = Math.max(
-      container.scrollHeight, 
-      container.offsetHeight, 
-      container.getBoundingClientRect().height,
-      800
-    );
+    // Use ResizeObserver to avoid forced reflow
+    const actualHeight = await new Promise<number>(resolve => {
+      const resizeObserver = new ResizeObserver(entries => {
+        const entry = entries[0];
+        if (entry) {
+          const height = Math.max(entry.contentRect.height, 800);
+          resizeObserver.disconnect();
+          resolve(height);
+        }
+      });
+      resizeObserver.observe(container);
+      
+      // Fallback after timeout
+      setTimeout(() => {
+        resizeObserver.disconnect();
+        resolve(800);
+      }, 100);
+    });
     
     console.log('Container dimensions:', { 
       scrollHeight: container.scrollHeight,

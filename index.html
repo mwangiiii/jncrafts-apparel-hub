@@ -2,29 +2,80 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/favicon.png" type="image/png">
-    <title>JN Crafts - Premium Streetwear</title>
-    <meta name="description" content="Premium streetwear and crafts for modern lifestyle" />
     
-    <!-- Performance optimizations -->
+    <!-- SEO Meta Tags -->
+    <title>jnCRAFTS - Premium Streetwear & Urban Fashion</title>
+    <meta name="description" content="Discover premium streetwear at jnCRAFTS. Shop hoodies, tracksuits, and urban fashion designed for the modern lifestyle. Quality crafted, style perfected." />
+    <meta name="keywords" content="streetwear, urban fashion, hoodies, tracksuits, premium clothing, jnCRAFTS" />
+    <meta name="author" content="jnCRAFTS" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jncrafts.lovable.app/" />
+    <meta property="og:title" content="jnCRAFTS - Premium Streetwear & Urban Fashion" />
+    <meta property="og:description" content="Discover premium streetwear at jnCRAFTS. Shop hoodies, tracksuits, and urban fashion designed for the modern lifestyle." />
+    <meta property="og:image" content="/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.webp" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://jncrafts.lovable.app/" />
+    <meta property="twitter:title" content="jnCRAFTS - Premium Streetwear & Urban Fashion" />
+    <meta property="twitter:description" content="Discover premium streetwear at jnCRAFTS. Shop hoodies, tracksuits, and urban fashion designed for the modern lifestyle." />
+    <meta property="twitter:image" content="/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.webp" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.webp" as="image" fetchpriority="high" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://ppljsayhwtlogficifar.supabase.co" />
-    <link rel="dns-prefetch" href="https://api.exchangerate-api.com" />
+    
+    <!-- DNS prefetch for external resources -->
+    <link rel="dns-prefetch" href="//supabase.co" />
+    <link rel="dns-prefetch" href="//api.exchangerate-api.com" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://jncrafts.lovable.app/" />
     
     <!-- Resource hints for critical assets -->
     <link rel="preload" href="/src/index.css" as="style" />
     <link rel="preload" href="/src/main.tsx" as="script" type="module" />
     
-    <!-- SEO Meta Tags -->
-    <meta property="og:title" content="JN Crafts - Premium Streetwear" />
-    <meta property="og:description" content="Premium streetwear and crafts for modern lifestyle" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/favicon.png" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="JN Crafts - Premium Streetwear" />
-    <meta name="twitter:description" content="Premium streetwear and crafts for modern lifestyle" />
-    <meta name="twitter:image" content="/favicon.png" />
+    <!-- Theme colors -->
+    <meta name="theme-color" content="#2c3e50" />
+    <meta name="msapplication-TileColor" content="#2c3e50" />
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ClothingStore",
+      "name": "jnCRAFTS",
+      "description": "Premium streetwear and urban fashion store",
+      "url": "https://jncrafts.lovable.app/",
+      "logo": "https://jncrafts.lovable.app/favicon.png",
+      "image": "https://jncrafts.lovable.app/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.webp",
+      "priceRange": "$$",
+      "paymentAccepted": ["Cash", "Credit Card", "M-Pesa"],
+      "currenciesAccepted": ["KES", "USD"],
+      "areaServed": "Kenya",
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Streetwear Collection",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Product",
+              "name": "Premium Hoodies",
+              "category": "Clothing"
+            }
+          }
+        ]
+      }
+    }
+    </script>
     
     <!-- Service worker registration -->
     <script>

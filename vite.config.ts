@@ -22,11 +22,25 @@ export default defineConfig(({ mode }) => ({
     // Performance optimizations
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          supabase: ['@supabase/supabase-js'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          query: ['@tanstack/react-query'],
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase';
+            }
+            if (id.includes('@radix-ui')) {
+              return 'ui';
+            }
+            if (id.includes('@tanstack')) {
+              return 'query';
+            }
+            if (id.includes('lucide-react')) {
+              return 'icons';
+            }
+            return 'vendor';
+          }
         },
       },
     },
@@ -36,8 +50,15 @@ export default defineConfig(({ mode }) => ({
       compress: {
         drop_console: mode === 'production',
         drop_debugger: true,
+        pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
+      },
+      mangle: {
+        safari10: true,
       },
     },
+    // Enable source maps for production debugging
+    sourcemap: mode === 'production' ? 'hidden' : true,
+    target: 'es2020',
   },
   optimizeDeps: {
     include: ['@tanstack/react-query', '@supabase/supabase-js'],

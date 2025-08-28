@@ -1,32 +1,41 @@
 // Service Worker for aggressive caching and performance optimization
-const CACHE_NAME = 'jncrafts-v1';
-const STATIC_CACHE = 'jncrafts-static-v1';
-const DYNAMIC_CACHE = 'jncrafts-dynamic-v1';
-const IMAGE_CACHE = 'jncrafts-images-v1';
+const CACHE_NAME = 'jncrafts-v2';
+const STATIC_CACHE = 'jncrafts-static-v2';
+const DYNAMIC_CACHE = 'jncrafts-dynamic-v2';
+const IMAGE_CACHE = 'jncrafts-images-v2';
 
-// Assets to cache immediately
+// Assets to cache immediately with proper versioning
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/offline.html'
+  '/offline.html',
+  '/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.webp',
+  '/lovable-uploads/db868647-544e-4c56-9f4e-508500776671.png'
 ];
 
-// Cache strategies for different resource types
+// Cache strategies for different resource types with better optimization
 const CACHE_STRATEGIES = {
-  // Cache first for static assets
+  // Cache first for static assets with long expiry
   static: [
     /\.(css|js|woff|woff2|ttf|eot)$/,
-    /\/assets\//
+    /\/assets\//,
+    /\/_app\//
   ],
   // Network first for API calls with fallback
   networkFirst: [
     /\/rest\/v1\//,
-    /supabase\.co.*\/rest\/v1\//
+    /supabase\.co.*\/rest\/v1\//,
+    /\/functions\/v1\//
   ],
-  // Cache first for images with network fallback
+  // Cache first for images with network fallback and compression
   imageCache: [
-    /\.(jpg|jpeg|png|gif|webp|svg)$/,
-    /supabase\.co.*\/storage\//
+    /\.(jpg|jpeg|png|gif|webp|avif|svg)$/,
+    /supabase\.co.*\/storage\//,
+    /\/lovable-uploads\//
+  ],
+  // Stale while revalidate for API data
+  staleWhileRevalidate: [
+    /\/api\//
   ]
 };
 
@@ -169,27 +178,4 @@ async function networkFirstWithFallback(request) {
   }
 }
 
-// Helper functions to determine request type
-function isStaticAsset(request) {
-  return CACHE_STRATEGIES.static.some(pattern => pattern.test(request.url));
-}
-
-function isImageRequest(request) {
-  return CACHE_STRATEGIES.imageCache.some(pattern => pattern.test(request.url));
-}
-
-function isApiRequest(request) {
-  return CACHE_STRATEGIES.networkFirst.some(pattern => pattern.test(request.url));
-}
-
-// Background sync for offline actions
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'background-sync') {
-    event.waitUntil(handleBackgroundSync());
-  }
-});
-
-async function handleBackgroundSync() {
-  // Handle any pending offline actions
-  console.log('Background sync triggered');
-}
+//... keep existing code (helper functions and background sync)

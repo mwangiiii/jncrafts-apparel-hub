@@ -1,5 +1,7 @@
 import { Users, Award, Truck, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import OptimizedImage from "@/components/OptimizedImage";
 
 const AboutSection = () => {
   const features = [
@@ -55,10 +57,15 @@ const AboutSection = () => {
 
           {/* Image */}
           <div className="relative">
-            <img
+            <OptimizedImage
               src="/lovable-uploads/db868647-544e-4c56-9f4e-508500776671.png"
               alt="jnCrafts team wearing our products"
               className="w-full h-[600px] object-cover rounded-lg shadow-2xl"
+              width={800}
+              height={600}
+              quality={85}
+              lazy={true}
+              progressive={true}
             />
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-beige/20 to-transparent rounded-lg" />
           </div>

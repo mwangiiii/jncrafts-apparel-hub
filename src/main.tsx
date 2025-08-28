@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { CurrencyProvider } from './contexts/CurrencyContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from './components/ui/sonner'
+import CriticalResourcePreloader from './components/CriticalResourcePreloader.tsx'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,7 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <AuthProvider>
         <CurrencyProvider>
+          <CriticalResourcePreloader />
           <App />
           <Toaster />
         </CurrencyProvider>
