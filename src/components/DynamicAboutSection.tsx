@@ -3,9 +3,7 @@ import { Users, Award, Truck, Shield, Play, Pause, ChevronLeft, ChevronRight } f
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-// Import OptimizedImage with explicit path
-import OptimizedImage from "./OptimizedImage";
+import ImageModal from "./ImageModal";
 
 interface AboutMedia {
   id: string;
@@ -90,6 +88,10 @@ const DynamicAboutSection = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [nextImageIndex, setNextImageIndex] = useState(1);
   const [imagesLoaded, setImagesLoaded] = useState(new Set<string>());
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<AboutMedia | null>(null);
 
   // Screen size detection
   useEffect(() => {
@@ -194,6 +196,16 @@ const DynamicAboutSection = () => {
     }
   };
 
+  const handleImageClick = (media: AboutMedia) => {
+    setSelectedImage(media);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedImage(null);
+  };
+
   const currentMedia = aboutMedia[currentMediaIndex];
   const hasMultipleMedia = aboutMedia.length > 1;
 
@@ -278,12 +290,12 @@ const DynamicAboutSection = () => {
                     className="relative w-full"
                     style={{ height: imageHeight }}
                   >
-                    {/* Current Image with enhanced transitions */}
+                     {/* Current Image with crossfade + zoom transitions */}
                     <div 
-                      className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
+                      className={`absolute inset-0 transition-all duration-1000 ease-out transform ${
                         isTransitioning 
-                          ? `opacity-0 ${isMobile ? 'scale-110 rotate-1 blur-sm' : 'scale-105 rotate-2 blur-sm translate-x-12'}` 
-                          : 'opacity-100 scale-100 rotate-0 blur-0 translate-x-0 translate-y-0'
+                          ? 'opacity-0 scale-110' 
+                          : 'opacity-100 scale-100'
                       }`}
                     >
                       <div className="relative w-full h-full overflow-hidden rounded-lg">
@@ -291,8 +303,9 @@ const DynamicAboutSection = () => {
                           key={`current-${currentMedia.id}`}
                           src={currentMedia.media_url}
                           alt={currentMedia.alt_text}
-                          className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
+                          className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105 cursor-pointer"
                           loading={currentMediaIndex < 2 ? "eager" : "lazy"}
+                          onClick={() => handleImageClick(currentMedia)}
                           style={{
                             width: '100%',
                             height: '100%',
@@ -300,18 +313,18 @@ const DynamicAboutSection = () => {
                             objectPosition: 'center'
                           }}
                         />
-                        {/* Parallax overlay effect */}
+                        {/* Subtle overlay effect on hover */}
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-brand-beige/10 opacity-0 hover:opacity-100 transition-opacity duration-500" />
                       </div>
                     </div>
 
-                    {/* Next Image with stunning entrance */}
+                    {/* Next Image with crossfade + zoom entrance */}
                     {isTransitioning && aboutMedia[nextImageIndex] && (
                       <div 
-                        className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
+                        className={`absolute inset-0 transition-all duration-1000 ease-out transform ${
                           isTransitioning 
-                            ? 'opacity-100 scale-100 rotate-0 blur-0 translate-x-0 translate-y-0' 
-                            : `opacity-0 ${isMobile ? 'scale-90 -rotate-1 blur-sm' : 'scale-95 -rotate-2 blur-sm -translate-x-12'}`
+                            ? 'opacity-100 scale-100' 
+                            : 'opacity-0 scale-90'
                         }`}
                       >
                         <div className="relative w-full h-full overflow-hidden rounded-lg">
@@ -319,8 +332,9 @@ const DynamicAboutSection = () => {
                             key={`next-${aboutMedia[nextImageIndex]?.id}`}
                             src={aboutMedia[nextImageIndex]?.media_url}
                             alt={aboutMedia[nextImageIndex]?.alt_text}
-                            className="w-full h-full object-cover object-center"
+                            className="w-full h-full object-cover object-center cursor-pointer"
                             loading="lazy"
+                            onClick={() => handleImageClick(aboutMedia[nextImageIndex])}
                             style={{
                               width: '100%',
                               height: '100%',
@@ -328,8 +342,6 @@ const DynamicAboutSection = () => {
                               objectPosition: 'center'
                             }}
                           />
-                          {/* Entry glow effect */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-brand-beige/20 via-transparent to-transparent animate-pulse" />
                         </div>
                       </div>
                     )}
@@ -433,6 +445,16 @@ const DynamicAboutSection = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <ImageModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          imageSrc={selectedImage.media_url}
+          imageAlt={selectedImage.alt_text}
+        />
+      )}
     </section>
   );
 };
