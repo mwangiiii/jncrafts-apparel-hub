@@ -382,7 +382,7 @@ const AdminDashboard = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, description, sizes, colors, videos, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

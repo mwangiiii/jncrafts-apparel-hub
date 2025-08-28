@@ -34,7 +34,7 @@ const EnhancedContactSection = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, price, category, stock_quantity, is_active, images, sizes, colors, created_at, updated_at')
         .eq('is_active', true)
         .order('name', { ascending: true });
 

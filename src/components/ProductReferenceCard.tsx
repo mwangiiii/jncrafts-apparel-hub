@@ -29,7 +29,7 @@ const ProductReferenceCard = ({ productId }: ProductReferenceCardProps) => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, sizes, colors, created_at, updated_at')
           .eq('id', productId)
           .single();
 

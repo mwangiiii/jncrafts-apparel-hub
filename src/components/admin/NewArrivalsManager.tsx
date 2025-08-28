@@ -24,7 +24,7 @@ const NewArrivalsManager = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, new_arrival_date, sizes, colors, created_at, updated_at')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 

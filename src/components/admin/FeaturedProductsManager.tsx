@@ -45,7 +45,7 @@ const FeaturedProductsManager = () => {
       // Fetch all products for dropdown
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, price, category, images, thumbnail_index, stock_quantity, is_active, sizes, colors, created_at, updated_at')
         .eq('is_active', true)
         .order('name', { ascending: true });
 
