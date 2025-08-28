@@ -750,54 +750,42 @@ export type Database = {
       products: {
         Row: {
           category: string
-          colors: string[] | null
           created_at: string
           description: string | null
           id: string
-          images: string[] | null
           is_active: boolean | null
           name: string
           new_arrival_date: string | null
           price: number
-          sizes: string[] | null
           stock_quantity: number | null
           thumbnail_index: number | null
           updated_at: string
-          videos: string[] | null
         }
         Insert: {
           category: string
-          colors?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
-          images?: string[] | null
           is_active?: boolean | null
           name: string
           new_arrival_date?: string | null
           price: number
-          sizes?: string[] | null
           stock_quantity?: number | null
           thumbnail_index?: number | null
           updated_at?: string
-          videos?: string[] | null
         }
         Update: {
           category?: string
-          colors?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
-          images?: string[] | null
           is_active?: boolean | null
           name?: string
           new_arrival_date?: string | null
           price?: number
-          sizes?: string[] | null
           stock_quantity?: number | null
           thumbnail_index?: number | null
           updated_at?: string
-          videos?: string[] | null
         }
         Relationships: []
       }
@@ -1003,6 +991,25 @@ export type Database = {
           category: string
         }[]
       }
+      get_product_complete: {
+        Args: { p_product_id: string }
+        Returns: {
+          category: string
+          colors: Json
+          created_at: string
+          description: string
+          id: string
+          images: Json
+          is_active: boolean
+          name: string
+          new_arrival_date: string
+          price: number
+          sizes: Json
+          stock_quantity: number
+          thumbnail_index: number
+          updated_at: string
+        }[]
+      }
       get_products_lightweight: {
         Args: {
           p_category?: string
@@ -1013,6 +1020,21 @@ export type Database = {
         Returns: {
           category: string
           created_at: string
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          stock_quantity: number
+          thumbnail_image: string
+        }[]
+      }
+      get_products_lightweight_v2: {
+        Args: { p_category?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          category: string
+          created_at: string
+          has_colors: boolean
+          has_sizes: boolean
           id: string
           name: string
           new_arrival_date: string
