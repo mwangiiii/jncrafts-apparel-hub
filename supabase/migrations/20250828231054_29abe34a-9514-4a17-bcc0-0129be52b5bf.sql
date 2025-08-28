@@ -1,0 +1,114 @@
+-- Create materialized view and ultra-fast functions for performance
+
+-- 1. Create materialized view for ultra-fast landing page queries
+DROP MATERIALIZED VIEW IF EXISTS mv_products_landing;
+CREATE MATERIALIZED VIEW mv_products_landing AS
+SELECT 
+    p.id,
+    p.name,
+    p.price,
+    p.category,
+    p.stock_quantity,
+    p.new_arrival_date,
+    p.created_at,
+    pi.image_url as thumbnail_image,
+    -- Performance flags for quick checks
+    EXISTS(SELECT 1 FROM product_colors pc WHERE pc.product_id = p.id AND pc.is_available = true) as has_colors,
+    EXISTS(SELECT 1 FROM product_sizes ps WHERE ps.product_id = p.id AND ps.is_available = true) as has_sizes
+FROM products p
+LEFT JOIN product_images pi ON (
+    pi.product_id = p.id 
+    AND pi.display_order = 1
+)
+WHERE p.is_active = true
+ORDER BY p.created_at DESC;
+
+-- 2. Create indexes on materialized view for fast lookups
+CREATE UNIQUE INDEX idx_mv_products_landing_id ON mv_products_landing (id);
+CREATE INDEX idx_mv_products_landing_category ON mv_products_landing (category, created_at DESC);
+CREATE INDEX idx_mv_products_landing_created ON mv_products_landing (created_at DESC);
+
+-- 3. Create ultra-fast product listing function
+CREATE OR REPLACE FUNCTION get_products_ultra_fast(
+    p_category text DEFAULT 'all',
+    p_limit integer DEFAULT 20,
+    p_offset integer DEFAULT 0
+)
+RETURNS TABLE(
+    id uuid,
+    name text,
+    price numeric,
+    category text,
+    thumbnail_image text,
+    stock_quantity integer,
+    new_arrival_date timestamp with time zone,
+    created_at timestamp with time zone,
+    has_colors boolean,
+    has_sizes boolean
+)
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+    SELECT 
+        pl.id,
+        pl.name,
+        pl.price,
+        pl.category,
+        pl.thumbnail_image,
+        pl.stock_quantity,
+        pl.new_arrival_date,
+        pl.created_at,
+        pl.has_colors,
+        pl.has_sizes
+    FROM mv_products_landing pl
+    WHERE (p_category = 'all' OR pl.category = p_category)
+    ORDER BY pl.created_at DESC
+    LIMIT p_limit
+    OFFSET p_offset;
+$$;
+
+-- 4. Create ultra-fast featured products function
+CREATE OR REPLACE FUNCTION get_featured_products_ultra_fast(p_limit integer DEFAULT 6)
+RETURNS TABLE(
+    id uuid,
+    display_order integer,
+    product_id uuid,
+    name text,
+    price numeric,
+    category text,
+    thumbnail_image text,
+    stock_quantity integer,
+    new_arrival_date timestamp with time zone
+)
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+    SELECT 
+        hf.id,
+        hf.display_order,
+        hf.product_id,
+        pl.name,
+        pl.price,
+        pl.category,
+        pl.thumbnail_image,
+        pl.stock_quantity,
+        pl.new_arrival_date
+    FROM homepage_featured hf
+    JOIN mv_products_landing pl ON pl.id = hf.product_id
+    WHERE hf.is_active = true
+    ORDER BY hf.display_order ASC
+    LIMIT p_limit;
+$$;
+
+-- 5. Function to refresh materialized view efficiently
+CREATE OR REPLACE FUNCTION refresh_products_landing_view()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_products_landing;
+END;
+$$;

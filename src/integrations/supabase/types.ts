@@ -128,6 +128,13 @@ export type Database = {
             foreignKeyName: "cart_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -223,6 +230,13 @@ export type Database = {
             foreignKeyName: "conversations_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -256,6 +270,13 @@ export type Database = {
             columns: ["discount_id"]
             isOneToOne: false
             referencedRelation: "discounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_products_landing"
             referencedColumns: ["id"]
           },
           {
@@ -386,6 +407,13 @@ export type Database = {
           product_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "homepage_featured_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "homepage_featured_product_id_fkey"
             columns: ["product_id"]
@@ -595,6 +623,13 @@ export type Database = {
             foreignKeyName: "product_colors_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_colors_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -632,6 +667,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_images_product_id_fkey"
             columns: ["product_id"]
@@ -690,6 +732,13 @@ export type Database = {
             foreignKeyName: "product_inventory_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -731,6 +780,13 @@ export type Database = {
           stock_quantity?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_sizes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_sizes_product_id_fkey"
             columns: ["product_id"]
@@ -963,6 +1019,13 @@ export type Database = {
             foreignKeyName: "wishlist_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_products_landing"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -970,7 +1033,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_products_landing: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          has_colors: boolean | null
+          has_sizes: boolean | null
+          id: string | null
+          name: string | null
+          new_arrival_date: string | null
+          price: number | null
+          stock_quantity: number | null
+          thumbnail_image: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_expired_sessions: {
@@ -989,6 +1066,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           category: string
+        }[]
+      }
+      get_featured_products_ultra_fast: {
+        Args: { p_limit?: number }
+        Returns: {
+          category: string
+          display_order: number
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          product_id: string
+          stock_quantity: number
+          thumbnail_image: string
         }[]
       }
       get_product_complete: {
@@ -1043,6 +1134,21 @@ export type Database = {
           thumbnail_image: string
         }[]
       }
+      get_products_ultra_fast: {
+        Args: { p_category?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          category: string
+          created_at: string
+          has_colors: boolean
+          has_sizes: boolean
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          stock_quantity: number
+          thumbnail_image: string
+        }[]
+      }
       hash_email: {
         Args: { email_address: string }
         Returns: string
@@ -1066,6 +1172,10 @@ export type Database = {
           p_record_id?: string
           p_table_name: string
         }
+        Returns: undefined
+      }
+      refresh_products_landing_view: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       validate_discount_code: {
