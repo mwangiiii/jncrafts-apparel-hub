@@ -20,6 +20,7 @@ const Wishlist = () => {
   const { formatPrice } = useCurrency();
   const { toast } = useToast();
   const [selectedItems, setSelectedItems] = useState<{[key: string]: {size: string, color: string}}>({});
+  const [addingToCart, setAddingToCart] = useState<{[key: string]: boolean}>({});
 
   if (loading || isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -32,6 +33,9 @@ const Wishlist = () => {
   const handleAddToCart = async (item: any) => {
     const product = item.product;
     if (!product) return;
+
+    // Prevent multiple clicks
+    if (addingToCart[item.id]) return;
 
     const selection = selectedItems[item.id];
     const requiresSize = hasRealSizes(product);
@@ -64,7 +68,36 @@ const Wishlist = () => {
       return;
     }
 
-    await addToCart(product, 1, selection?.size || '', selection?.color || '');
+    // Set loading state
+    setAddingToCart(prev => ({ ...prev, [item.id]: true }));
+
+    try {
+      await addToCart(product, 1, selection?.size || '', selection?.color || '');
+      
+      // Show success message
+      toast({
+        title: "Added to Cart",
+        description: `${product.name} has been added to your cart`,
+      });
+
+      // Clear selection after successful add
+      setSelectedItems(prev => {
+        const newState = { ...prev };
+        delete newState[item.id];
+        return newState;
+      });
+
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      // Remove loading state
+      setAddingToCart(prev => ({ ...prev, [item.id]: false }));
+    }
   };
 
   const updateSelection = (itemId: string, type: 'size' | 'color', value: string) => {
@@ -186,16 +219,26 @@ const Wishlist = () => {
                   )}
 
                   <Button
-                    className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant"
+                    className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleAddToCart(item)}
                     disabled={
+                      addingToCart[item.id] ||
                       item.product?.stock_quantity === 0 || 
                       (hasRealSizes(item.product) && !selectedItems[item.id]?.size) ||
                       (hasRealColors(item.product) && !selectedItems[item.id]?.color)
                     }
                   >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {item.product?.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    {addingToCart[item.id] ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        {item.product?.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
