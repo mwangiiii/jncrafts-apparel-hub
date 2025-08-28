@@ -1,5 +1,6 @@
 import { Product, ProductImage, ProductSizeInfo, ProductColorInfo } from '@/types/database';
 
+// Product display helper utilities - updated
 // Helper function to get product thumbnail
 export const getProductThumbnail = (product: Product): string | undefined => {
   if (!product.images || product.images.length === 0) return undefined;
