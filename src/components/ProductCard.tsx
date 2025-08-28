@@ -8,7 +8,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useNavigate } from 'react-router-dom';
-import ChatWidget from './ChatWidget';
+
 import { useToast } from '@/hooks/use-toast';
 
 interface ProductCardProps {
@@ -196,12 +196,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                   className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
                 />
               </Button>
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <ChatWidget 
-                  productId={product.id} 
-                  productName={product.name}
-                />
-              </div>
             </>
           )}
         </div>

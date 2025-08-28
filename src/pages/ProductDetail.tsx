@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { usePersistentCart } from '@/hooks/usePersistentCart';
-import ChatWidget from '@/components/ChatWidget';
+
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import ProductVideoPlayer from '@/components/admin/ProductVideoPlayer';
 import Header from '@/components/Header';
@@ -493,15 +493,6 @@ const ProductDetail = () => {
           </div>
         )}
 
-        {/* Chat Widget */}
-        {user && (
-          <div className="mt-8 flex justify-center">
-            <ChatWidget 
-              productId={product.id} 
-              productName={product.name}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
