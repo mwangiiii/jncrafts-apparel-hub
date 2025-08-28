@@ -76,7 +76,7 @@ const DiscountsSection = () => {
     try {
       const { data, error } = await supabase
         .from('discounts')
-        .select('*')
+        .select('id, code, name, description, discount_type, discount_value, banner_message, start_date, end_date, applies_to, requires_code')
         .eq('is_active', true)
         .or('end_date.is.null,end_date.gte.' + new Date().toISOString())
         .order('created_at', { ascending: false });

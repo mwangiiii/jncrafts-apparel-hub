@@ -35,7 +35,7 @@ const PromoCodeInput = ({ onCodeApplied, onCodeRemoved, appliedDiscount, orderTo
       // Use direct query instead of RPC to avoid 500 errors
       const { data, error } = await supabase
         .from('discounts')
-        .select('*')
+        .select('id, code, name, description, discount_type, discount_value, min_order_amount, usage_limit, used_count, start_date, end_date')
         .eq('code', code.toUpperCase())
         .eq('is_active', true)
         .eq('requires_code', true)

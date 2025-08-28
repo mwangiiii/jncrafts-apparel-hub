@@ -22,7 +22,7 @@ export const usePersistentCart = () => {
   const loadCartItems = async () => {
     setIsLoading(true);
     try {
-      let query = supabase.from('cart_items').select('*');
+      let query = supabase.from('cart_items').select('id, user_id, session_id, product_id, product_name, product_image, quantity, size, color, price, created_at, updated_at');
       
       if (user) {
         query = query.eq('user_id', user.id);

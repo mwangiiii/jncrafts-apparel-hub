@@ -101,7 +101,7 @@ const SpecialOffersManager = () => {
     try {
       const { data, error } = await supabase
         .from('discounts')
-        .select('*')
+        .select('id, code, name, description, discount_type, discount_value, applies_to, min_order_amount, usage_limit, used_count, is_active, requires_code, start_date, end_date, banner_message, created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

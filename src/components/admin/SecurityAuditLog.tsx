@@ -49,7 +49,7 @@ const SecurityAuditLog: React.FC = () => {
       // Fetch audit logs for this admin
       const { data, error } = await supabase
         .from('admin_audit_log')
-        .select('*')
+        .select('id, admin_user_id, action, table_name, record_id, created_at, ip_address, accessed_data, user_agent')
         .order('created_at', { ascending: false })
         .limit(50);
 

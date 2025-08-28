@@ -31,7 +31,7 @@ const AboutMediaManager = () => {
     try {
       const { data, error } = await supabase
         .from('about_media')
-        .select('*')
+        .select('id, media_type, media_url, display_order, is_active, created_at, updated_at')
         .order('display_order', { ascending: true });
 
       if (error) throw error;

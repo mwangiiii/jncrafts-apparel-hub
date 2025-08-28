@@ -73,7 +73,7 @@ export const useMessaging = () => {
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('id, conversation_id, sender_id, sender_type, content, message_type, created_at')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 

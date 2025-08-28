@@ -100,7 +100,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
     try {
       const { data, error } = await supabase
         .from('discounts')
-        .select('*')
+        .select('id, code, name, discount_type, discount_value, min_order_amount, max_uses, current_uses')
         .eq('code', discountCode.toUpperCase())
         .eq('is_active', true)
         .gte('end_date', new Date().toISOString())

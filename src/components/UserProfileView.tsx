@@ -30,7 +30,7 @@ export const UserProfileView = ({ userId, conversations, onBack }: UserProfileVi
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, user_id, full_name, phone, address, created_at, updated_at')
           .eq('user_id', userId)
           .single();
 
