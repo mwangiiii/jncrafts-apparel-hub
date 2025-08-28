@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Users, Award, Truck, Shield, Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,12 @@ interface AboutMedia {
 }
 
 const DynamicAboutSection = () => {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [screenSize, setScreenSize] = useState({ width: 0, height: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Static media array with all the jnCrafts images
   const aboutMedia: AboutMedia[] = [
     {
@@ -83,17 +89,77 @@ const DynamicAboutSection = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [nextImageIndex, setNextImageIndex] = useState(1);
+  const [imagesLoaded, setImagesLoaded] = useState(new Set<string>());
 
-  // Auto-rotate media every 4 seconds
+  // Screen size detection
   useEffect(() => {
-    if (!isPlaying) return;
+    const updateScreenSize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setScreenSize({ width, height });
+      setIsMobile(width < 768);
+    };
+
+    updateScreenSize();
+    window.addEventListener('resize', updateScreenSize);
+    return () => window.removeEventListener('resize', updateScreenSize);
+  }, []);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          setIsLoading(false);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Preload images for smooth transitions
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const preloadImages = async () => {
+      const loadPromises = aboutMedia.map((media) => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            setImagesLoaded(prev => new Set(prev).add(media.id));
+            resolve(media.id);
+          };
+          img.onerror = () => resolve(media.id); // Still resolve to prevent blocking
+          img.src = media.media_url;
+        });
+      });
+
+      await Promise.all(loadPromises);
+    };
+
+    preloadImages();
+  }, [isVisible, aboutMedia]);
+
+  // Auto-rotate media with responsive timing
+  useEffect(() => {
+    if (!isPlaying || !isVisible) return;
+
+    // Slower rotation on mobile for better UX
+    const rotationSpeed = isMobile ? 5000 : 4000;
 
     const interval = setInterval(() => {
       handleNextImage();
-    }, 4000);
+    }, rotationSpeed);
 
     return () => clearInterval(interval);
-  }, [isPlaying, currentMediaIndex]);
+  }, [isPlaying, currentMediaIndex, isMobile, isVisible]);
 
   const handleNextImage = () => {
     const nextIndex = (currentMediaIndex + 1) % aboutMedia.length;
@@ -154,16 +220,29 @@ const DynamicAboutSection = () => {
     }
   ];
 
+  // Get responsive dimensions
+  const getImageDimensions = () => {
+    if (isMobile) {
+      return { width: screenSize.width * 0.9, height: 300 };
+    } else if (screenSize.width < 1024) {
+      return { width: screenSize.width * 0.8, height: 400 };
+    } else {
+      return { width: 600, height: 600 };
+    }
+  };
+
+  const { width: imageWidth, height: imageHeight } = getImageDimensions();
+
   return (
-    <section id="about" className="py-20 overflow-hidden">
+    <section ref={sectionRef} id="about" className="py-12 md:py-20 overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-start lg:items-center">
           {/* Content */}
-          <div className="animate-fade-in">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <div className={`order-2 lg:order-1 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6">
               About <span className="text-brand-beige">jnCRAFTS</span>
             </h2>
-            <div className="space-y-6 text-lg text-muted-foreground">
+            <div className="space-y-4 md:space-y-6 text-base md:text-lg text-muted-foreground">
               <p className="leading-relaxed">
                 jnCrafts is more than just a clothing brand - we're a lifestyle. Founded with 
                 the vision of creating premium streetwear that combines comfort, style, and 
@@ -183,134 +262,168 @@ const DynamicAboutSection = () => {
           </div>
 
           {/* Dynamic Media Section */}
-          <div className="relative">
-            <div className="relative overflow-hidden rounded-2xl shadow-2xl group bg-gradient-to-br from-muted/50 to-background">
-              {/* Main Image Container with smooth transitions */}
-              <div className="relative w-full h-[600px]">
-                {/* Current Image */}
-                <div 
-                  className={`absolute inset-0 transition-all duration-500 ease-out transform ${
-                    isTransitioning 
-                      ? 'opacity-0 scale-95 translate-x-8' 
-                      : 'opacity-100 scale-100 translate-x-0'
-                  }`}
-                >
-                  <img
-                    key={`current-${currentMedia.id}`}
-                    src={currentMedia.media_url}
-                    alt={currentMedia.alt_text}
-                    className="w-full h-full object-cover object-center"
-                    loading="eager"
-                  />
-                </div>
-
-                {/* Next Image for smooth transitions */}
-                {isTransitioning && (
-                  <div 
-                    className={`absolute inset-0 transition-all duration-500 ease-out transform ${
-                      isTransitioning 
-                        ? 'opacity-100 scale-100 translate-x-0' 
-                        : 'opacity-0 scale-95 -translate-x-8'
-                    }`}
-                  >
-                    <img
-                      key={`next-${aboutMedia[nextImageIndex]?.id}`}
-                      src={aboutMedia[nextImageIndex]?.media_url}
-                      alt={aboutMedia[nextImageIndex]?.alt_text}
-                      className="w-full h-full object-cover object-center"
-                      loading="eager"
-                    />
-                  </div>
-                )}
+          <div className="order-1 lg:order-2 w-full">
+            {isLoading ? (
+              <div 
+                className="w-full bg-muted rounded-xl md:rounded-2xl animate-pulse flex items-center justify-center"
+                style={{ height: imageHeight }}
+              >
+                <span className="text-muted-foreground text-sm">Loading gallery...</span>
               </div>
-
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-brand-beige/10 via-transparent to-transparent" />
-              
-              {/* Navigation Arrows */}
-              {hasMultipleMedia && (
-                <>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md border-white/20 text-foreground hover:bg-background hover:scale-110 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
-                    onClick={handlePrevImage}
+            ) : (
+              <div className="relative mx-auto max-w-full">
+                <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg md:shadow-2xl group bg-gradient-to-br from-muted/20 to-background">
+                  {/* Main Image Container with responsive dimensions */}
+                  <div 
+                    className="relative w-full"
+                    style={{ height: imageHeight }}
                   >
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md border-white/20 text-foreground hover:bg-background hover:scale-110 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
-                    onClick={handleNextImage}
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                </>
-              )}
-
-              {/* Play/Pause Control */}
-              {hasMultipleMedia && (
-                <div className="absolute top-4 right-4">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="bg-background/90 backdrop-blur-md border-white/20 hover:bg-background hover:scale-110 transition-all duration-300 shadow-lg"
-                    onClick={() => setIsPlaying(!isPlaying)}
-                  >
-                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                </div>
-              )}
-
-              {/* Image Counter */}
-              {hasMultipleMedia && (
-                <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-md rounded-full px-4 py-2 text-sm font-medium shadow-lg border border-white/20">
-                  {currentMediaIndex + 1} / {aboutMedia.length}
-                </div>
-              )}
-
-              {/* Dot Indicators */}
-              {hasMultipleMedia && (
-                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3">
-                  {aboutMedia.map((_, index) => (
-                    <button
-                      key={index}
-                      className={`transition-all duration-300 hover:scale-125 rounded-full ${
-                        index === currentMediaIndex 
-                          ? 'w-10 h-3 bg-white shadow-lg' 
-                          : 'w-3 h-3 bg-white/60 hover:bg-white/80'
+                    {/* Current Image */}
+                    <div 
+                      className={`absolute inset-0 transition-all duration-500 ease-out transform ${
+                        isTransitioning 
+                          ? `opacity-0 scale-95 ${isMobile ? 'translate-y-4' : 'translate-x-8'}` 
+                          : 'opacity-100 scale-100 translate-x-0 translate-y-0'
                       }`}
-                      onClick={() => handleDotClick(index)}
-                      aria-label={`View image ${index + 1}`}
-                    />
-                  ))}
+                    >
+                      <img
+                        key={`current-${currentMedia.id}`}
+                        src={currentMedia.media_url}
+                        alt={currentMedia.alt_text}
+                        className="w-full h-full object-cover object-center"
+                        loading={currentMediaIndex < 2 ? "eager" : "lazy"}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: 'center'
+                        }}
+                      />
+                    </div>
+
+                    {/* Next Image for smooth transitions */}
+                    {isTransitioning && aboutMedia[nextImageIndex] && (
+                      <div 
+                        className={`absolute inset-0 transition-all duration-500 ease-out transform ${
+                          isTransitioning 
+                            ? 'opacity-100 scale-100 translate-x-0 translate-y-0' 
+                            : `opacity-0 scale-95 ${isMobile ? '-translate-y-4' : '-translate-x-8'}`
+                        }`}
+                      >
+                        <img
+                          key={`next-${aboutMedia[nextImageIndex]?.id}`}
+                          src={aboutMedia[nextImageIndex]?.media_url}
+                          alt={aboutMedia[nextImageIndex]?.alt_text}
+                          className="w-full h-full object-cover object-center"
+                          loading="lazy"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: 'center'
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-brand-beige/5 via-transparent to-transparent" />
+                  
+                  {/* Navigation Arrows - Hidden on small mobile */}
+                  {hasMultipleMedia && !isMobile && (
+                    <>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md border-white/20 text-foreground hover:bg-background hover:scale-110 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                        onClick={handlePrevImage}
+                      >
+                        <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md border-white/20 text-foreground hover:bg-background hover:scale-110 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                        onClick={handleNextImage}
+                      >
+                        <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Play/Pause Control */}
+                  {hasMultipleMedia && (
+                    <div className="absolute top-2 md:top-4 right-2 md:right-4">
+                      <Button
+                        size={isMobile ? "sm" : "icon"}
+                        variant="outline"
+                        className="bg-background/90 backdrop-blur-md border-white/20 hover:bg-background hover:scale-110 transition-all duration-300 shadow-lg"
+                        onClick={() => setIsPlaying(!isPlaying)}
+                      >
+                        {isPlaying ? (
+                          <Pause className="h-3 w-3 md:h-4 md:w-4" />
+                        ) : (
+                          <Play className="h-3 w-3 md:h-4 md:w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Image Counter */}
+                  {hasMultipleMedia && (
+                    <div className="absolute top-2 md:top-4 left-2 md:left-4 bg-background/90 backdrop-blur-md rounded-full px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm font-medium shadow-lg border border-white/20">
+                      {currentMediaIndex + 1} / {aboutMedia.length}
+                    </div>
+                  )}
+
+                  {/* Dot Indicators - Responsive */}
+                  {hasMultipleMedia && (
+                    <div className="absolute bottom-3 md:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 md:gap-3 max-w-full overflow-x-auto px-4">
+                      {aboutMedia.map((_, index) => (
+                        <button
+                          key={index}
+                          className={`flex-shrink-0 transition-all duration-300 hover:scale-125 rounded-full ${
+                            index === currentMediaIndex 
+                              ? 'w-6 md:w-10 h-2 md:h-3 bg-white shadow-lg' 
+                              : 'w-2 md:w-3 h-2 md:h-3 bg-white/60 hover:bg-white/80'
+                          }`}
+                          onClick={() => handleDotClick(index)}
+                          aria-label={`View image ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Features Grid */}
-        <div className="mt-24">
-          <h3 className="text-3xl font-bold text-center mb-12 animate-fade-in">
+        <div className="mt-16 md:mt-24">
+          <h3 className={`text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
             Why Choose jnCrafts?
           </h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {features.map((feature, index) => (
               <Card 
                 key={index} 
-                className="text-center hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group border-muted/50 hover:border-brand-beige/30 animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className={`text-center hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group border-muted/50 hover:border-brand-beige/30 ${
+                  isVisible ? 'animate-fade-in' : 'opacity-0'
+                }`}
+                style={{ 
+                  animationDelay: isVisible ? `${index * 0.1 + 0.2}s` : '0s'
+                }}
               >
-                <CardContent className="p-8">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-brand-beige/10 text-brand-beige rounded-full mb-6 group-hover:scale-110 group-hover:bg-brand-beige/20 transition-all duration-300 group-hover:shadow-lg">
+                <CardContent className="p-4 md:p-8">
+                  <div className={`inline-flex items-center justify-center ${isMobile ? 'w-16 h-16' : 'w-20 h-20'} bg-brand-beige/10 text-brand-beige rounded-full mb-4 md:mb-6 group-hover:scale-110 group-hover:bg-brand-beige/20 transition-all duration-300 group-hover:shadow-lg`}>
                     {feature.icon}
                   </div>
-                  <h4 className="text-xl font-semibold mb-4 group-hover:text-brand-beige transition-colors duration-300">
+                  <h4 className="text-lg md:text-xl font-semibold mb-3 md:mb-4 group-hover:text-brand-beige transition-colors duration-300">
                     {feature.title}
                   </h4>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                     {feature.description}
                   </p>
                 </CardContent>
