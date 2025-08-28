@@ -1,14 +1,20 @@
 import { Button } from "@/components/ui/button";
+import OptimizedImage from "@/components/OptimizedImage";
 
 const Hero = () => {
   return (
     <section id="home" className="relative min-h-screen flex items-center">
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
-        <img
+        <OptimizedImage
           src="/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.png"
           alt="jnCrafts streetwear models showcasing premium hoodies"
           className="w-full h-full object-cover object-center"
+          width={1920}
+          height={1080}
+          quality={90}
+          lazy={false}
+          progressive={true}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/40"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
