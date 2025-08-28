@@ -2,28 +2,17 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/types/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
-
-interface FeaturedProduct {
-  id: string;
-  product_id: string;
-  display_order: number;
-  is_active: boolean;
-  product?: Product;
-}
+import { useOptimizedFeatured } from '@/hooks/useOptimizedFeatured';
+import { Product } from '@/types/database';
 
 const AnimatedFeaturedProducts = () => {
-  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [loading, setLoading] = useState(true);
   const { formatPrice } = useCurrency();
-
-  useEffect(() => {
-    fetchFeaturedProducts();
-  }, []);
+  
+  // Use optimized featured products hook
+  const { data: featuredProducts = [], isLoading: loading, isError } = useOptimizedFeatured();
 
   // Auto-advance carousel
   useEffect(() => {
@@ -35,26 +24,6 @@ const AnimatedFeaturedProducts = () => {
 
     return () => clearInterval(interval);
   }, [featuredProducts.length, isAutoPlaying]);
-
-  const fetchFeaturedProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('homepage_featured')
-        .select(`
-          *,
-          product:products(*)
-        `)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-      setFeaturedProducts(data || []);
-    } catch (error) {
-      console.error('Error fetching featured products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % featuredProducts.length);
@@ -76,7 +45,7 @@ const AnimatedFeaturedProducts = () => {
     );
   }
 
-  if (featuredProducts.length === 0) return null;
+  if (isError || featuredProducts.length === 0) return null;
 
   return (
     <section className="py-16 bg-gradient-to-b from-background to-muted/30 overflow-hidden">
@@ -99,32 +68,36 @@ const AnimatedFeaturedProducts = () => {
             onMouseLeave={() => setIsAutoPlaying(true)}
           >
             {featuredProducts.map((featured, index) => {
-              const product = featured.product;
-              if (!product) return null;
+              // Transform featured product data to Product interface
+              const product: Product = {
+                id: featured.product_id,
+                name: featured.name,
+                price: featured.price,
+                category: featured.category,
+                images: featured.thumbnail_image ? [featured.thumbnail_image] : [],
+                sizes: [], // Load on demand
+                colors: [], // Load on demand
+                stock_quantity: featured.stock_quantity,
+                new_arrival_date: featured.new_arrival_date,
+                is_active: true,
+                description: null,
+                videos: null,
+                thumbnail_index: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
 
               return (
                 <div key={featured.id} className="w-full flex-shrink-0 px-4">
                   <Card className="overflow-hidden bg-gradient-to-br from-background to-muted/30 border-0 shadow-2xl">
                     <div className="grid md:grid-cols-2 gap-0">
-                      {/* Product Image/Video */}
+                      {/* Product Image */}
                       <div className="relative overflow-hidden h-96 md:h-full">
-                        {product.videos && product.videos.length > 0 ? (
-                          <video
-                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                          >
-                            <source src={product.videos[0]} type="video/mp4" />
-                          </video>
-                        ) : (
-                          <img
-                            src={product.images[0] || '/placeholder.svg'}
-                            alt={product.name}
-                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                          />
-                        )}
+                        <img
+                          src={product.images[0] || '/placeholder.svg'}
+                          alt={product.name}
+                          className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                        />
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/20" />
                       </div>
 
@@ -139,7 +112,7 @@ const AnimatedFeaturedProducts = () => {
                               {product.name}
                             </h3>
                             <p className="text-muted-foreground mb-4 leading-relaxed">
-                              {product.description || `Discover the perfect blend of style and comfort with our ${product.name}. Crafted with premium materials and attention to detail.`}
+                              {`Discover the perfect blend of style and comfort with our ${product.name}. Crafted with premium materials and attention to detail.`}
                             </p>
                           </div>
 
@@ -152,28 +125,6 @@ const AnimatedFeaturedProducts = () => {
                                 {product.category}
                               </span>
                             </div>
-
-                            {/* Size and Color Preview */}
-                            {product.sizes && product.sizes.length > 0 && (
-                              <div>
-                                <p className="text-sm text-muted-foreground mb-2">Available sizes:</p>
-                                <div className="flex gap-2">
-                                  {product.sizes.slice(0, 4).map((size) => (
-                                    <span
-                                      key={size}
-                                      className="px-3 py-1 text-xs border rounded bg-muted text-muted-foreground"
-                                    >
-                                      {size}
-                                    </span>
-                                  ))}
-                                  {product.sizes.length > 4 && (
-                                    <span className="px-3 py-1 text-xs text-muted-foreground">
-                                      +{product.sizes.length - 4} more
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
 
                             <Button 
                               size="lg" 

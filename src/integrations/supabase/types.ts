@@ -733,17 +733,26 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      get_products_optimized: {
-        Args: { p_category?: string; p_limit?: number; p_offset?: number }
+      get_categories_fast: {
+        Args: Record<PropertyKey, never>
         Returns: {
           category: string
-          colors: string[]
+        }[]
+      }
+      get_products_lightweight: {
+        Args: {
+          p_category?: string
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_limit?: number
+        }
+        Returns: {
+          category: string
           created_at: string
           id: string
           name: string
           new_arrival_date: string
           price: number
-          sizes: string[]
           stock_quantity: number
           thumbnail_image: string
         }[]

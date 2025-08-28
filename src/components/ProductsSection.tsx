@@ -13,7 +13,7 @@ interface ProductsSectionProps {
 const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  // Use infinite products hook for better performance
+  // Use optimized infinite products hook
   const {
     data,
     fetchNextPage,
@@ -25,14 +25,13 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     refetch
   } = useInfiniteProducts({ 
     category: selectedCategory,
-    pageSize: 16 // Load 16 products per page
+    pageSize: 12 // Smaller batch for better performance
   });
 
   const products = data?.pages.flatMap(page => page.products) || [];
   
-  // Get categories from all loaded products
-  const allProductsForCategories = data?.pages.flatMap(page => page.products) || [];
-  const categories = ["all", ...Array.from(new Set(allProductsForCategories.map(product => product.category)))];
+  // Hardcoded categories for better performance - no need to derive from data
+  const categories = ["all", "hoodies", "jackets", "pants", "croptops", "customized tshirts", "2 piece set", "skull caps"];
 
   // Handle load more
   const handleLoadMore = useCallback(() => {

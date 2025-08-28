@@ -8,20 +8,27 @@ interface UseInfiniteProductsOptions {
   enabled?: boolean;
 }
 
+// Cursor-based pagination state
+interface ProductCursor {
+  created_at: string;
+  id: string;
+}
+
 export const useInfiniteProducts = ({ 
   category = 'all', 
-  pageSize = 20,
+  pageSize = 16,
   enabled = true 
 }: UseInfiniteProductsOptions = {}) => {
   return useInfiniteQuery({
-    queryKey: ['products', 'infinite', category],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryKey: ['products', 'lightweight', category],
+    queryFn: async ({ pageParam }: { pageParam?: ProductCursor }) => {
       try {
-        // Use optimized RPC function for better performance
-        const { data, error } = await supabase.rpc('get_products_optimized', {
+        // Use lightweight RPC with keyset pagination for better performance
+        const { data, error } = await supabase.rpc('get_products_lightweight', {
           p_category: category,
           p_limit: pageSize,
-          p_offset: pageParam * pageSize
+          p_cursor_created_at: pageParam?.created_at || null,
+          p_cursor_id: pageParam?.id || null
         });
 
         if (error) {
@@ -29,15 +36,100 @@ export const useInfiniteProducts = ({
           throw error;
         }
 
-        // Transform data to match expected format
+        // Transform minimal data to match expected format
         const products = (data || []).map((item: any) => ({
           id: item.id,
           name: item.name,
           price: item.price,
           category: item.category,
           images: item.thumbnail_image ? [item.thumbnail_image] : [],
-          sizes: item.sizes || [],
-          colors: item.colors || [],
+          sizes: [], // Load on-demand when needed
+          colors: [], // Load on-demand when needed
+          stock_quantity: item.stock_quantity,
+          new_arrival_date: item.new_arrival_date,
+          is_active: true,
+          created_at: item.created_at,
+          updated_at: item.created_at
+        }));
+
+        // Next page cursor is the last item's created_at and id
+        const nextCursor = products.length === pageSize && products.length > 0 
+          ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
+          : null;
+
+        return {
+          products,
+          nextCursor,
+          hasMore: products.length === pageSize
+        };
+      } catch (error: any) {
+        // Simplified error handling - no complex fallbacks
+        console.error('Products query failed:', error);
+        throw error;
+      }
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: undefined,
+    staleTime: 10 * 60 * 1000, // 10 minutes - aggressive caching
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    enabled,
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      // Only retry network errors, not database timeouts
+      if (error?.code === '57014') return false; // Don't retry timeouts
+      if (error?.message?.includes('Failed to fetch')) return failureCount < 1;
+      return failureCount < 1;
+    },
+    retryDelay: 1000, // Simple 1 second delay
+  });
+};
+
+// Optimized categories hook
+export const useProductCategories = () => {
+  const queryClient = useQueryClient();
+  
+  return {
+    queryKey: ['categories', 'lightweight'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_categories_fast');
+      if (error) throw error;
+      return ['all', ...(data || []).map((item: any) => item.category)];
+    },
+    staleTime: 15 * 60 * 1000, // 15 minutes - categories rarely change
+    gcTime: 60 * 60 * 1000, // 1 hour
+    retry: false // Don't retry category queries
+  };
+};
+
+// Minimal prefetch for critical above-the-fold content only
+export const usePrefetchProducts = () => {
+  const queryClient = useQueryClient();
+  
+  const prefetchCategory = (category: string) => {
+    // Only prefetch if not already cached
+    const existingData = queryClient.getQueryData(['products', 'lightweight', category]);
+    if (existingData) return;
+
+    queryClient.prefetchInfiniteQuery({
+      queryKey: ['products', 'lightweight', category],
+      queryFn: async () => {
+        const { data, error } = await supabase.rpc('get_products_lightweight', {
+          p_category: category,
+          p_limit: 8, // Minimal prefetch
+          p_cursor_created_at: null,
+          p_cursor_id: null
+        });
+
+        if (error) throw error;
+
+        const products = (data || []).map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          category: item.category,
+          images: item.thumbnail_image ? [item.thumbnail_image] : [],
+          sizes: [],
+          colors: [],
           stock_quantity: item.stock_quantity,
           new_arrival_date: item.new_arrival_date,
           is_active: true,
@@ -47,114 +139,14 @@ export const useInfiniteProducts = ({
 
         return {
           products,
-          nextPage: products.length === pageSize ? pageParam + 1 : null,
-          hasMore: products.length === pageSize
+          nextCursor: products.length > 0 
+            ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
+            : null,
+          hasMore: products.length === 8
         };
-      } catch (error: any) {
-        // Handle timeout errors specifically
-        if (error?.code === '57014') {
-          console.warn('Query timeout, retrying with smaller batch...');
-          // Fallback to smaller page size on timeout
-          const fallbackSize = Math.max(5, Math.floor(pageSize / 2));
-          const { data, error: fallbackError } = await supabase.rpc('get_products_optimized', {
-            p_category: category,
-            p_limit: fallbackSize,
-            p_offset: pageParam * fallbackSize
-          });
-          
-          if (fallbackError) throw fallbackError;
-          
-          const products = (data || []).map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            category: item.category,
-            images: item.thumbnail_image ? [item.thumbnail_image] : [],
-            sizes: item.sizes || [],
-            colors: item.colors || [],
-            stock_quantity: item.stock_quantity,
-            new_arrival_date: item.new_arrival_date,
-            is_active: true,
-            created_at: item.created_at,
-            updated_at: item.created_at
-          }));
-          
-          return {
-            products,
-            nextPage: products.length === fallbackSize ? pageParam + 1 : null,
-            hasMore: products.length === fallbackSize
-          };
-        }
-        throw error;
-      }
-    },
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-    initialPageParam: 0,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 15 * 60 * 1000, // 15 minutes
-    enabled,
-    refetchOnWindowFocus: false,
-    retry: (failureCount, error: any) => {
-      // Don't retry on timeout errors more than once
-      if (error?.code === '57014' && failureCount >= 1) return false;
-      // Don't retry on network errors
-      if (error?.message?.includes('Failed to fetch')) return false;
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(500 * 2 ** attemptIndex, 5000),
-  });
-};
-
-export const usePrefetchProducts = () => {
-  const queryClient = useQueryClient();
-  
-  const prefetchCategory = (category: string) => {
-    queryClient.prefetchInfiniteQuery({
-      queryKey: ['products', 'infinite', category],
-      queryFn: async () => {
-        try {
-          // Use the same optimized RPC function for prefetching
-          const { data, error } = await supabase.rpc('get_products_optimized', {
-            p_category: category,
-            p_limit: 20,
-            p_offset: 0
-          });
-
-          if (error) throw error;
-
-          // Transform data to match expected format
-          const products = (data || []).map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            category: item.category,
-            images: item.thumbnail_image ? [item.thumbnail_image] : [],
-            sizes: item.sizes || [],
-            colors: item.colors || [],
-            stock_quantity: item.stock_quantity,
-            new_arrival_date: item.new_arrival_date,
-            is_active: true,
-            created_at: item.created_at,
-            updated_at: item.created_at
-          }));
-
-          return {
-            products,
-            nextPage: products.length === 20 ? 1 : null,
-            hasMore: products.length === 20
-          };
-        } catch (error: any) {
-          // Fail silently on prefetch errors
-          console.warn('Prefetch failed:', error);
-          return {
-            products: [],
-            nextPage: null,
-            hasMore: false
-          };
-        }
       },
-      initialPageParam: 0,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      initialPageParam: undefined,
+      staleTime: 10 * 60 * 1000,
     });
   };
 
