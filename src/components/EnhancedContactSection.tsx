@@ -9,7 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { validateContactForm, sanitizeContactForm, checkRateLimit } from "@/lib/security-utils";
 import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/types/database';
+
+interface ContactProduct {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+}
 
 const EnhancedContactSection = () => {
   const [formData, setFormData] = useState({
@@ -22,8 +28,8 @@ const EnhancedContactSection = () => {
     message: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<ContactProduct[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<ContactProduct | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,9 +40,9 @@ const EnhancedContactSection = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price, category, stock_quantity, is_active, images, sizes, colors, created_at, updated_at')
+        .select('id, name, price, category')
         .eq('is_active', true)
-        .order('name', { ascending: true });
+        .limit(50); // Limit to 50 products for dropdown
 
       if (error) throw error;
       setProducts(data || []);
@@ -349,26 +355,16 @@ Looking forward to your response. Thank you!`;
                 {/* Selected Product Display */}
                 {selectedProduct && (
                   <Card className="p-4 bg-muted/50">
-                    <div className="flex items-start gap-4">
-                      <img
-                        src={selectedProduct.images[0] || '/placeholder.svg'}
-                        alt={selectedProduct.name}
-                        className="w-20 h-20 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{selectedProduct.name}</h4>
-                        <p className="text-sm text-muted-foreground">{selectedProduct.category}</p>
-                        <p className="text-sm font-medium text-brand-beige">${selectedProduct.price}</p>
-                        {selectedProduct.videos && selectedProduct.videos.length > 0 && (
-                          <video
-                            src={selectedProduct.videos[0]}
-                            className="w-full max-w-32 h-20 object-cover rounded mt-2"
-                            muted
-                            controls
-                          />
-                        )}
-                      </div>
-                    </div>
+                     <div className="flex items-start gap-4">
+                       <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center">
+                         <span className="text-xs text-muted-foreground">No Image</span>
+                       </div>
+                       <div className="flex-1">
+                         <h4 className="font-semibold">{selectedProduct.name}</h4>
+                         <p className="text-sm text-muted-foreground">{selectedProduct.category}</p>
+                         <p className="text-sm font-medium text-brand-beige">${selectedProduct.price}</p>
+                       </div>
+                     </div>
                   </Card>
                 )}
                 
