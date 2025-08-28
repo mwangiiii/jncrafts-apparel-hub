@@ -26,7 +26,7 @@ export const useSessionId = () => {
           .from('guest_sessions')
           .select('session_id')
           .eq('session_id', storedSessionId)
-          .single();
+          .maybeSingle();
 
         if (!existingSession) {
           // Create new session record
