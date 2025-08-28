@@ -80,6 +80,10 @@ const OptimizedImage = ({
 
   const displaySrc = hasError ? (fallbackSrc || src) : (progressive ? progressiveSrc : optimizedSrc);
 
+  // Generate WebP URL for static files
+  const webpSrc = src.includes('/lovable-uploads/') ? 
+    src.replace(/\.(png|jpg|jpeg)$/i, '.webp') : null;
+
   return (
     <div ref={imgRef} className={cn("relative overflow-hidden", className)}>
       {/* Loading placeholder */}
@@ -90,22 +94,44 @@ const OptimizedImage = ({
         />
       )}
       
-      {/* Main image */}
+      {/* Main image with WebP support for static files */}
       {isVisible && (
-        <img
-          src={displaySrc}
-          alt={alt}
-          className={cn(
-            "w-full h-full object-cover transition-opacity duration-300",
-            isLoaded ? "opacity-100" : "opacity-0"
+        <>
+          {webpSrc ? (
+            <picture>
+              <source srcSet={webpSrc} type="image/webp" />
+              <img
+                src={displaySrc}
+                alt={alt}
+                className={cn(
+                  "w-full h-full object-cover transition-opacity duration-300",
+                  isLoaded ? "opacity-100" : "opacity-0"
+                )}
+                loading={lazy ? "lazy" : "eager"}
+                decoding="async"
+                onLoad={handleLoad}
+                onError={handleError}
+                width={width}
+                height={height}
+              />
+            </picture>
+          ) : (
+            <img
+              src={displaySrc}
+              alt={alt}
+              className={cn(
+                "w-full h-full object-cover transition-opacity duration-300",
+                isLoaded ? "opacity-100" : "opacity-0"
+              )}
+              loading={lazy ? "lazy" : "eager"}
+              decoding="async"
+              onLoad={handleLoad}
+              onError={handleError}
+              width={width}
+              height={height}
+            />
           )}
-          loading={lazy ? "lazy" : "eager"}
-          decoding="async"
-          onLoad={handleLoad}
-          onError={handleError}
-          width={width}
-          height={height}
-        />
+        </>
       )}
 
       {/* Progressive loading blur effect */}
