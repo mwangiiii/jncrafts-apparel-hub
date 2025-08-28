@@ -7,9 +7,9 @@ const Hero = () => {
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <OptimizedImage
-          src="/lovable-uploads/7957bb4c-c1c7-4adb-9854-974dfbd9f332.png"
-          alt="jnCrafts streetwear models showcasing premium hoodies"
-          className="w-full h-full object-cover object-center"
+          src="/lovable-uploads/193c6e10-f163-46b8-93c9-76505e006c60.png"
+          alt="jnCrafts streetwear models showcasing premium hoodies in beige and brown"
+          className="w-full h-full object-cover object-center brightness-90 contrast-110"
           width={1920}
           height={1080}
           quality={90}
@@ -17,8 +17,8 @@ const Hero = () => {
           progressive={true}
           fetchPriority="high"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/40"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/75"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30"></div>
       </div>
 
       {/* Content */}
