@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { useOptimizedFeatured } from '@/hooks/useOptimizedFeatured';
+import { useUltraFastFeatured, type UltraFastFeaturedProduct } from '@/hooks/useUltraFastProducts';
 import { Product } from '@/types/database';
 import { getPrimaryImage } from '@/components/ProductDisplayHelper';
 
@@ -12,8 +12,8 @@ const AnimatedFeaturedProducts = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const { formatPrice } = useCurrency();
   
-  // Use optimized featured products hook
-  const { data: featuredProducts = [], isLoading: loading, isError } = useOptimizedFeatured();
+  // Use ultra-fast featured products hook
+  const { data: featuredProducts = [], isLoading: loading, isError } = useUltraFastFeatured();
 
   // Auto-advance carousel
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
 import { Product } from '@/types/database';
-import { useOptimizedProducts, useOptimizedCategories } from '@/hooks/useOptimizedProducts';
+import { useUltraFastProducts, type UltraFastProduct } from '@/hooks/useUltraFastProducts';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 
@@ -13,7 +13,7 @@ interface ProductsSectionProps {
 const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  // Use optimized infinite products hook
+  // Use ultra-fast infinite products hook for <100ms loading
   const {
     data,
     fetchNextPage,
@@ -23,12 +23,13 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     isError,
     error,
     refetch
-  } = useOptimizedProducts({ 
+  } = useUltraFastProducts({ 
     category: selectedCategory,
-    pageSize: 12 // Smaller batch for better performance
+    pageSize: 12 // Optimized batch size for performance
   });
 
-  const products = data?.pages.flatMap(page => page.products) || [];
+  // Ultra-fast products with proper typing
+  const products: UltraFastProduct[] = data?.pages.flatMap(page => page.products) || [];
   
   // Hardcoded categories for better performance - no need to derive from data
   const categories = ["all", "hoodies", "jackets", "pants", "croptops", "customized tshirts", "2 piece set", "skull caps"];
@@ -133,12 +134,21 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
                 <ProductCard
                   key={product.id}
                   product={{
-                    ...product,
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    category: product.category,
+                    stock_quantity: product.stock_quantity,
+                    is_active: true,
                     images: product.thumbnail_image ? [product.thumbnail_image] : [],
                     colors: [],
                     sizes: [],
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
+                    new_arrival_date: product.new_arrival_date,
+                    created_at: product.created_at,
+                    updated_at: product.created_at,
+                    // Include variant flags for better UX
+                    has_colors: product.has_colors,
+                    has_sizes: product.has_sizes,
                   }}
                   onAddToCart={onAddToCart}
                 />
