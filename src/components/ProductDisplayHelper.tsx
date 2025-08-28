@@ -1,55 +1,72 @@
-// Helper component to handle display of product data in both old and new formats
 import { Product, ProductImage, ProductSizeInfo, ProductColorInfo } from '@/types/database';
 
-export const getImageUrl = (image: string | ProductImage): string => {
-  if (typeof image === 'string') {
-    return image;
-  }
-  return image?.image_url || '/placeholder.svg';
-};
-
-export const getSizeName = (size: string | ProductSizeInfo): string => {
-  if (typeof size === 'string') {
-    return size;
-  }
-  return size?.name || '';
-};
-
-export const getColorName = (color: string | ProductColorInfo): string => {
-  if (typeof color === 'string') {
-    return color;
-  }
-  return color?.name || '';
-};
-
-export const getSizeId = (size: string | ProductSizeInfo): string => {
-  if (typeof size === 'string') {
-    return size;
-  }
-  return size?.id || size?.name || '';
-};
-
-export const getColorId = (color: string | ProductColorInfo): string => {
-  if (typeof color === 'string') {
-    return color;
-  }
-  return color?.id || color?.name || '';
-};
-
-// Helper to get the primary/first image from a product
-export const getPrimaryImage = (product: Product): string => {
-  if (!product.images || product.images.length === 0) {
-    return '/placeholder.svg';
-  }
+// Helper function to get product thumbnail
+export const getProductThumbnail = (product: Product): string | undefined => {
+  if (!product.images || product.images.length === 0) return undefined;
   
-  return getImageUrl(product.images[0]);
+  const firstImage = product.images[0];
+  return typeof firstImage === 'string' ? firstImage : firstImage.image_url;
 };
 
-// Helper to check if product has real sizes/colors (not just empty arrays)
+// Alias for getProductThumbnail for backward compatibility
+export const getPrimaryImage = getProductThumbnail;
+
+// Helper function to get product sizes as strings
+export const getProductSizes = (product: Product): string[] => {
+  if (!product.sizes) return [];
+  
+  return product.sizes.map(size => 
+    typeof size === 'string' ? size : size.name
+  );
+};
+
+// Helper function to get product colors as strings
+export const getProductColors = (product: Product): string[] => {
+  if (!product.colors) return [];
+  
+  return product.colors.map(color => 
+    typeof color === 'string' ? color : color.name
+  );
+};
+
+// Helper function to get all product images as URLs
+export const getProductImages = (product: Product): string[] => {
+  if (!product.images) return [];
+  
+  return product.images.map(image => 
+    typeof image === 'string' ? image : image.image_url
+  );
+};
+
+// Helper function to format product for display
+export const formatProductForDisplay = (product: Product) => {
+  return {
+    ...product,
+    thumbnail: getProductThumbnail(product),
+    imageUrls: getProductImages(product),
+    sizeNames: getProductSizes(product),
+    colorNames: getProductColors(product)
+  };
+};
+
+// Check if product has real sizes (more than just default)
 export const hasRealSizes = (product: Product): boolean => {
-  return !!(product.sizes && product.sizes.length > 0);
+  const sizes = getProductSizes(product);
+  return sizes.length > 0 && !sizes.every(size => size === 'One Size');
 };
 
+// Check if product has real colors (more than just default)  
 export const hasRealColors = (product: Product): boolean => {
-  return !!(product.colors && product.colors.length > 0);
+  const colors = getProductColors(product);
+  return colors.length > 0 && !colors.every(color => color === 'Default');
+};
+
+// Get size name (string) - for backward compatibility
+export const getSizeName = (size: string | ProductSizeInfo): string => {
+  return typeof size === 'string' ? size : size.name;
+};
+
+// Get color name (string) - for backward compatibility
+export const getColorName = (color: string | ProductColorInfo): string => {
+  return typeof color === 'string' ? color : color.name;
 };

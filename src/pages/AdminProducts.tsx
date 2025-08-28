@@ -41,17 +41,17 @@ const AdminProducts = () => {
   // Flatten paginated data
   const products = data?.pages.flatMap(page => page.products) || [];
 
-  // Form state
+  // Form state - using simple types for form handling
   const [formData, setFormData] = useState({
     name: '',
     price: '',
     description: '',
     category: '',
-      images: [] as ProductImage[],
-      videos: [] as string[],
-      thumbnailIndex: 0,
-      sizes: [] as ProductSizeInfo[],
-      colors: [] as ProductColorInfo[],
+    images: [] as string[],
+    videos: [] as string[],
+    thumbnailIndex: 0,
+    sizes: [] as string[],
+    colors: [] as string[],
     stock_quantity: '',
     is_active: true
   });
@@ -125,16 +125,26 @@ const AdminProducts = () => {
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
+    
+    // Convert mixed types to simple arrays for form handling
+    const convertToStringArray = (arr: (string | any)[]): string[] => {
+      return arr?.map(item => typeof item === 'string' ? item : (item.name || item)) || [];
+    };
+    
+    const convertImagesToStrings = (images: (string | ProductImage)[]): string[] => {
+      return images?.map(img => typeof img === 'string' ? img : img.image_url) || [];
+    };
+    
     setFormData({
       name: product.name,
       price: product.price.toString(),
       description: product.description || '',
       category: product.category,
-      images: product.images || [],
+      images: convertImagesToStrings(product.images || []),
       videos: product.videos || [],
       thumbnailIndex: product.thumbnail_index || 0,
-      sizes: product.sizes || [],
-      colors: product.colors || [],
+      sizes: convertToStringArray(product.sizes || []),
+      colors: convertToStringArray(product.colors || []),
       stock_quantity: product.stock_quantity.toString(),
       is_active: product.is_active
     });
@@ -507,25 +517,25 @@ const AdminProducts = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {/* Product Image Preview */}
-                    {product.images && product.images.length > 0 ? (
-                      <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                        {product.images.length > 1 && (
-                          <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-medium">
-                            +{product.images.length - 1} more
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                        <Image className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                    )}
+                     {/* Product Image Preview */}
+                     {product.images && product.images.length > 0 ? (
+                       <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                         <img
+                           src={typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as ProductImage).image_url}
+                           alt={product.name}
+                           className="w-full h-full object-cover"
+                         />
+                         {product.images.length > 1 && (
+                           <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-medium">
+                             +{product.images.length - 1} more
+                           </div>
+                         )}
+                       </div>
+                     ) : (
+                       <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
+                         <Image className="h-12 w-12 text-muted-foreground" />
+                       </div>
+                     )}
                     
                     <div className="space-y-2">
                       <p className="text-2xl font-bold text-primary">KSh {product.price.toLocaleString()}</p>
@@ -536,8 +546,8 @@ const AdminProducts = () => {
                         {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs font-medium">Sizes: {product.sizes.join(', ')}</p>
-                        <p className="text-xs font-medium">Colors: {product.colors.join(', ')}</p>
+                        <p className="text-xs font-medium">Sizes: {Array.isArray(product.sizes) ? product.sizes.map(s => typeof s === 'string' ? s : s.name).join(', ') : 'None'}</p>
+                        <p className="text-xs font-medium">Colors: {Array.isArray(product.colors) ? product.colors.map(c => typeof c === 'string' ? c : c.name).join(', ') : 'None'}</p>
                         <p className="text-xs font-medium">Images: {product.images?.length || 0}</p>
                       </div>
                     </div>

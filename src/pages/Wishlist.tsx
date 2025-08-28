@@ -116,13 +116,13 @@ const Wishlist = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select size" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {getProductSizes(item.product).map(size => (
-                          <SelectItem key={typeof size === 'string' ? size : size.name} value={typeof size === 'string' ? size : size.name}>
-                            {typeof size === 'string' ? size : size.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent>
+                         {getProductSizes(item.product).map(size => (
+                           <SelectItem key={size} value={size}>
+                             {size}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                   </div>
 
@@ -136,13 +136,13 @@ const Wishlist = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select color" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {getProductColors(item.product).map(color => (
-                          <SelectItem key={typeof color === 'string' ? color : color.name} value={typeof color === 'string' ? color : color.name}>
-                            {typeof color === 'string' ? color : color.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent>
+                         {getProductColors(item.product).map(color => (
+                           <SelectItem key={color} value={color}>
+                             {color}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                   </div>
 

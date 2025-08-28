@@ -48,7 +48,7 @@ export const useOptimizedFeatured = () => {
         throw error;
       }
 
-      // Transform the data
+      // Transform the data to use display_order = 1 as thumbnail
       return (data || []).map((item: any) => ({
         id: item.id,
         display_order: item.display_order,
@@ -56,7 +56,7 @@ export const useOptimizedFeatured = () => {
         name: item.products.name,
         price: item.products.price,
         category: item.products.category,
-        thumbnail_image: item.products.product_images?.find(img => img.is_primary)?.image_url || 
+        thumbnail_image: item.products.product_images?.find(img => img.display_order === 1)?.image_url || 
                         item.products.product_images?.[0]?.image_url || null,
         stock_quantity: item.products.stock_quantity,
         new_arrival_date: item.products.new_arrival_date,

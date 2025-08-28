@@ -58,7 +58,7 @@ export const useOptimizedProducts = ({
         throw error;
       }
 
-      // Transform data to include only thumbnail
+      // Transform data to include only thumbnail (display_order = 1)
       const products: OptimizedProduct[] = (data || []).map(product => ({
         id: product.id,
         name: product.name,
@@ -67,7 +67,7 @@ export const useOptimizedProducts = ({
         stock_quantity: product.stock_quantity,
         new_arrival_date: product.new_arrival_date,
         is_active: product.is_active,
-        thumbnail_image: product.product_images?.find(img => img.is_primary)?.image_url || 
+        thumbnail_image: product.product_images?.find(img => img.display_order === 1)?.image_url || 
                         product.product_images?.[0]?.image_url || null
       }));
 
