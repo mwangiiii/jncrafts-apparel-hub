@@ -52,24 +52,6 @@ const Hero = () => {
         </div>
       </div>
     </section>
-
-    {/* Featured Image Section */}
-    <section className="py-16 bg-background">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-center">
-          <OptimizedImage
-            src="/lovable-uploads/5b7537db-d7d8-4944-ae1b-bedf060e85cc.png"
-            alt="jnCrafts streetwear models showcasing premium hoodies in beige and brown"
-            className="w-full max-w-4xl h-auto object-cover rounded-lg shadow-2xl"
-            width={1200}
-            height={800}
-            quality={95}
-            lazy={true}
-            progressive={true}
-          />
-        </div>
-      </div>
-    </section>
     </>
   );
 };
