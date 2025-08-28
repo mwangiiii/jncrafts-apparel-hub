@@ -666,6 +666,24 @@ export type Database = {
         }
         Relationships: []
       }
+      timezones: {
+        Row: {
+          created_at: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
