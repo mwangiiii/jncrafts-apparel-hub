@@ -272,14 +272,14 @@ Looking forward to your response. Thank you!`;
                       <SelectTrigger>
                         <SelectValue placeholder="Select inquiry type" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="custom-basket">Custom Handmade Basket</SelectItem>
-                        <SelectItem value="woven-bags">Woven Bags</SelectItem>
-                        <SelectItem value="home-decor">Home Decor Items</SelectItem>
-                        <SelectItem value="bulk-order">Bulk Order</SelectItem>
-                        <SelectItem value="general-inquiry">General Inquiry</SelectItem>
-                        <SelectItem value="shipping-delivery">Shipping & Delivery</SelectItem>
-                        <SelectItem value="custom-design">Custom Design Request</SelectItem>
+                      <SelectContent className="z-50 bg-background border border-border shadow-lg">
+                        <SelectItem value="hoodies">Hoodies</SelectItem>
+                        <SelectItem value="jackets">Jackets</SelectItem>
+                        <SelectItem value="pants">Pants</SelectItem>
+                        <SelectItem value="croptops">Croptops</SelectItem>
+                        <SelectItem value="customized-tshirts">Customized Tshirts</SelectItem>
+                        <SelectItem value="2-piece-set">2 Piece Set</SelectItem>
+                        <SelectItem value="skull-caps">Skull Caps</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

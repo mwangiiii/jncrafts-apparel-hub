@@ -278,44 +278,21 @@ const DynamicAboutSection = () => {
                     className="relative w-full"
                     style={{ height: imageHeight }}
                   >
-                    {/* Current Image */}
+                    {/* Current Image with enhanced transitions */}
                     <div 
-                      className={`absolute inset-0 transition-all duration-500 ease-out transform ${
+                      className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
                         isTransitioning 
-                          ? `opacity-0 scale-95 ${isMobile ? 'translate-y-4' : 'translate-x-8'}` 
-                          : 'opacity-100 scale-100 translate-x-0 translate-y-0'
+                          ? `opacity-0 ${isMobile ? 'scale-110 rotate-1 blur-sm' : 'scale-105 rotate-2 blur-sm translate-x-12'}` 
+                          : 'opacity-100 scale-100 rotate-0 blur-0 translate-x-0 translate-y-0'
                       }`}
                     >
-                      <img
-                        key={`current-${currentMedia.id}`}
-                        src={currentMedia.media_url}
-                        alt={currentMedia.alt_text}
-                        className="w-full h-full object-cover object-center"
-                        loading={currentMediaIndex < 2 ? "eager" : "lazy"}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          objectPosition: 'center'
-                        }}
-                      />
-                    </div>
-
-                    {/* Next Image for smooth transitions */}
-                    {isTransitioning && aboutMedia[nextImageIndex] && (
-                      <div 
-                        className={`absolute inset-0 transition-all duration-500 ease-out transform ${
-                          isTransitioning 
-                            ? 'opacity-100 scale-100 translate-x-0 translate-y-0' 
-                            : `opacity-0 scale-95 ${isMobile ? '-translate-y-4' : '-translate-x-8'}`
-                        }`}
-                      >
+                      <div className="relative w-full h-full overflow-hidden rounded-lg">
                         <img
-                          key={`next-${aboutMedia[nextImageIndex]?.id}`}
-                          src={aboutMedia[nextImageIndex]?.media_url}
-                          alt={aboutMedia[nextImageIndex]?.alt_text}
-                          className="w-full h-full object-cover object-center"
-                          loading="lazy"
+                          key={`current-${currentMedia.id}`}
+                          src={currentMedia.media_url}
+                          alt={currentMedia.alt_text}
+                          className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-105"
+                          loading={currentMediaIndex < 2 ? "eager" : "lazy"}
                           style={{
                             width: '100%',
                             height: '100%',
@@ -323,6 +300,37 @@ const DynamicAboutSection = () => {
                             objectPosition: 'center'
                           }}
                         />
+                        {/* Parallax overlay effect */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-brand-beige/10 opacity-0 hover:opacity-100 transition-opacity duration-500" />
+                      </div>
+                    </div>
+
+                    {/* Next Image with stunning entrance */}
+                    {isTransitioning && aboutMedia[nextImageIndex] && (
+                      <div 
+                        className={`absolute inset-0 transition-all duration-700 ease-in-out transform ${
+                          isTransitioning 
+                            ? 'opacity-100 scale-100 rotate-0 blur-0 translate-x-0 translate-y-0' 
+                            : `opacity-0 ${isMobile ? 'scale-90 -rotate-1 blur-sm' : 'scale-95 -rotate-2 blur-sm -translate-x-12'}`
+                        }`}
+                      >
+                        <div className="relative w-full h-full overflow-hidden rounded-lg">
+                          <img
+                            key={`next-${aboutMedia[nextImageIndex]?.id}`}
+                            src={aboutMedia[nextImageIndex]?.media_url}
+                            alt={aboutMedia[nextImageIndex]?.alt_text}
+                            className="w-full h-full object-cover object-center"
+                            loading="lazy"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              objectPosition: 'center'
+                            }}
+                          />
+                          {/* Entry glow effect */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-brand-beige/20 via-transparent to-transparent animate-pulse" />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -367,13 +375,6 @@ const DynamicAboutSection = () => {
                           <Play className="h-3 w-3 md:h-4 md:w-4" />
                         )}
                       </Button>
-                    </div>
-                  )}
-
-                  {/* Image Counter */}
-                  {hasMultipleMedia && (
-                    <div className="absolute top-2 md:top-4 left-2 md:left-4 bg-background/90 backdrop-blur-md rounded-full px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm font-medium shadow-lg border border-white/20">
-                      {currentMediaIndex + 1} / {aboutMedia.length}
                     </div>
                   )}
 
