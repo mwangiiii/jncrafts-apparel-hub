@@ -28,31 +28,21 @@ export const useSessionId = () => {
           .eq('session_id', storedSessionId)
           .maybeSingle();
 
-        if (!existingSession) {
-          // Create new session record
-          const { error } = await supabase
-            .from('guest_sessions')
-            .insert({
-              session_id: storedSessionId,
-              user_agent: navigator.userAgent,
-              expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-            });
+        // Use UPSERT to handle both new and existing sessions atomically
+        const { error } = await supabase
+          .from('guest_sessions')
+          .upsert({
+            session_id: storedSessionId,
+            user_agent: navigator.userAgent,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+            last_accessed: new Date().toISOString()
+          }, {
+            onConflict: 'session_id'
+          });
 
-          if (error) {
-            // Handle duplicate session ID gracefully
-            if (error.code === '23505') {
-              console.log('Session already exists - continuing with stored session');
-            } else {
-              console.error('Failed to register guest session:', error);
-            }
-            // Continue with session even if DB registration fails
-          }
-        } else {
-          // Update last accessed time
-          await supabase
-            .from('guest_sessions')
-            .update({ last_accessed: new Date().toISOString() })
-            .eq('session_id', storedSessionId);
+        if (error) {
+          console.error('Failed to register/update guest session:', error);
+          // Continue with session even if DB operations fail
         }
       } catch (error) {
         console.error('Session management error:', error);
