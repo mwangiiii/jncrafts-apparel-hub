@@ -15,7 +15,22 @@ interface ProductsSectionProps {
 const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
+  // Fetch admin-created categories
+  const { data: adminCategories, isLoading: categoriesLoading } = useCategories();
+  
+  // Create category mapping for proper filtering
+  const categoryMap = new Map<string, string>([
+    ["all", "all"],
+    ...(adminCategories?.map(cat => [cat.name.toLowerCase(), cat.name] as [string, string]) || [])
+  ]);
+  
+  // Prepare categories array with "all" first, then admin categories (lowercase for display)
+  const categories = ["all", ...(adminCategories?.map(cat => cat.name.toLowerCase()) || [])];
+
   // Use ultra-fast infinite products hook for <100ms loading
+  // Map selected category to actual category name for proper filtering
+  const actualCategory = categoryMap.get(selectedCategory) || selectedCategory;
+  
   const {
     data,
     fetchNextPage,
@@ -26,18 +41,12 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     error,
     refetch
   } = useUltraFastProducts({ 
-    category: selectedCategory,
+    category: actualCategory,
     pageSize: 12 // Optimized batch size for performance
   });
 
   // Ultra-fast products with proper typing
   const products: UltraFastProduct[] = data?.pages.flatMap(page => page.products) || [];
-  
-  // Fetch admin-created categories
-  const { data: adminCategories, isLoading: categoriesLoading } = useCategories();
-  
-  // Prepare categories array with "all" first, then admin categories
-  const categories = ["all", ...(adminCategories?.map(cat => cat.name.toLowerCase()) || [])];
 
   // Handle load more
   const handleLoadMore = useCallback(() => {
