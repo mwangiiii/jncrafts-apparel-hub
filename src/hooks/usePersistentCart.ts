@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSessionId } from './useSessionId';
 import { CartItem, Product } from '@/types/database';
-import { getPrimaryImage } from '@/components/ProductDisplayHelper';
 import { useToast } from '@/hooks/use-toast';
 
 export const usePersistentCart = () => {
@@ -23,7 +22,7 @@ export const usePersistentCart = () => {
   const loadCartItems = async () => {
     setIsLoading(true);
     try {
-      let query = supabase.from('cart_items').select('id, user_id, session_id, product_id, product_name, product_image, quantity, size, color, price, created_at, updated_at');
+      let query = supabase.from('cart_items_with_details').select('*');
       
       if (user) {
         query = query.eq('user_id', user.id);
@@ -49,37 +48,21 @@ export const usePersistentCart = () => {
 
   const addToCart = async (product: Product, quantity: number, size: string, color: string) => {
     try {
-      const cartItem = {
-        user_id: user?.id || null,
-        session_id: user ? null : sessionId,
-        product_id: product.id,
-        product_name: product.name,
-        product_image: getPrimaryImage(product),
-        quantity,
-        size,
-        color,
-        price: product.price
-      };
+      // Use the normalized function to add items to cart
+      const { data: cartItemId, error } = await supabase.rpc('add_to_cart_normalized', {
+        p_product_id: product.id,
+        p_color_name: color,
+        p_size_name: size,
+        p_quantity: quantity,
+        p_price: product.price,
+        p_user_id: user?.id || null,
+        p_session_id: user ? null : sessionId
+      });
 
-      // Check if item already exists
-      const existingItem = cartItems.find(
-        item => item.product_id === product.id && 
-                 item.size === size && 
-                 item.color === color
-      );
+      if (error) throw error;
 
-      if (existingItem) {
-        await updateQuantity(existingItem.id, existingItem.quantity + quantity);
-      } else {
-        const { data, error } = await supabase
-          .from('cart_items')
-          .insert(cartItem)
-          .select()
-          .single();
-
-        if (error) throw error;
-        setCartItems(prev => [data, ...prev]);
-      }
+      // Reload cart items to get the updated normalized data
+      await loadCartItems();
 
       // Send admin notification for cart addition
       if (user) {

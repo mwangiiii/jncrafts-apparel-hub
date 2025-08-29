@@ -107,17 +107,24 @@ export interface ProductInventory {
 
 export interface CartItem {
   id: string;
-  user_id?: string;
-  session_id?: string;
+  user_id: string | null;
+  session_id: string | null;
   product_id: string;
-  product_name: string;
-  product_image?: string;
+  color_id: string;
+  size_id: string;
   quantity: number;
-  size: string;
-  color: string;
   price: number;
   created_at: string;
   updated_at: string;
+  // Joined fields from the view
+  product_name: string;
+  product_description: string | null;
+  product_category: string;
+  product_image: string | null;
+  color_name: string;
+  color_hex: string | null;
+  size_name: string;
+  size_category: string;
 }
 
 export interface WishlistItem {

@@ -91,9 +91,9 @@ const OrderConfirmationDialog = ({
                   />
                   <div className="flex-1">
                     <h4 className="font-medium text-sm">{item.product_name}</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {item.size} • {item.color} • Qty: {item.quantity}
-                    </p>
+                     <p className="text-xs text-muted-foreground">
+                       {item.size_name} • {item.color_name} • Qty: {item.quantity}
+                     </p>
                   </div>
                   <span className="font-semibold text-sm">
                     {formatPrice(item.price * item.quantity)}

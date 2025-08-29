@@ -236,8 +236,8 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         product_image: item.product_image,
         price: item.price,
         quantity: item.quantity,
-        size: item.size,
-        color: item.color,
+        size: item.size_name,
+        color: item.color_name,
       }));
 
       const { error: itemsError } = await supabase
@@ -273,8 +273,8 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
             items: items.map(item => ({
               product_name: item.product_name,
               quantity: item.quantity,
-              size: item.size,
-              color: item.color,
+              size: item.size_name,
+              color: item.color_name,
               price: item.price
             })),
             totalAmount: finalTotal,
@@ -302,8 +302,8 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
               items: items.map(item => ({
                 product_name: item.product_name,
                 quantity: item.quantity,
-                size: item.size,
-                color: item.color,
+                size: item.size_name,
+                color: item.color_name,
                 price: item.price
               })),
               totalAmount: finalTotal,
@@ -332,8 +332,8 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                   items: items.map(item => ({
                     product_name: item.product_name,
                     quantity: item.quantity,
-                    size: item.size,
-                    color: item.color,
+                    size: item.size_name,
+                    color: item.color_name,
                     price: item.price
                   })),
                   totalAmount: finalTotal,
@@ -421,9 +421,9 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                   />
                   <div className="flex-1">
                     <h4 className="font-medium">{item.product_name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {item.size} • {item.color}
-                    </p>
+                     <p className="text-sm text-muted-foreground">
+                       {item.size_name} • {item.color_name}
+                     </p>
                     <p className="font-semibold">{formatPrice(item.price)}</p>
                   </div>
                   <div className="flex items-center gap-2">
