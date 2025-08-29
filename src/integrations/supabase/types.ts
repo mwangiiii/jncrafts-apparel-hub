@@ -1048,6 +1048,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles_secure: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string | null
+          phone: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: never
+          created_at?: string | null
+          full_name?: never
+          id?: string | null
+          phone?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: never
+          created_at?: string | null
+          full_name?: never
+          id?: string | null
+          phone?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_expired_sessions: {
@@ -1173,6 +1203,22 @@ export type Database = {
           p_table_name: string
         }
         Returns: undefined
+      }
+      log_profile_access: {
+        Args: {
+          p_accessed_fields?: string[]
+          p_action: string
+          p_profile_id: string
+        }
+        Returns: undefined
+      }
+      mask_address: {
+        Args: { address_text: string }
+        Returns: string
+      }
+      mask_phone: {
+        Args: { phone_number: string }
+        Returns: string
       }
       refresh_products_landing_view: {
         Args: Record<PropertyKey, never>
