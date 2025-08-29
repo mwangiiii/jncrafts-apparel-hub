@@ -16,7 +16,7 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <h3 className="text-2xl font-bold mb-4">
-              jn<span className="text-brand-beige">CRAFTS</span>
+              <span className="text-brand-beige">JNCRAFTS</span>
             </h3>
             <p className="text-background/80 mb-6">
               Premium streetwear designed for the modern lifestyle. 
@@ -93,7 +93,7 @@ const Footer = () => {
 
         {/* Copyright */}
         <div className="border-t border-background/20 mt-8 pt-8 text-center text-background/60">
-          <p>&copy; 2024 jnCrafts. All rights reserved. | <a href="#" className="hover:text-brand-beige transition-colors">Privacy Policy</a> | <a href="#" className="hover:text-brand-beige transition-colors">Terms of Service</a></p>
+          <p>&copy; 2024 JNCRAFTS. All rights reserved. | <a href="#" className="hover:text-brand-beige transition-colors">Privacy Policy</a> | <a href="#" className="hover:text-brand-beige transition-colors">Terms of Service</a></p>
         </div>
       </div>
     </footer>

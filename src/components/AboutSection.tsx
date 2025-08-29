@@ -34,11 +34,11 @@ const AboutSection = () => {
           {/* Content */}
           <div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              About <span className="text-brand-beige">jnCRAFTS</span>
+              About <span className="text-brand-beige">JNCRAFTS</span>
             </h2>
             <div className="space-y-6 text-lg text-muted-foreground">
               <p>
-                jnCrafts is more than just a clothing brand - we're a lifestyle. Founded with 
+                JNCRAFTS is more than just a clothing brand - we're a lifestyle. Founded with 
                 the vision of creating premium streetwear that combines comfort, style, and 
                 durability, we've been crafting exceptional pieces for the modern individual.
               </p>
@@ -59,7 +59,7 @@ const AboutSection = () => {
           <div className="relative">
             <OptimizedImage
               src="/lovable-uploads/db868647-544e-4c56-9f4e-508500776671.png"
-              alt="jnCrafts team wearing our products"
+              alt="JNCRAFTS team wearing our products"
               className="w-full h-[600px] object-cover rounded-lg shadow-2xl"
               width={800}
               height={600}
@@ -73,7 +73,7 @@ const AboutSection = () => {
 
         {/* Features Grid */}
         <div className="mt-20">
-          <h3 className="text-3xl font-bold text-center mb-12">Why Choose jnCrafts?</h3>
+          <h3 className="text-3xl font-bold text-center mb-12">Why Choose JNCRAFTS?</h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="text-center hover:shadow-lg transition-shadow duration-300">

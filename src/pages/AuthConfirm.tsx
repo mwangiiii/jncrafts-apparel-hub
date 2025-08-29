@@ -51,7 +51,7 @@ const AuthConfirm = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-brand">jnCrafts</CardTitle>
+          <CardTitle className="text-2xl font-bold text-brand">JNCRAFTS</CardTitle>
           <CardDescription>Email Verification</CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">

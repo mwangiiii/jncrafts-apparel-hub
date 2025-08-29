@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* jnCrafts Design System - Streetwear brand colors and design tokens */
+/* JNCRAFTS Design System - Streetwear brand colors and design tokens */
 
 @layer base {
   :root {
@@ -21,7 +21,7 @@
     --primary: 220 60% 25%;
     --primary-foreground: 210 40% 98%;
 
-    /* Secondary - Warm beige that complements jnCrafts products */
+    /* Secondary - Warm beige that complements JNCRAFTS products */
     --secondary: 35 15% 88%;
     --secondary-foreground: 222 15% 25%;
 

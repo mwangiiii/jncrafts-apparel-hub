@@ -69,7 +69,7 @@ const MpesaPaymentDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Phone className="h-5 w-5 text-green-600" />
@@ -81,13 +81,13 @@ const MpesaPaymentDialog = ({
         </DialogHeader>
 
         {step === 'payment' && (
-          <div className="space-y-6">
-            <div className="text-center p-6 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-green-800 mb-2">
+          <div className="space-y-4">
+            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <h3 className="text-base font-semibold text-green-800 mb-2">
                 Send Payment Via M-Pesa
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="bg-white p-3 rounded border">
                   <Label className="text-sm text-gray-600">Send to:</Label>
                   <div className="flex items-center justify-between mt-1">
@@ -122,35 +122,32 @@ const MpesaPaymentDialog = ({
               </div>
             </div>
 
-            <div className="text-center text-sm text-muted-foreground">
-              <Clock className="h-4 w-4 mx-auto mb-2" />
-              <p>
-                Send the payment now via M-Pesa. Once sent, click "I've Made Payment" below.
-              </p>
+            <div className="text-center text-xs text-muted-foreground">
+              <Clock className="h-3 w-3 mx-auto mb-1" />
+              <p>Send payment via M-Pesa, then click "I've Made Payment".</p>
             </div>
 
             <Separator />
 
-            <div className="text-xs text-muted-foreground bg-accent/5 p-3 rounded">
-              <strong>Instructions:</strong>
-              <ol className="list-decimal list-inside mt-1 space-y-1">
-                <li>Go to M-Pesa on your phone</li>
-                <li>Select "Send Money"</li>
-                <li>Enter number: <strong>{mpesaNumber}</strong></li>
-                <li>Enter amount: <strong>{formatPrice(totalAmount)}</strong></li>
-                <li>Complete the transaction</li>
+            <div className="text-xs text-muted-foreground bg-accent/5 p-2 rounded">
+              <strong>Quick Steps:</strong>
+              <ol className="list-decimal list-inside mt-1 space-y-0.5 text-xs">
+                <li>Open M-Pesa → Send Money</li>
+                <li>Number: <strong>{mpesaNumber}</strong></li>
+                <li>Amount: <strong>{formatPrice(totalAmount)}</strong></li>
+                <li>Complete & get transaction code</li>
               </ol>
             </div>
           </div>
         )}
 
         {step === 'confirmation' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="text-center">
-              <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold mb-2">Payment Confirmation</h3>
-              <p className="text-sm text-muted-foreground">
-                Please enter your M-Pesa transaction code to complete your order.
+              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <h3 className="text-base font-semibold mb-1">Payment Confirmation</h3>
+              <p className="text-xs text-muted-foreground">
+                Enter your M-Pesa transaction code to complete the order.
               </p>
             </div>
 
@@ -169,11 +166,10 @@ const MpesaPaymentDialog = ({
               </p>
             </div>
 
-            <div className="text-xs text-accent bg-accent/5 p-3 rounded">
-              <strong>Where to find your transaction code:</strong>
-              <p className="mt-1">
-                Check your SMS messages for the M-Pesa confirmation. The transaction code is usually 
-                a 8-10 character code like "QA12B3C4D5" in the message.
+            <div className="text-xs text-accent bg-accent/5 p-2 rounded">
+              <strong>Find code in SMS:</strong>
+              <p className="mt-0.5">
+                Look for 8-10 characters like "QA12B3C4D5" in your M-Pesa confirmation message.
               </p>
             </div>
           </div>

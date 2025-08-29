@@ -388,7 +388,7 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
         <div class="header">
           <div class="company-info">
             <div class="company-logo">
-              jn<span class="logo-crafts">CRAFTS</span>
+              <span class="logo-crafts">JNCRAFTS</span>
             </div>
             <div class="company-tagline">Premium Streetwear & Fashion</div>
             <div class="company-details">
@@ -479,7 +479,7 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
         </div>
 
         <div class="footer">
-          <div class="thank-you">Thank you for choosing jnCrafts!</div>
+          <div class="thank-you">Thank you for choosing JNCRAFTS!</div>
           <div class="contact-info">
             For any inquiries, please contact us at <strong>craftsjn@gmail.com</strong> or visit <strong>www.jncrafts.com</strong><br>
             Follow us on social media <strong>@jncrafts</strong> for latest collections and updates<br><br>
@@ -737,7 +737,7 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
       <div class="receipt-container">
         <div class="header">
           <div class="company-logo">
-            jn<span class="logo-crafts">CRAFTS</span>
+            <span class="logo-crafts">JNCRAFTS</span>
           </div>
           <div class="receipt-title">PAYMENT RECEIPT</div>
           <div class="receipt-subtitle">Official Transaction Record</div>
@@ -798,11 +798,11 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
         </div>
 
         <div class="footer">
-          <div class="thank-you">Thank you for choosing jnCrafts!</div>
+          <div class="thank-you">Thank you for choosing JNCRAFTS!</div>
           <div>
             Your payment has been successfully processed and your order is being prepared.<br>
             You will receive order updates via email and SMS.<br><br>
-            <strong>jnCrafts Premium Streetwear</strong><br>
+            <strong>JNCRAFTS Premium Streetwear</strong><br>
             Email: <strong>craftsjn@gmail.com</strong> | Phone: <strong>+254710573084</strong><br>
             Visit: <strong>www.jncrafts.com</strong> | Follow: <strong>@jncrafts</strong><br><br>
             <em>Receipt generated on ${currentDate} at ${currentTime}</em>
@@ -1028,7 +1028,7 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
     }
     
     // Download PDF
-    pdf.save(`JNCrafts-Invoice-${invoiceNumber}.pdf`);
+    pdf.save(`JNCRAFTS-Invoice-${invoiceNumber}.pdf`);
     
     console.log('Invoice PDF generated successfully:', invoiceNumber);
     return invoiceNumber;
@@ -1193,7 +1193,7 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
     }
     
     // Download PDF
-    pdf.save(`JNCrafts-Receipt-${receiptNumber}.pdf`);
+    pdf.save(`JNCRAFTS-Receipt-${receiptNumber}.pdf`);
     
     console.log('Receipt PDF generated successfully:', receiptNumber);
     return receiptNumber;

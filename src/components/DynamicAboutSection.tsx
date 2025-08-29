@@ -19,66 +19,66 @@ const DynamicAboutSection = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Static media array with all the jnCrafts images
+  // Static media array with all the JNCRAFTS images
   const aboutMedia: AboutMedia[] = [
     {
       id: "1",
       media_url: "/lovable-uploads/7b4c907d-e2b7-46a2-bbde-20cb4abc0776.png",
-      alt_text: "jnCRAFTS beige tracksuit back view - premium streetwear collection",
+      alt_text: "JNCRAFTS beige tracksuit back view - premium streetwear collection",
       display_order: 1
     },
     {
       id: "2", 
       media_url: "/lovable-uploads/131ae0e9-2be0-4978-844b-c5b068698fc5.png",
-      alt_text: "jnCRAFTS beige tracksuit front view showcasing modern urban style",
+      alt_text: "JNCRAFTS beige tracksuit front view showcasing modern urban style",
       display_order: 2
     },
     {
       id: "3",
       media_url: "/lovable-uploads/896feeaf-efd1-44cf-9633-234eca0ec7b0.png", 
-      alt_text: "jnCRAFTS duo outdoor photoshoot - black and beige streetwear collection",
+      alt_text: "JNCRAFTS duo outdoor photoshoot - black and beige streetwear collection",
       display_order: 3
     },
     {
       id: "4",
       media_url: "/lovable-uploads/f661576c-022f-427d-a121-e9c27a96720f.png",
-      alt_text: "jnCRAFTS black tracksuit pose - premium urban fashion",
+      alt_text: "JNCRAFTS black tracksuit pose - premium urban fashion",
       display_order: 4
     },
     {
       id: "5", 
       media_url: "/lovable-uploads/e8aae9e2-1dcc-449a-b973-a146c9f76697.png",
-      alt_text: "jnCRAFTS duo pose - black and beige streetwear collaboration",
+      alt_text: "JNCRAFTS duo pose - black and beige streetwear collaboration",
       display_order: 5
     },
     {
       id: "6",
       media_url: "/lovable-uploads/aa402c42-c440-4464-8001-285730a3aab2.png",
-      alt_text: "jnCRAFTS reflective tracksuit in modern hallway setting",
+      alt_text: "JNCRAFTS reflective tracksuit in modern hallway setting",
       display_order: 6
     },
     {
       id: "7",
       media_url: "/lovable-uploads/bf0a3d25-068b-4216-a267-c3b20fb91e09.png", 
-      alt_text: "jnCRAFTS women's black tracksuit - contemporary streetwear design",
+      alt_text: "JNCRAFTS women's black tracksuit - contemporary streetwear design",
       display_order: 7
     },
     {
       id: "8",
       media_url: "/lovable-uploads/a01150bb-2ae7-49ef-8e2b-97e0937143f1.png",
-      alt_text: "jnCRAFTS women's crop top and joggers - urban fashion statement",
+      alt_text: "JNCRAFTS women's crop top and joggers - urban fashion statement",
       display_order: 8
     },
     {
       id: "9",
       media_url: "/lovable-uploads/18c44d09-ee17-43a6-9ed7-fc230cf18b77.png",
-      alt_text: "jnCRAFTS women's t-shirt by train - street style photography",
+      alt_text: "JNCRAFTS women's t-shirt by train - street style photography",
       display_order: 9
     },
     {
       id: "10",
       media_url: "/lovable-uploads/27421a78-37c1-421c-ad08-d6a696faa860.png",
-      alt_text: "jnCRAFTS two women in matching t-shirts - brand community showcase",
+      alt_text: "JNCRAFTS two women in matching t-shirts - brand community showcase",
       display_order: 10
     }
   ];
@@ -252,11 +252,11 @@ const DynamicAboutSection = () => {
           {/* Content */}
           <div className={`order-2 lg:order-1 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6">
-              About <span className="text-brand-beige">jnCRAFTS</span>
+              About <span className="text-brand-beige">JNCRAFTS</span>
             </h2>
             <div className="space-y-4 md:space-y-6 text-base md:text-lg text-muted-foreground">
               <p className="leading-relaxed">
-                jnCrafts is more than just a clothing brand - we're a lifestyle. Founded with 
+                JNCRAFTS is more than just a clothing brand - we're a lifestyle. Founded with 
                 the vision of creating premium streetwear that combines comfort, style, and 
                 durability, we've been crafting exceptional pieces for the modern individual.
               </p>
@@ -413,7 +413,7 @@ const DynamicAboutSection = () => {
         {/* Features Grid */}
         <div className="mt-16 md:mt-24">
           <h3 className={`text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
-            Why Choose jnCrafts?
+            Why Choose JNCRAFTS?
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {features.map((feature, index) => (

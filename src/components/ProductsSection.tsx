@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
+import CategoryDropdown from "./CategoryDropdown";
 import { Product } from '@/types/database';
 import { useUltraFastProducts, type UltraFastProduct } from '@/hooks/useUltraFastProducts';
+import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 
@@ -31,8 +33,11 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   // Ultra-fast products with proper typing
   const products: UltraFastProduct[] = data?.pages.flatMap(page => page.products) || [];
   
-  // Hardcoded categories for better performance - no need to derive from data
-  const categories = ["all", "hoodies", "jackets", "pants", "croptops", "customized tshirts", "2 piece set", "skull caps"];
+  // Fetch admin-created categories
+  const { data: adminCategories, isLoading: categoriesLoading } = useCategories();
+  
+  // Prepare categories array with "all" first, then admin categories
+  const categories = ["all", ...(adminCategories?.map(cat => cat.name.toLowerCase()) || [])];
 
   // Handle load more
   const handleLoadMore = useCallback(() => {
@@ -89,24 +94,15 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
           </p>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex justify-center mb-12">
-          <div className="flex flex-wrap gap-2 bg-background rounded-lg p-2 shadow-lg">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => handleCategoryChange(category)}
-                className={`px-6 py-2 rounded-md transition-all duration-300 capitalize ${
-                  selectedCategory === category
-                    ? "bg-brand-beige text-brand-beige-foreground shadow-md"
-                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Category Filter with Dropdown */}
+        {!categoriesLoading && (
+          <CategoryDropdown
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onCategoryChange={handleCategoryChange}
+            maxVisibleCategories={4}
+          />
+        )}
 
         {/* Products Grid */}
         {isError ? (

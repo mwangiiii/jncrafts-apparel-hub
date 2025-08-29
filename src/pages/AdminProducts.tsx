@@ -488,7 +488,7 @@ const AdminProducts = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-4xl font-bold mb-2">Product Management</h1>
-              <p className="text-primary-foreground/80 text-lg">Add, edit, and manage your jnCrafts products</p>
+              <p className="text-primary-foreground/80 text-lg">Add, edit, and manage your JNCRAFTS products</p>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
