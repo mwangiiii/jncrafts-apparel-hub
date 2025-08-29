@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
 import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
 import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
+import { getPrimaryImage } from '@/lib/utils';
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -311,6 +312,75 @@ const AdminProducts = () => {
     }
   };
 
+  // Product Image Component for Admin Cards
+  const AdminProductImage = ({ product }: { product: Product }) => {
+    const [imageLoaded, setImageLoaded] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    // Intersection Observer for lazy loading
+    useEffect(() => {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.1 }
+      );
+
+      if (imgRef.current) {
+        observer.observe(imgRef.current);
+      }
+
+      return () => observer.disconnect();
+    }, []);
+
+    const primaryImageUrl = getPrimaryImage(product.images, product.thumbnail_index);
+
+    return (
+      <div ref={imgRef} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
+        {isVisible && (
+          <>
+            <img
+              src={primaryImageUrl}
+              alt={product.name}
+              className={`w-full h-full object-cover transition-all duration-500 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              } group-hover:scale-105`}
+              onLoad={() => setImageLoaded(true)}
+              loading="lazy"
+              decoding="async"
+            />
+            {/* Preload next image for faster navigation */}
+            {product.images && product.images.length > 1 && (
+              <link rel="preload" as="image" href={getPrimaryImage(product.images, 1)} />
+            )}
+          </>
+        )}
+        {!imageLoaded && isVisible && (
+          <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/60 animate-pulse" />
+        )}
+        {!isVisible && (
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <Image className="h-12 w-12 text-muted-foreground" />
+          </div>
+        )}
+        
+        {/* Image count badge */}
+        {product.images && product.images.length > 1 && (
+          <div className="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
+            +{product.images.length - 1} more
+          </div>
+        )}
+        
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       <AdminHeader />
@@ -516,28 +586,10 @@ const AdminProducts = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                     {/* Product Image Preview */}
-                     {product.images && product.images.length > 0 ? (
-                       <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-                         <img
-                           src={typeof product.images[0] === 'string' ? product.images[0] : (product.images[0] as ProductImage).image_url}
-                           alt={product.name}
-                           className="w-full h-full object-cover"
-                         />
-                         {product.images.length > 1 && (
-                           <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-medium">
-                             +{product.images.length - 1} more
-                           </div>
-                         )}
-                       </div>
-                     ) : (
-                       <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                         <Image className="h-12 w-12 text-muted-foreground" />
-                       </div>
-                     )}
-                    
-                    <div className="space-y-2">
+                   <div className="space-y-3">
+                     <AdminProductImage product={product} />
+                     
+                     <div className="space-y-2">
                       <p className="text-2xl font-bold text-primary">KSh {product.price.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
                       <div className="flex flex-wrap gap-1">
