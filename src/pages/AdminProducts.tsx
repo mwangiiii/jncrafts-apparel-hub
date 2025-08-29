@@ -313,13 +313,13 @@ const AdminProducts = () => {
     }
   };
 
-  // Product Image Component for Admin Cards using thumbnail strategy
-  const AdminProductImage = ({ product }: { product: Product }) => {
+  // Admin Product Card Component matching homepage styling
+  const AdminProductCard = ({ product }: { product: Product }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
 
-    // Intersection Observer for lazy loading
+    // Intersection Observer for lazy loading (same as homepage)
     useEffect(() => {
       const observer = new IntersectionObserver(
         ([entry]) => {
@@ -338,54 +338,144 @@ const AdminProducts = () => {
       return () => observer.disconnect();
     }, []);
 
-    // Use thumbnail_image from the query or fall back to first image
+    // Helper function to get image URL (same as homepage)
+    const getImageUrl = (image: string | ProductImage) => {
+      return typeof image === 'string' ? image : image.image_url;
+    };
+
+    // Use thumbnail strategy like homepage
     const thumbnailUrl = (product as any).thumbnail_image || 
-                        (product.images && product.images.length > 0 
-                          ? (typeof product.images[0] === 'string' 
-                             ? product.images[0] 
-                             : product.images[0].image_url)
-                          : '/placeholder.svg');
+                        getImageUrl(product.images?.[0] || '/placeholder.svg');
+
+    const getStockStatus = () => {
+      if (product.stock_quantity === 0) {
+        return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
+      } else if (product.stock_quantity <= 5) {
+        return { status: 'low', message: `Only ${product.stock_quantity} left`, variant: 'secondary' as const };
+      }
+      return null;
+    };
+
+    const stockStatus = getStockStatus();
 
     return (
-      <div ref={imgRef} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
-        {isVisible && (
-          <>
-            <img
-              src={thumbnailUrl}
-              alt={product.name}
-              className={`w-full h-full object-cover transition-all duration-500 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              } group-hover:scale-105`}
-              onLoad={() => setImageLoaded(true)}
-              loading="lazy"
-              decoding="async"
-            />
-          </>
-        )}
-        {!imageLoaded && isVisible && (
-          <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/60 animate-pulse" />
-        )}
-        {!isVisible && (
-          <div className="w-full h-full bg-muted flex items-center justify-center">
-            <Image className="h-12 w-12 text-muted-foreground" />
+      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+        {/* Image section matching homepage layout */}
+        <div className="relative overflow-hidden">
+          <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
+            {isVisible && (
+              <>
+                <img
+                  src={thumbnailUrl}
+                  alt={product.name}
+                  className={`w-full h-full object-cover transition-opacity duration-500 ${
+                    imageLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onLoad={() => setImageLoaded(true)}
+                  loading="lazy"
+                  decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                />
+                {/* Preload next image for faster navigation */}
+                {product.images?.[1] && (
+                  <link rel="preload" as="image" href={getImageUrl(product.images[1])} />
+                )}
+              </>
+            )}
+            {!imageLoaded && isVisible && (
+              <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/60 animate-pulse" />
+            )}
           </div>
-        )}
-        
-        {/* Image count badge */}
-        {product.images && product.images.length > 1 && (
-          <div className="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
-            {product.images.length} images
+          
+          {/* Gradient overlay matching homepage */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          {/* Admin action buttons overlay (replacing homepage view/wishlist buttons) */}
+          <div className="absolute top-2 right-2 flex flex-col gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="p-2 bg-background/80 backdrop-blur-sm"
+              onClick={() => openEditDialog(product)}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="p-2 bg-background/80 backdrop-blur-sm"
+              onClick={() => toggleProductStatus(product)}
+            >
+              {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="p-2 bg-background/80 backdrop-blur-sm"
+              onClick={() => deleteProduct(product.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
-        )}
-        
-        {/* Thumbnail indicator */}
-        <div className="absolute top-2 left-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
-          Thumbnail
+
+          {/* Status badges */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {!product.is_active && (
+              <Badge variant="destructive" className="text-xs">
+                Hidden
+              </Badge>
+            )}
+            {product.new_arrival_date && (
+              <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg text-xs">
+                New
+              </Badge>
+            )}
+          </div>
+
+          {/* Stock status badge matching homepage */}
+          {stockStatus && (
+            <div className="absolute bottom-2 left-2">
+              <Badge variant={stockStatus.variant} className="text-xs">
+                {stockStatus.message}
+              </Badge>
+            </div>
+          )}
+
+          {/* Image count badge */}
+          {product.images && product.images.length > 1 && (
+            <div className="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
+              {product.images.length} images
+            </div>
+          )}
         </div>
         
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
+        {/* Card content matching homepage layout */}
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xl font-semibold text-foreground">{product.name}</h3>
+              <p className="text-sm text-muted-foreground">{product.category}</p>
+              <p className="text-2xl font-bold text-primary mt-2">KSh {product.price.toLocaleString()}</p>
+            </div>
+
+            {/* Product details */}
+            <div className="space-y-2 text-sm">
+              <p><span className="font-medium">Stock:</span> {product.stock_quantity}</p>
+              <p><span className="font-medium">Sizes:</span> {Array.isArray(product.sizes) ? product.sizes.map(s => typeof s === 'string' ? s : s.name).join(', ') || 'None' : 'None'}</p>
+              <p><span className="font-medium">Colors:</span> {Array.isArray(product.colors) ? product.colors.map(c => typeof c === 'string' ? c : c.name).join(', ') || 'None' : 'None'}</p>
+              <p><span className="font-medium">Images:</span> {product.images?.length || 0}</p>
+            </div>
+            
+            {/* Image Management - CRUD operations on normalized product_images table */}
+            <div className="pt-2 border-t">
+              <AdminProductImageManager 
+                product={product} 
+                onUpdate={() => refreshProducts()}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -564,64 +654,7 @@ const AdminProducts = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map(product => (
-              <Card key={product.id} className={`${!product.is_active ? 'opacity-60' : ''} shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm`}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{product.name}</CardTitle>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleProductStatus(product)}
-                      >
-                        {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEditDialog(product)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteProduct(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                   <div className="space-y-3">
-                     <AdminProductImage product={product} />
-                     
-                     <div className="space-y-2">
-                      <p className="text-2xl font-bold text-primary">KSh {product.price.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="secondary">{product.category}</Badge>
-                        <Badge variant="outline">Stock: {product.stock_quantity}</Badge>
-                        {!product.is_active && <Badge variant="destructive">Hidden</Badge>}
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium">Sizes: {Array.isArray(product.sizes) ? product.sizes.map(s => typeof s === 'string' ? s : s.name).join(', ') : 'None'}</p>
-                        <p className="text-xs font-medium">Colors: {Array.isArray(product.colors) ? product.colors.map(c => typeof c === 'string' ? c : c.name).join(', ') : 'None'}</p>
-                        <p className="text-xs font-medium">Images: {product.images?.length || 0}</p>
-                      </div>
-                      
-                      {/* Image Management - CRUD operations on normalized product_images table */}
-                      <div className="pt-2 border-t">
-                        <AdminProductImageManager 
-                          product={product} 
-                          onUpdate={() => refreshProducts()}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <AdminProductCard key={product.id} product={product} />
               ))}
             </div>
             
