@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
 import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
 import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
+import AdminProductImageManager from '@/components/admin/AdminProductImageManager';
 import { getPrimaryImage } from '@/lib/utils';
 
 const AdminProducts = () => {
@@ -312,7 +313,7 @@ const AdminProducts = () => {
     }
   };
 
-  // Product Image Component for Admin Cards
+  // Product Image Component for Admin Cards using thumbnail strategy
   const AdminProductImage = ({ product }: { product: Product }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
@@ -337,14 +338,20 @@ const AdminProducts = () => {
       return () => observer.disconnect();
     }, []);
 
-    const primaryImageUrl = getPrimaryImage(product.images, product.thumbnail_index);
+    // Use thumbnail_image from the query or fall back to first image
+    const thumbnailUrl = (product as any).thumbnail_image || 
+                        (product.images && product.images.length > 0 
+                          ? (typeof product.images[0] === 'string' 
+                             ? product.images[0] 
+                             : product.images[0].image_url)
+                          : '/placeholder.svg');
 
     return (
       <div ref={imgRef} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
         {isVisible && (
           <>
             <img
-              src={primaryImageUrl}
+              src={thumbnailUrl}
               alt={product.name}
               className={`w-full h-full object-cover transition-all duration-500 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
@@ -353,10 +360,6 @@ const AdminProducts = () => {
               loading="lazy"
               decoding="async"
             />
-            {/* Preload next image for faster navigation */}
-            {product.images && product.images.length > 1 && (
-              <link rel="preload" as="image" href={getPrimaryImage(product.images, 1)} />
-            )}
           </>
         )}
         {!imageLoaded && isVisible && (
@@ -371,9 +374,14 @@ const AdminProducts = () => {
         {/* Image count badge */}
         {product.images && product.images.length > 1 && (
           <div className="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
-            +{product.images.length - 1} more
+            {product.images.length} images
           </div>
         )}
+        
+        {/* Thumbnail indicator */}
+        <div className="absolute top-2 left-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
+          Thumbnail
+        </div>
         
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -601,6 +609,14 @@ const AdminProducts = () => {
                         <p className="text-xs font-medium">Sizes: {Array.isArray(product.sizes) ? product.sizes.map(s => typeof s === 'string' ? s : s.name).join(', ') : 'None'}</p>
                         <p className="text-xs font-medium">Colors: {Array.isArray(product.colors) ? product.colors.map(c => typeof c === 'string' ? c : c.name).join(', ') : 'None'}</p>
                         <p className="text-xs font-medium">Images: {product.images?.length || 0}</p>
+                      </div>
+                      
+                      {/* Image Management - CRUD operations on normalized product_images table */}
+                      <div className="pt-2 border-t">
+                        <AdminProductImageManager 
+                          product={product} 
+                          onUpdate={() => refreshProducts()}
+                        />
                       </div>
                     </div>
                   </div>

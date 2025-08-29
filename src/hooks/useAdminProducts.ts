@@ -20,7 +20,7 @@ export const useAdminProducts = ({
   return useInfiniteQuery({
     queryKey: ['admin-products', 'keyset'],
     queryFn: async ({ pageParam }: { pageParam?: AdminProductCursor }) => {
-      // Use direct query instead of non-existent RPC function
+      // Enhanced query with thumbnail images for admin management
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -34,9 +34,25 @@ export const useAdminProducts = ({
           new_arrival_date,
           thumbnail_index,
           created_at,
-          updated_at
+          updated_at,
+          product_images(
+            id,
+            image_url,
+            alt_text,
+            display_order,
+            is_primary
+          ),
+          product_colors(
+            id,
+            color_id,
+            colors(name, hex_code)
+          ),
+          product_sizes(
+            id,
+            size_id,
+            sizes(name, category)
+          )
         `)
-        .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(pageSize);
 
@@ -45,15 +61,23 @@ export const useAdminProducts = ({
         throw error;
       }
 
-      // Transform data with empty arrays for relations
-      const products = (data || []).map((item: any) => ({
-        ...item,
-        images: [], // Will be loaded on demand
-        colors: [], // Will be loaded on demand
-        sizes: [], // Will be loaded on demand
-        videos: [], // Will be loaded on demand
-        description: item.description || null
-      }));
+      // Transform data with proper thumbnail handling
+      const products = (data || []).map((item: any) => {
+        // Sort images by display_order and find thumbnail
+        const sortedImages = (item.product_images || [])
+          .sort((a: any, b: any) => a.display_order - b.display_order);
+
+        return {
+          ...item,
+          images: sortedImages, // Full image data with display_order
+          thumbnail_image: sortedImages.find((img: any) => img.display_order === 1)?.image_url || 
+                          sortedImages[0]?.image_url || null,
+          colors: (item.product_colors || []).map((pc: any) => pc.colors).filter(Boolean),
+          sizes: (item.product_sizes || []).map((ps: any) => ps.sizes).filter(Boolean),
+          videos: [], // Videos not in normalized tables yet
+          description: item.description || null
+        };
+      });
 
       const nextCursor = products.length === pageSize && products.length > 0
         ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
