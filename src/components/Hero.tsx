@@ -6,16 +6,12 @@ const Hero = () => {
     <>
     <section id="home" className="relative min-h-screen flex items-center">
       {/* Background Image */}
-      <div className="absolute inset-0 z-0">
-        <OptimizedImage
+      <div className="absolute inset-0 z-0 bg-muted">
+        <img
           src="/lovable-uploads/ff5b7619-467b-4813-b82a-8ec4345d46f4.png"
           alt="jnCrafts streetwear models showcasing premium hoodies in beige and brown outdoors"
           className="w-full h-full object-cover object-center brightness-90 contrast-110 saturate-105"
-          width={1920}
-          height={1080}
-          quality={90}
-          lazy={false}
-          progressive={true}
+          loading="eager"
           fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/60"></div>
