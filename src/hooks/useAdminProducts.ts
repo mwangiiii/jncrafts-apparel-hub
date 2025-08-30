@@ -14,7 +14,7 @@ interface AdminProductCursor {
 }
 
 export const useAdminProducts = ({ 
-  pageSize = 8, // Smaller batch for admin
+  pageSize = 12, // Larger batch like homepage for FORCE FETCH
   enabled = true 
 }: UseAdminProductsOptions = {}) => {
   return useInfiniteQuery({
@@ -91,11 +91,13 @@ export const useAdminProducts = ({
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined,
-    staleTime: 1 * 60 * 1000, // 1 minute for admin
-    gcTime: 5 * 60 * 1000, // 5 minutes for admin
+    staleTime: 0, // FORCE FRESH DATA - no cache like homepage
+    gcTime: 1 * 60 * 1000, // 1 minute cache
     enabled,
-    refetchOnWindowFocus: false,
-    retry: false, // No retries for admin queries
+    refetchOnWindowFocus: true, // FORCE refetch on focus
+    refetchOnMount: true, // FORCE refetch on mount
+    refetchOnReconnect: true, // FORCE refetch on reconnect
+    retry: 3, // Enable retries for reliable fetching
   });
 };
 

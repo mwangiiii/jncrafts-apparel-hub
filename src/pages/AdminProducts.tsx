@@ -26,7 +26,7 @@ const AdminProducts = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
-  // Use infinite query for better performance
+  // Use infinite query for better performance - FORCE IMMEDIATE FETCH
   const {
     data,
     fetchNextPage,
@@ -36,7 +36,10 @@ const AdminProducts = () => {
     isError,
     error,
     refetch
-  } = useAdminProducts({ enabled: !!user && isAdmin });
+  } = useAdminProducts({ 
+    enabled: !!user && isAdmin,
+    pageSize: 12 // Force larger batches like homepage
+  });
   
   const { refreshProducts } = useRefreshAdminProducts();
   
@@ -65,8 +68,10 @@ const AdminProducts = () => {
   useEffect(() => {
     if (user && isAdmin) {
       fetchCategories();
+      // FORCE IMMEDIATE PRODUCT FETCH like homepage
+      refetch();
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, refetch]);
 
   // Infinite scroll handler
   const handleLoadMore = useCallback(() => {
