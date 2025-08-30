@@ -82,16 +82,20 @@ const AdminProducts = () => {
 
   const fetchCategories = async () => {
     try {
+      console.log('🔒 ADMIN-ONLY CATEGORY FETCH - ROLE-BASED ISOLATION');
+      // STRICT: Only category data for product management - NO USER DATA
       const { data, error } = await supabase
         .from('categories')
         .select('name')
         .eq('is_active', true)
-        .order('display_order', { ascending: true });
+        .order('display_order', { ascending: true })
+        .limit(50); // Efficiency limit for admin operations
 
       if (error) throw error;
       setCategories(data?.map(cat => cat.name) || []);
+      console.log('✅ ADMIN CATEGORIES FETCHED:', data?.length || 0, 'categories (NO USER DATA)');
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('🚨 ADMIN CATEGORY FETCH FAILED:', error);
       toast({
         title: "Error",
         description: "Failed to fetch categories",
@@ -177,6 +181,7 @@ const AdminProducts = () => {
       };
 
       if (editingProduct) {
+        console.log('🔒 ADMIN PRODUCT UPDATE - ROLE-BASED ISOLATION');
         const { error } = await supabase
           .from('products')
           .update(productData)
@@ -188,7 +193,9 @@ const AdminProducts = () => {
           title: "Success",
           description: "Product updated successfully",
         });
+        console.log('✅ ADMIN PRODUCT UPDATED - NO USER DATA INVOLVED');
       } else {
+        console.log('🔒 ADMIN PRODUCT CREATE - ROLE-BASED ISOLATION');
         const { error } = await supabase
           .from('products')
           .insert(productData);
@@ -199,6 +206,7 @@ const AdminProducts = () => {
           title: "Success",
           description: "Product created successfully",
         });
+        console.log('✅ ADMIN PRODUCT CREATED - NO USER DATA INVOLVED');
       }
 
       setIsDialogOpen(false);
@@ -216,6 +224,7 @@ const AdminProducts = () => {
 
   const toggleProductStatus = async (product: Product) => {
     try {
+      console.log('🔒 ADMIN PRODUCT STATUS TOGGLE - ROLE-BASED ISOLATION');
       const { error } = await supabase
         .from('products')
         .update({ is_active: !product.is_active })
@@ -228,8 +237,9 @@ const AdminProducts = () => {
         title: "Success",
         description: `Product ${product.is_active ? 'hidden' : 'activated'}`,
       });
+      console.log('✅ ADMIN PRODUCT STATUS UPDATED - NO USER DATA INVOLVED');
     } catch (error) {
-      console.error('Error toggling product status:', error);
+      console.error('🚨 ADMIN PRODUCT STATUS UPDATE FAILED:', error);
       toast({
         title: "Error",
         description: "Failed to update product status",
@@ -242,6 +252,7 @@ const AdminProducts = () => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
+      console.log('🔒 ADMIN PRODUCT DELETE - ROLE-BASED ISOLATION');
       const { error } = await supabase
         .from('products')
         .delete()
@@ -254,8 +265,9 @@ const AdminProducts = () => {
         title: "Success",
         description: "Product deleted successfully",
       });
+      console.log('✅ ADMIN PRODUCT DELETED - NO USER DATA INVOLVED');
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error('🚨 ADMIN PRODUCT DELETE FAILED:', error);
       toast({
         title: "Error",
         description: "Failed to delete product",

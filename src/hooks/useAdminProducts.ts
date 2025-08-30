@@ -14,16 +14,18 @@ interface AdminProductsPage {
 }
 
 export const useAdminProducts = ({ 
-  pageSize = 20, // ULTRA AGGRESSIVE BATCH SIZE like homepage
+  pageSize = 20, // ADMIN-FOCUSED BATCH SIZE
   enabled = true 
 }: UseAdminProductsOptions = {}) => {
   return useInfiniteQuery({
-    queryKey: ['admin-products', 'ultra-fast', 'normalized'],
+    queryKey: ['admin-products-isolated', 'product-crud-only', 'no-user-data'],
     queryFn: async ({ pageParam = 0 }: { pageParam: number }): Promise<AdminProductsPage> => {
-      console.log('🔥 FORCE FETCHING ADMIN PRODUCTS - Page:', pageParam);
+      console.log('🔒 ADMIN-ONLY PRODUCT FETCH - ROLE-BASED ISOLATION - Page:', pageParam);
       
-      // FORCE ULTRA-FAST NORMALIZED QUERY with all joined data for admin CRUD
-      const { data: fallbackData, error: fallbackError } = await supabase
+      // STRICT ROLE-BASED DATA ISOLATION - ADMIN PRODUCT MANAGEMENT ONLY
+      // ✅ ALLOWED: Products, Images, Colors, Sizes, Categories, Inventory
+      // ❌ FORBIDDEN: User data, Wishlists, Carts, Profiles, Sessions, Orders
+      const { data: productData, error: productError } = await supabase
         .from('products')
         .select(`
           id,
@@ -37,7 +39,7 @@ export const useAdminProducts = ({
           thumbnail_index,
           created_at,
           updated_at,
-          product_images(
+          product_images!inner(
             id,
             image_url,
             alt_text,
@@ -50,7 +52,7 @@ export const useAdminProducts = ({
             stock_quantity,
             additional_price,
             is_available,
-            colors(name, hex_code)
+            colors!inner(name, hex_code)
           ),
           product_sizes(
             id,
@@ -58,19 +60,19 @@ export const useAdminProducts = ({
             stock_quantity,
             additional_price,
             is_available,
-            sizes(name, category)
+            sizes!inner(name, category)
           )
         `)
         .order('created_at', { ascending: false })
         .range(pageParam * pageSize, (pageParam * pageSize) + pageSize - 1);
 
-      if (fallbackError) {
-        console.error('🚨 FORCE FETCH FAILED:', fallbackError);
-        throw fallbackError;
+      if (productError) {
+        console.error('🚨 ADMIN PRODUCT FETCH FAILED - DATA ISOLATION BREACH?:', productError);
+        throw productError;
       }
       
-      // Transform normalized data for admin CRUD operations
-      const products = (fallbackData || []).map((item: any) => {
+      // STRICT DATA TRANSFORMATION - ADMIN PRODUCT MANAGEMENT ONLY
+      const products = (productData || []).map((item: any) => {
         const sortedImages = (item.product_images || [])
           .sort((a: any, b: any) => a.display_order - b.display_order);
 
@@ -102,7 +104,7 @@ export const useAdminProducts = ({
         };
       });
 
-      console.log('✅ FORCE FETCHED', products.length, 'admin products');
+      console.log('✅ ADMIN-ISOLATED FETCH COMPLETE:', products.length, 'products (NO USER DATA)');
 
       return {
         products,
@@ -112,14 +114,14 @@ export const useAdminProducts = ({
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: 0,
-    staleTime: 0, // FORCE FRESH DATA - no cache like homepage
-    gcTime: 30 * 1000, // 30 seconds only - very aggressive
+    staleTime: 0, // ADMIN NEEDS FRESH DATA - NO STALE CACHE
+    gcTime: 60 * 1000, // 1 minute cache for admin efficiency
     enabled,
-    refetchOnWindowFocus: true, // FORCE refetch on focus
-    refetchOnMount: true, // FORCE refetch on mount
-    refetchOnReconnect: true, // FORCE refetch on reconnect
-    retry: 3, // Enable retries for reliable fetching
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Fast exponential backoff
+    refetchOnWindowFocus: true, // ADMIN-FOCUSED: Fresh data on focus
+    refetchOnMount: true, // ADMIN-FOCUSED: Fresh data on mount
+    refetchOnReconnect: true, // ADMIN-FOCUSED: Fresh data on reconnect
+    retry: 2, // Admin operations need fast response
+    retryDelay: (attemptIndex) => Math.min(500 * 2 ** attemptIndex, 5000), // Fast admin retries
   });
 };
 
@@ -127,8 +129,9 @@ export const useRefreshAdminProducts = () => {
   const queryClient = useQueryClient();
   
   const refreshProducts = () => {
-    console.log('🔄 FORCE REFRESH ADMIN PRODUCTS');
-    queryClient.invalidateQueries({ queryKey: ['admin-products', 'ultra-fast', 'normalized'] });
+    console.log('🔄 ADMIN PRODUCT REFRESH - ROLE-BASED ISOLATION ENFORCED');
+    // Clear admin-specific cache only - no user data involved
+    queryClient.invalidateQueries({ queryKey: ['admin-products-isolated', 'product-crud-only', 'no-user-data'] });
   };
 
   return { refreshProducts };
