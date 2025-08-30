@@ -15,7 +15,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
-import { useLoading } from '@/contexts/LoadingContext';
 import BackButton from '@/components/BackButton';
 import Cart from '@/components/Cart';
 
@@ -30,7 +29,6 @@ const ProductDetail = () => {
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { formatPrice } = useCurrency();
-  const { setLoadingState } = useLoading();
   const {
     addToCart,
     cartItems,
@@ -59,7 +57,6 @@ const ProductDetail = () => {
   }, [id]);
 
   const fetchProduct = async () => {
-    setLoadingState(true, "Loading product details...");
     try {
       const { data, error } = await supabase
         .rpc('get_product_complete', { p_product_id: id });
@@ -126,7 +123,6 @@ const ProductDetail = () => {
       navigate('/');
     } finally {
       setLoading(false);
-      setLoadingState(false);
     }
   };
 

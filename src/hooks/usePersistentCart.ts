@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSessionId } from './useSessionId';
 import { CartItem, Product } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { useLoading } from '@/contexts/LoadingContext';
 
 export const usePersistentCart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -12,7 +11,6 @@ export const usePersistentCart = () => {
   const { user } = useAuth();
   const sessionId = useSessionId();
   const { toast } = useToast();
-  const { setLoadingState } = useLoading();
 
   // Load cart items on mount or user change
   useEffect(() => {
@@ -23,7 +21,6 @@ export const usePersistentCart = () => {
 
   const loadCartItems = async () => {
     setIsLoading(true);
-    setLoadingState(true, "Loading cart...");
     try {
       let query = supabase.from('cart_items_with_details').select('*');
       
@@ -46,12 +43,10 @@ export const usePersistentCart = () => {
       });
     } finally {
       setIsLoading(false);
-      setLoadingState(false);
     }
   };
 
   const addToCart = async (product: Product, quantity: number, size: string, color: string) => {
-    setLoadingState(true, "Adding to cart...");
     try {
       // Use the normalized function to add items to cart
       const { data: cartItemId, error } = await supabase.rpc('add_to_cart_normalized', {
@@ -109,8 +104,6 @@ export const usePersistentCart = () => {
         description: "Failed to add item to cart",
         variant: "destructive"
       });
-    } finally {
-      setLoadingState(false);
     }
   };
 
