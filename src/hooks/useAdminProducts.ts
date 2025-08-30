@@ -14,17 +14,17 @@ interface AdminProductsPage {
 }
 
 export const useAdminProducts = ({ 
-  pageSize = 20, // ADMIN-FOCUSED BATCH SIZE
+  pageSize = 50, // ULTRA AGGRESSIVE BATCH SIZE - ADMIN EFFICIENCY
   enabled = true 
 }: UseAdminProductsOptions = {}) => {
   return useInfiniteQuery({
-    queryKey: ['admin-products-isolated', 'product-crud-only', 'no-user-data'],
+    queryKey: ['admin-products-isolated', 'product-crud-only', 'no-user-data', 'force-fresh'],
     queryFn: async ({ pageParam = 0 }: { pageParam: number }): Promise<AdminProductsPage> => {
-      console.log('🔒 ADMIN-ONLY PRODUCT FETCH - ROLE-BASED ISOLATION - Page:', pageParam);
+      console.log('🔒 ADMIN-ONLY PRODUCT FETCH - ULTRA STRICT ISOLATION - Page:', pageParam);
       
-      // STRICT ROLE-BASED DATA ISOLATION - ADMIN PRODUCT MANAGEMENT ONLY
-      // ✅ ALLOWED: Products, Images, Colors, Sizes, Categories, Inventory
-      // ❌ FORBIDDEN: User data, Wishlists, Carts, Profiles, Sessions, Orders
+      // ULTRA STRICT ROLE-BASED DATA ISOLATION - ADMIN PRODUCT MANAGEMENT ONLY
+      // ✅ ALLOWED: Products, Images, Colors, Sizes, Categories ONLY
+      // ❌ FORBIDDEN: ALL USER DATA (Wishlists, Carts, Profiles, Sessions, Orders, Discounts)
       const { data: productData, error: productError } = await supabase
         .from('products')
         .select(`
@@ -39,7 +39,7 @@ export const useAdminProducts = ({
           thumbnail_index,
           created_at,
           updated_at,
-          product_images!inner(
+          product_images(
             id,
             image_url,
             alt_text,
@@ -52,7 +52,7 @@ export const useAdminProducts = ({
             stock_quantity,
             additional_price,
             is_available,
-            colors!inner(name, hex_code)
+            colors(name, hex_code)
           ),
           product_sizes(
             id,
@@ -60,7 +60,7 @@ export const useAdminProducts = ({
             stock_quantity,
             additional_price,
             is_available,
-            sizes!inner(name, category)
+            sizes(name, category)
           )
         `)
         .order('created_at', { ascending: false })
@@ -114,14 +114,15 @@ export const useAdminProducts = ({
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: 0,
-    staleTime: 0, // ADMIN NEEDS FRESH DATA - NO STALE CACHE
-    gcTime: 60 * 1000, // 1 minute cache for admin efficiency
+    staleTime: 0, // ULTRA AGGRESSIVE: NO STALE DATA EVER
+    gcTime: 30 * 1000, // 30 second cache only
     enabled,
-    refetchOnWindowFocus: true, // ADMIN-FOCUSED: Fresh data on focus
-    refetchOnMount: true, // ADMIN-FOCUSED: Fresh data on mount
-    refetchOnReconnect: true, // ADMIN-FOCUSED: Fresh data on reconnect
-    retry: 2, // Admin operations need fast response
-    retryDelay: (attemptIndex) => Math.min(500 * 2 ** attemptIndex, 5000), // Fast admin retries
+    refetchOnWindowFocus: true, // ULTRA AGGRESSIVE: Always fresh on focus
+    refetchOnMount: true, // ULTRA AGGRESSIVE: Always fresh on mount  
+    refetchOnReconnect: true, // ULTRA AGGRESSIVE: Always fresh on reconnect
+    refetchInterval: 30000, // FORCE REFRESH EVERY 30 SECONDS
+    retry: 1, // Fast fail for admin efficiency
+    retryDelay: 200, // Minimal retry delay
   });
 };
 
@@ -129,9 +130,10 @@ export const useRefreshAdminProducts = () => {
   const queryClient = useQueryClient();
   
   const refreshProducts = () => {
-    console.log('🔄 ADMIN PRODUCT REFRESH - ROLE-BASED ISOLATION ENFORCED');
-    // Clear admin-specific cache only - no user data involved
-    queryClient.invalidateQueries({ queryKey: ['admin-products-isolated', 'product-crud-only', 'no-user-data'] });
+    console.log('🔄 ULTRA AGGRESSIVE ADMIN REFRESH - FORCE IMMEDIATE DATA');
+    // FORCE REMOVE ALL CACHES AND REFETCH IMMEDIATELY
+    queryClient.invalidateQueries({ queryKey: ['admin-products-isolated', 'product-crud-only', 'no-user-data', 'force-fresh'] });
+    queryClient.removeQueries({ queryKey: ['admin-products-isolated', 'product-crud-only', 'no-user-data', 'force-fresh'] });
   };
 
   return { refreshProducts };

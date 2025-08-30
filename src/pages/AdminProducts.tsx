@@ -2,23 +2,22 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, ProductImage, ProductSizeInfo, ProductColorInfo } from '@/types/database';
+import { Product, ProductImage } from '@/types/database';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, Upload, Eye, EyeOff, Image, X, ChevronUp, ChevronDown, Package, Loader2 } from 'lucide-react';
-import ProductMediaManager from '@/components/admin/ProductMediaManager';
+import { Plus, Edit2, Trash2, Eye, EyeOff, X, ChevronUp, ChevronDown, Package, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
 import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
 import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
 import AdminProductImageManager from '@/components/admin/AdminProductImageManager';
-import { getPrimaryImage } from '@/lib/utils';
+import ProductMediaManager from '@/components/admin/ProductMediaManager';
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
