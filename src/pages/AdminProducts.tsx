@@ -38,7 +38,7 @@ const AdminProducts = () => {
     refetch
   } = useAdminProducts({ 
     enabled: !!user && isAdmin,
-    pageSize: 12 // Force larger batches like homepage
+    pageSize: 20 // ULTRA AGGRESSIVE BATCH SIZE like homepage
   });
   
   const { refreshProducts } = useRefreshAdminProducts();

@@ -7,21 +7,23 @@ interface UseAdminProductsOptions {
   enabled?: boolean;
 }
 
-// Cursor for admin products
-interface AdminProductCursor {
-  created_at: string;
-  id: string;
+interface AdminProductsPage {
+  products: Product[];
+  nextCursor: number | undefined;
+  hasMore: boolean;
 }
 
 export const useAdminProducts = ({ 
-  pageSize = 12, // Larger batch like homepage for FORCE FETCH
+  pageSize = 20, // ULTRA AGGRESSIVE BATCH SIZE like homepage
   enabled = true 
 }: UseAdminProductsOptions = {}) => {
   return useInfiniteQuery({
-    queryKey: ['admin-products', 'keyset'],
-    queryFn: async ({ pageParam }: { pageParam?: AdminProductCursor }) => {
-      // Enhanced query with thumbnail images for admin management
-      const { data, error } = await supabase
+    queryKey: ['admin-products', 'ultra-fast', 'normalized'],
+    queryFn: async ({ pageParam = 0 }: { pageParam: number }): Promise<AdminProductsPage> => {
+      console.log('🔥 FORCE FETCHING ADMIN PRODUCTS - Page:', pageParam);
+      
+      // FORCE ULTRA-FAST NORMALIZED QUERY with all joined data for admin CRUD
+      const { data: fallbackData, error: fallbackError } = await supabase
         .from('products')
         .select(`
           id,
@@ -45,59 +47,79 @@ export const useAdminProducts = ({
           product_colors(
             id,
             color_id,
+            stock_quantity,
+            additional_price,
+            is_available,
             colors(name, hex_code)
           ),
           product_sizes(
             id,
             size_id,
+            stock_quantity,
+            additional_price,
+            is_available,
             sizes(name, category)
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(pageSize);
+        .range(pageParam * pageSize, (pageParam * pageSize) + pageSize - 1);
 
-      if (error) {
-        console.error('Error fetching admin products:', error);
-        throw error;
+      if (fallbackError) {
+        console.error('🚨 FORCE FETCH FAILED:', fallbackError);
+        throw fallbackError;
       }
-
-      // Transform data with proper thumbnail handling
-      const products = (data || []).map((item: any) => {
-        // Sort images by display_order and find thumbnail
+      
+      // Transform normalized data for admin CRUD operations
+      const products = (fallbackData || []).map((item: any) => {
         const sortedImages = (item.product_images || [])
           .sort((a: any, b: any) => a.display_order - b.display_order);
 
         return {
           ...item,
-          images: sortedImages, // Full image data with display_order
+          images: sortedImages,
           thumbnail_image: sortedImages.find((img: any) => img.display_order === 1)?.image_url || 
                           sortedImages[0]?.image_url || null,
-          colors: (item.product_colors || []).map((pc: any) => pc.colors).filter(Boolean),
-          sizes: (item.product_sizes || []).map((ps: any) => ps.sizes).filter(Boolean),
-          videos: [], // Videos not in normalized tables yet
-          description: item.description || null
+          colors: (item.product_colors || []).map((pc: any) => ({
+            id: pc.id,
+            name: pc.colors?.name || '',
+            hex: pc.colors?.hex_code || '',
+            stock: pc.stock_quantity || 0,
+            additional_price: pc.additional_price || 0,
+            available: pc.is_available !== false
+          })).filter(Boolean),
+          sizes: (item.product_sizes || []).map((ps: any) => ({
+            id: ps.id,
+            name: ps.sizes?.name || '',
+            category: ps.sizes?.category || '',
+            stock: ps.stock_quantity || 0,
+            additional_price: ps.additional_price || 0,
+            available: ps.is_available !== false
+          })).filter(Boolean),
+          videos: [],
+          description: item.description || null,
+          has_colors: (item.product_colors || []).length > 0,
+          has_sizes: (item.product_sizes || []).length > 0
         };
       });
 
-      const nextCursor = products.length === pageSize && products.length > 0
-        ? { created_at: products[products.length - 1].created_at, id: products[products.length - 1].id }
-        : null;
+      console.log('✅ FORCE FETCHED', products.length, 'admin products');
 
       return {
         products,
-        nextCursor,
+        nextCursor: products.length === pageSize ? pageParam + 1 : undefined,
         hasMore: products.length === pageSize
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    initialPageParam: undefined,
+    initialPageParam: 0,
     staleTime: 0, // FORCE FRESH DATA - no cache like homepage
-    gcTime: 1 * 60 * 1000, // 1 minute cache
+    gcTime: 30 * 1000, // 30 seconds only - very aggressive
     enabled,
     refetchOnWindowFocus: true, // FORCE refetch on focus
     refetchOnMount: true, // FORCE refetch on mount
     refetchOnReconnect: true, // FORCE refetch on reconnect
     retry: 3, // Enable retries for reliable fetching
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Fast exponential backoff
   });
 };
 
@@ -105,7 +127,8 @@ export const useRefreshAdminProducts = () => {
   const queryClient = useQueryClient();
   
   const refreshProducts = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin-products', 'keyset'] });
+    console.log('🔄 FORCE REFRESH ADMIN PRODUCTS');
+    queryClient.invalidateQueries({ queryKey: ['admin-products', 'ultra-fast', 'normalized'] });
   };
 
   return { refreshProducts };
