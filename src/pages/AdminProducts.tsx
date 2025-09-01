@@ -18,6 +18,8 @@ import { useAdminProductsUltraFast, useRefreshAdminProductsUltraFast } from '@/h
 import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
 import AdminProductImageManager from '@/components/admin/AdminProductImageManager';
 import ProductMediaManager from '@/components/admin/ProductMediaManager';
+import AdminProductsErrorBoundary from '@/components/admin/AdminProductsErrorBoundary';
+import AdminProductsLoadingFallback from '@/components/admin/AdminProductsLoadingFallback';
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -25,7 +27,7 @@ const AdminProducts = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
-  // ULTRA-FAST DATABASE FUNCTION QUERY - ZERO USER DATA ACCESS
+  // ULTRA-FAST MATERIALIZED VIEW QUERY - FORCE OPTIMIZED
   const {
     data,
     fetchNextPage,
@@ -37,7 +39,7 @@ const AdminProducts = () => {
     refetch
   } = useAdminProductsUltraFast({ 
     enabled: !!user && isAdmin,
-    pageSize: 50 // ULTRA-FAST BATCH SIZE with database function
+    pageSize: 8 // FORCE OPTIMIZED: Reduced batch size for ultra-fast loading
   });
   
   const { refreshProducts } = useRefreshAdminProductsUltraFast();
@@ -104,7 +106,7 @@ const AdminProducts = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <AdminProductsLoadingFallback />;
   }
 
   if (!user || !isAdmin) {
@@ -642,23 +644,13 @@ const AdminProducts = () => {
         </div>
 
         {isError ? (
-          <div className="text-center py-12">
-            <Package className="h-16 w-16 text-destructive mx-auto mb-4" />
-            <p className="text-destructive text-lg mb-2">Failed to load products</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              {error?.message || "There was an error loading products"}
-            </p>
-            <Button onClick={handleRetry}>
-              <Loader2 className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
+          <AdminProductsErrorBoundary 
+            error={error}
+            onRetry={handleRetry}
+            isRetrying={isLoading}
+          />
         ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <AdminProductCardSkeleton key={index} />
-            ))}
-          </div>
+          <AdminProductsLoadingFallback />
         ) : products.length === 0 ? (
           <div className="text-center py-12">
             <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />

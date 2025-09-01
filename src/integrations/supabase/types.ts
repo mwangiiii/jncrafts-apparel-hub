@@ -129,6 +129,13 @@ export type Database = {
             foreignKeyName: "cart_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "mv_products_landing"
             referencedColumns: ["id"]
           },
@@ -238,6 +245,13 @@ export type Database = {
             foreignKeyName: "conversations_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "mv_products_landing"
             referencedColumns: ["id"]
           },
@@ -278,6 +292,13 @@ export type Database = {
             columns: ["discount_id"]
             isOneToOne: false
             referencedRelation: "discounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_admin_products"
             referencedColumns: ["id"]
           },
           {
@@ -415,6 +436,13 @@ export type Database = {
           product_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "homepage_featured_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "homepage_featured_product_id_fkey"
             columns: ["product_id"]
@@ -631,6 +659,13 @@ export type Database = {
             foreignKeyName: "product_colors_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_colors_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "mv_products_landing"
             referencedColumns: ["id"]
           },
@@ -675,6 +710,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_images_product_id_fkey"
             columns: ["product_id"]
@@ -740,6 +782,13 @@ export type Database = {
             foreignKeyName: "product_inventory_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "mv_products_landing"
             referencedColumns: ["id"]
           },
@@ -788,6 +837,13 @@ export type Database = {
           stock_quantity?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_sizes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_sizes_product_id_fkey"
             columns: ["product_id"]
@@ -1027,6 +1083,13 @@ export type Database = {
             foreignKeyName: "wishlist_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "mv_products_landing"
             referencedColumns: ["id"]
           },
@@ -1074,6 +1137,13 @@ export type Database = {
             foreignKeyName: "cart_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "mv_admin_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "mv_products_landing"
             referencedColumns: ["id"]
           },
@@ -1092,6 +1162,28 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mv_admin_products: {
+        Row: {
+          category: string | null
+          colors_count: number | null
+          created_at: string | null
+          description: string | null
+          has_colors: boolean | null
+          has_sizes: boolean | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          new_arrival_date: string | null
+          price: number | null
+          sizes_count: number | null
+          stock_quantity: number | null
+          thumbnail_image: string | null
+          thumbnail_index: number | null
+          total_images: number | null
+          updated_at: string | null
+        }
+        Relationships: []
       }
       mv_products_landing: {
         Row: {
@@ -1313,6 +1405,10 @@ export type Database = {
       mask_phone: {
         Args: { phone_number: string }
         Returns: string
+      }
+      refresh_admin_products_view: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       refresh_products_landing_view: {
         Args: Record<PropertyKey, never>
