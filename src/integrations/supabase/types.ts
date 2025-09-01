@@ -1164,6 +1164,28 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_admin_products_ultra_fast: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          category: string
+          colors_count: number
+          created_at: string
+          description: string
+          has_colors: boolean
+          has_sizes: boolean
+          id: string
+          is_active: boolean
+          name: string
+          new_arrival_date: string
+          price: number
+          sizes_count: number
+          stock_quantity: number
+          thumbnail_image: string
+          thumbnail_index: number
+          total_images: number
+          updated_at: string
+        }[]
+      }
       get_categories_fast: {
         Args: Record<PropertyKey, never>
         Returns: {

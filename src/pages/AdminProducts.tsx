@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit2, Trash2, Eye, EyeOff, X, ChevronUp, ChevronDown, Package, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
-import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
+import { useAdminProductsUltraFast, useRefreshAdminProductsUltraFast } from '@/hooks/useAdminProductsUltraFast';
 import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
 import AdminProductImageManager from '@/components/admin/AdminProductImageManager';
 import ProductMediaManager from '@/components/admin/ProductMediaManager';
@@ -25,7 +25,7 @@ const AdminProducts = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
-  // Use infinite query for better performance - FORCE IMMEDIATE FETCH
+  // ULTRA-FAST DATABASE FUNCTION QUERY - ZERO USER DATA ACCESS
   const {
     data,
     fetchNextPage,
@@ -35,12 +35,12 @@ const AdminProducts = () => {
     isError,
     error,
     refetch
-  } = useAdminProducts({ 
+  } = useAdminProductsUltraFast({ 
     enabled: !!user && isAdmin,
-    pageSize: 20 // ULTRA AGGRESSIVE BATCH SIZE like homepage
+    pageSize: 50 // ULTRA-FAST BATCH SIZE with database function
   });
   
-  const { refreshProducts } = useRefreshAdminProducts();
+  const { refreshProducts } = useRefreshAdminProductsUltraFast();
   
   // Flatten paginated data
   const products = data?.pages.flatMap(page => page.products) || [];
@@ -330,7 +330,7 @@ const AdminProducts = () => {
   };
 
   // Admin Product Card Component matching homepage styling
-  const AdminProductCard = ({ product }: { product: Product }) => {
+  const AdminProductCard = ({ product }: { product: any }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const imgRef = useRef<HTMLImageElement>(null);
@@ -359,9 +359,8 @@ const AdminProducts = () => {
       return typeof image === 'string' ? image : image.image_url;
     };
 
-    // Use thumbnail strategy like homepage
-    const thumbnailUrl = (product as any).thumbnail_image || 
-                        getImageUrl(product.images?.[0] || '/placeholder.svg');
+    // Use thumbnail from database function - ultra-fast
+    const thumbnailUrl = product.thumbnail_image || '/placeholder.svg';
 
     const getStockStatus = () => {
       if (product.stock_quantity === 0) {
@@ -457,10 +456,10 @@ const AdminProducts = () => {
             </div>
           )}
 
-          {/* Image count badge */}
-          {product.images && product.images.length > 1 && (
+          {/* Image count badge - optimized from database function */}
+          {(product.total_images || 0) > 1 && (
             <div className="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
-              {product.images.length} images
+              {product.total_images || 0} images
             </div>
           )}
         </div>
@@ -474,12 +473,12 @@ const AdminProducts = () => {
               <p className="text-2xl font-bold text-primary mt-2">KSh {product.price.toLocaleString()}</p>
             </div>
 
-            {/* Product details */}
+            {/* Product details - optimized from database function */}
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">Stock:</span> {product.stock_quantity}</p>
-              <p><span className="font-medium">Sizes:</span> {Array.isArray(product.sizes) ? product.sizes.map(s => typeof s === 'string' ? s : s.name).join(', ') || 'None' : 'None'}</p>
-              <p><span className="font-medium">Colors:</span> {Array.isArray(product.colors) ? product.colors.map(c => typeof c === 'string' ? c : c.name).join(', ') || 'None' : 'None'}</p>
-              <p><span className="font-medium">Images:</span> {product.images?.length || 0}</p>
+              <p><span className="font-medium">Colors:</span> {(product.colors_count || 0) > 0 ? `${product.colors_count} colors` : 'None'}</p>
+              <p><span className="font-medium">Sizes:</span> {(product.sizes_count || 0) > 0 ? `${product.sizes_count} sizes` : 'None'}</p>
+              <p><span className="font-medium">Images:</span> {product.total_images || 0}</p>
             </div>
             
             {/* Image Management - CRUD operations on normalized product_images table */}
