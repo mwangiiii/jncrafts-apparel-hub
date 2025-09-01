@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, Eye, EyeOff, X, ChevronUp, ChevronDown, Package, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, X, ChevronUp, ChevronDown, Package, Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
 import { useAdminProductsUltraFast, useRefreshAdminProductsUltraFast } from '@/hooks/useAdminProductsUltraFast';
@@ -20,6 +20,7 @@ import AdminProductImageManager from '@/components/admin/AdminProductImageManage
 import ProductMediaManager from '@/components/admin/ProductMediaManager';
 import AdminProductsErrorBoundary from '@/components/admin/AdminProductsErrorBoundary';
 import AdminProductsLoadingFallback from '@/components/admin/AdminProductsLoadingFallback';
+import OptimizedAdminImage from '@/components/admin/OptimizedAdminImage';
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -379,30 +380,12 @@ const AdminProducts = () => {
       <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
         {/* Image section matching homepage layout */}
         <div className="relative overflow-hidden">
-          <div ref={imgRef} className="w-full h-80 bg-muted/50 flex items-center justify-center">
-            {isVisible && (
-              <>
-                <img
-                  src={thumbnailUrl}
-                  alt={product.name}
-                  className={`w-full h-full object-cover transition-opacity duration-500 ${
-                    imageLoaded ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onLoad={() => setImageLoaded(true)}
-                  loading="lazy"
-                  decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-                {/* Preload next image for faster navigation */}
-                {product.images?.[1] && (
-                  <link rel="preload" as="image" href={getImageUrl(product.images[1])} />
-                )}
-              </>
-            )}
-            {!imageLoaded && isVisible && (
-              <div className="w-full h-full bg-gradient-to-br from-muted/30 to-muted/60 animate-pulse" />
-            )}
-          </div>
+          {/* Image section with optimized loading */}
+          <OptimizedAdminImage
+            src={product.thumbnail_image}
+            alt={product.name}
+            className="w-full h-80"
+          />
           
           {/* Gradient overlay matching homepage */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
