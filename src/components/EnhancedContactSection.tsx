@@ -201,7 +201,7 @@ Looking forward to your response. Thank you!`;
       icon: <MapPin className="h-6 w-6" />,
       title: "Address",
       info: "Nairobi CBD, Kenya 00100",
-      description: "Address"
+      description: "Located in the heart of the city"
     }
   ];
 

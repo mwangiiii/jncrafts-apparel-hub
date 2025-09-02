@@ -114,9 +114,10 @@ const AdminOrderDetail = () => {
 
       // Send status update email
       try {
-        await supabase.functions.invoke('send-order-email', {
+        await supabase.functions.invoke('send-order-status-update', {
           body: {
-            email: order.customer_info.email,
+            customerEmail: order.customer_info.email,
+            adminEmail: "craftsjn@gmail.com",
             orderNumber: order.order_number,
             customerName: order.customer_info.fullName,
             orderStatus: newStatus,

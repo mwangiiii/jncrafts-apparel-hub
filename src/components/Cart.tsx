@@ -264,9 +264,10 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
       // Send order confirmation email
       try {
-        await supabase.functions.invoke('send-order-email', {
+        await supabase.functions.invoke('send-order-status-update', {
           body: {
-            email: customerInfo.email,
+            customerEmail: customerInfo.email,
+            adminEmail: "craftsjn@gmail.com",
             orderNumber: orderNumber,
             customerName: customerInfo.fullName,
             orderStatus: 'pending',
@@ -292,31 +293,9 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
       // Send admin notification for new order
       try {
-        await supabase.functions.invoke('send-admin-notification', {
-          body: {
-            type: 'new_order',
-            customerEmail: customerInfo.email,
-            customerName: customerInfo.fullName,
-            orderDetails: {
-              orderNumber: orderNumber,
-              items: items.map(item => ({
-                product_name: item.product_name,
-                quantity: item.quantity,
-                size: item.size_name,
-                color: item.color_name,
-                price: item.price
-              })),
-              totalAmount: finalTotal,
-              shippingAddress: {
-                address: shippingAddress.address,
-                city: shippingAddress.city,
-                postalCode: shippingAddress.postalCode
-              }
-            }
-          }
-        });
-      } catch (adminNotificationError) {
-        console.error('Error sending admin notification:', adminNotificationError);
+        console.log('Order placed successfully, emails sent via order status update function');
+      } catch (emailError) {
+        console.error('Error in email notifications:', emailError);
       }
 
         // Send WhatsApp notification for international orders
