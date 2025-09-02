@@ -249,6 +249,9 @@ const DeliveryMethodSelector = ({
     }
   }, [pickupAgent, courierDetails]);
 
+  // Check if shipping address is provided
+  const hasShippingAddress = shippingAddress.address && shippingAddress.city && shippingAddress.postalCode;
+
   const deliveryOptions = [
     {
       id: 'home_delivery' as DeliveryMethod,
@@ -269,9 +272,11 @@ const DeliveryMethodSelector = ({
     {
       id: 'pickup_in_town' as DeliveryMethod,
       title: 'Pickup in Town',
-      description: 'Collect at Nairobi Archives (FREE)',
+      description: hasShippingAddress 
+        ? 'Not available when shipping address is provided' 
+        : 'Collect at Nairobi Archives (FREE)',
       icon: <Building className="h-5 w-5" />,
-      disabled: false,
+      disabled: hasShippingAddress,
     },
     {
       id: 'customer_logistics' as DeliveryMethod,
@@ -305,11 +310,11 @@ const DeliveryMethodSelector = ({
         >
           {deliveryOptions.map((option) => (
             <div key={option.id} className="flex items-start space-x-3">
-              <RadioGroupItem 
-                value={option.id} 
-                id={option.id}
-                disabled={option.disabled}
-              />
+               <RadioGroupItem 
+                 value={option.id} 
+                 id={option.id}
+                 disabled={Boolean(option.disabled)}
+               />
               <div className="flex-1">
                 <label
                   htmlFor={option.id}
