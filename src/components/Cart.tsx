@@ -353,10 +353,27 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       onClose();
     } catch (error) {
       console.error('Error placing order:', error);
+      
+      let errorMessage = "There was an error placing your order. Please try again.";
+      
+      if (error instanceof Error) {
+        // Provide more specific error messages based on the error
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        } else if (error.message.includes('auth') || error.message.includes('unauthorized')) {
+          errorMessage = "Authentication error. Please log in again and try.";
+        } else if (error.message.includes('validation') || error.message.includes('invalid')) {
+          errorMessage = "Invalid order data. Please check your information and try again.";
+        } else if (error.message.includes('duplicate') || error.message.includes('unique')) {
+          errorMessage = "Order already exists. Please check your orders or try with different items.";
+        }
+      }
+      
       toast({
         variant: "destructive",
         title: "Order Failed",
-        description: "There was an error placing your order. Please try again.",
+        description: errorMessage,
+        duration: 5000,
       });
     } finally {
       setIsPlacingOrder(false);
