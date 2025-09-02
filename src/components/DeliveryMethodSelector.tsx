@@ -249,9 +249,6 @@ const DeliveryMethodSelector = ({
     }
   }, [pickupAgent, courierDetails]);
 
-  // Check if shipping address is provided
-  const hasShippingAddress = shippingAddress.address && shippingAddress.city && shippingAddress.postalCode;
-
   const deliveryOptions = [
     {
       id: 'home_delivery' as DeliveryMethod,
@@ -272,11 +269,9 @@ const DeliveryMethodSelector = ({
     {
       id: 'pickup_in_town' as DeliveryMethod,
       title: 'Pickup in Town',
-      description: hasShippingAddress 
-        ? 'Not available when shipping address is provided' 
-        : 'Collect at Nairobi Archives (FREE)',
+      description: 'Collect at Nairobi Archives (FREE)',
       icon: <Building className="h-5 w-5" />,
-      disabled: hasShippingAddress,
+      disabled: false,
     },
     {
       id: 'customer_logistics' as DeliveryMethod,
