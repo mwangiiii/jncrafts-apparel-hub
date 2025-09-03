@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SectionLoader } from "@/components/ui/section-loader";
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useUltraFastFeatured, type UltraFastFeaturedProduct } from '@/hooks/useUltraFastProducts';
 import { Product } from '@/types/database';
@@ -39,22 +38,9 @@ const AnimatedFeaturedProducts = () => {
     return (
       <section className="py-16 bg-gradient-to-b from-background to-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Featured <span className="text-brand-beige">Collection</span>
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Discover our handpicked selection of premium streetwear pieces
-            </p>
+          <div className="h-96 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+            <span className="text-muted-foreground">Loading featured products...</span>
           </div>
-          <SectionLoader 
-            isLoading={true}
-            className="min-h-[400px]"
-          >
-            <div className="h-96 bg-muted rounded-lg flex items-center justify-center">
-              <span className="text-muted-foreground">Loading featured products...</span>
-            </div>
-          </SectionLoader>
         </div>
       </section>
     );

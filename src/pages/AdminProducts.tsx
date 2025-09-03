@@ -1,4 +1,3 @@
-import { SectionLoader } from '@/components/ui/section-loader';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -590,20 +589,14 @@ const AdminProducts = () => {
                       type="submit" 
                       disabled={isCreating || isUpdating}
                     >
-                      <SectionLoader 
-                        isLoading={isCreating || isUpdating}
-                        overlay={false}
-                        className="min-w-[120px]"
-                      >
-                        {(isCreating || isUpdating) ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            {editingProduct ? 'Updating...' : 'Creating...'}
-                          </>
-                        ) : (
-                          editingProduct ? 'Update Product' : 'Create Product'
-                        )}
-                      </SectionLoader>
+                      {(isCreating || isUpdating) ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {editingProduct ? 'Updating...' : 'Creating...'}
+                        </>
+                      ) : (
+                        editingProduct ? 'Update Product' : 'Create Product'
+                      )}
                     </Button>
                   </div>
                 </form>
@@ -619,12 +612,7 @@ const AdminProducts = () => {
             isRetrying={isLoading}
           />
         ) : isLoading ? (
-          <SectionLoader 
-            isLoading={true}
-            className="min-h-[600px]"
-          >
-            <AdminProductsLoadingFallback />
-          </SectionLoader>
+          <AdminProductsLoadingFallback />
         ) : products.length === 0 ? (
           <div className="text-center py-12">
             <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -642,27 +630,21 @@ const AdminProducts = () => {
             {/* Load More Button */}
             {hasNextPage && (
               <div className="flex justify-center mt-8">
-                <SectionLoader 
-                  isLoading={isFetchingNextPage}
-                  className="min-w-[300px]"
-                  overlay={false}
+                <Button 
+                  onClick={handleLoadMore} 
+                  disabled={isFetchingNextPage}
+                  size="lg"
+                  variant="outline"
                 >
-                  <Button 
-                    onClick={handleLoadMore} 
-                    disabled={isFetchingNextPage}
-                    size="lg"
-                    variant="outline"
-                  >
-                    {isFetchingNextPage ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      'Load More Products'
-                    )}
-                  </Button>
-                </SectionLoader>
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More Products'
+                  )}
+                </Button>
               </div>
             )}
           </>
