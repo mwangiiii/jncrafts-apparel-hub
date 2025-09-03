@@ -14,7 +14,7 @@ export const SectionLoader: React.FC<SectionLoaderProps> = ({
   isLoading,
   children,
   className,
-  loaderScale = 0.8,
+  loaderScale = 0.7,
   overlay = true
 }) => {
   return (
@@ -25,11 +25,13 @@ export const SectionLoader: React.FC<SectionLoaderProps> = ({
         <div 
           className={cn(
             "absolute inset-0 z-50 flex items-center justify-center",
-            "animate-fade-in",
-            overlay && "bg-background/80 backdrop-blur-sm"
+            "animate-fade-in transition-all duration-300",
+            overlay && "bg-background/95 backdrop-blur-md"
           )}
         >
-          <JNCraftsLoader scale={loaderScale} />
+          <div className="max-w-sm w-full">
+            <JNCraftsLoader scale={loaderScale} />
+          </div>
         </div>
       )}
     </div>

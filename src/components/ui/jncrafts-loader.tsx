@@ -13,8 +13,11 @@ export const JNCraftsLoader: React.FC<JNCraftsLoaderProps> = ({
   return (
     <div 
       className={cn(
-        "relative flex items-center justify-center h-[120px] w-auto",
-        "font-semibold text-2xl select-none text-white",
+        "relative flex items-center justify-center min-h-[200px] w-full",
+        "font-bold text-4xl md:text-5xl select-none text-foreground",
+        "bg-gradient-to-br from-background via-muted/30 to-background",
+        "border border-border/20 rounded-xl shadow-elegant backdrop-blur-sm",
+        "p-8 md:p-12",
         className
       )}
       style={{ 
@@ -22,51 +25,93 @@ export const JNCraftsLoader: React.FC<JNCraftsLoaderProps> = ({
         fontFamily: '"Inter", "Poppins", sans-serif',
       }}
     >
-      {/* JNCRAFTS Letters */}
-      {['J', 'N', 'C', 'R', '', 'A', 'F', 'T', 'S'].map((letter, index) => (
-        <span
-          key={index}
-          className="inline-block opacity-0 animate-loader-letter z-[2]"
+      {/* Elegant Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-accent/20 animate-pulse" />
+        <div 
+          className="absolute inset-0 opacity-10"
           style={{
-            animationDelay: `${0.1 + index * 0.105}s`,
+            backgroundImage: `
+              radial-gradient(circle at 25% 25%, hsl(var(--primary)) 0%, transparent 25%),
+              radial-gradient(circle at 75% 75%, hsl(var(--accent)) 0%, transparent 25%)
+            `,
+            backgroundSize: '60px 60px'
           }}
-        >
-          {letter}
-        </span>
-      ))}
+        />
+      </div>
 
-      {/* Animated Loader Effect */}
+      {/* Premium Brand Badge */}
+      <div className="absolute top-4 right-4 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+        <span className="text-xs font-medium text-primary tracking-wider">PREMIUM</span>
+      </div>
+
+      {/* JNCRAFTS Letters with Enhanced Styling */}
+      <div className="relative z-10 flex items-center justify-center space-x-1">
+        {['J', 'N', 'C', 'R', '', 'A', 'F', 'T', 'S'].map((letter, index) => (
+          <span
+            key={index}
+            className={cn(
+              "inline-block opacity-0 animate-loader-letter transition-all duration-300",
+              "bg-gradient-to-b from-foreground via-primary to-foreground bg-clip-text text-transparent",
+              "drop-shadow-lg tracking-wide"
+            )}
+            style={{
+              animationDelay: `${0.1 + index * 0.08}s`,
+            }}
+          >
+            {letter}
+          </span>
+        ))}
+      </div>
+
+      {/* Sophisticated Animated Effect */}
       <div 
-        className="absolute top-0 left-0 h-full w-full z-[1] bg-transparent"
+        className="absolute inset-0 z-[1] rounded-xl overflow-hidden"
         style={{
           mask: `repeating-linear-gradient(
             90deg,
             transparent 0,
-            transparent 6px,
-            black 7px,
-            black 8px
+            transparent 8px,
+            black 9px,
+            black 11px
           )`
         }}
       >
         <div 
-          className="absolute top-0 left-0 w-full h-full animate-loader-effect"
+          className="absolute inset-0 animate-loader-effect opacity-30"
           style={{
-            backgroundImage: `
-              radial-gradient(circle at 50% 50%, #ffff00 0%, transparent 50%),
-              radial-gradient(circle at 45% 45%, #ff0000 0%, transparent 45%),
-              radial-gradient(circle at 55% 55%, #00ffff 0%, transparent 45%),
-              radial-gradient(circle at 45% 55%, #00ff00 0%, transparent 45%),
-              radial-gradient(circle at 55% 45%, #0000ff 0%, transparent 45%)
+            background: `
+              radial-gradient(circle at 50% 50%, hsl(var(--primary)) 0%, transparent 40%),
+              radial-gradient(circle at 30% 70%, hsl(var(--accent)) 0%, transparent 35%),
+              radial-gradient(circle at 70% 30%, hsl(var(--primary)) 0%, transparent 35%),
+              radial-gradient(circle at 80% 80%, hsl(var(--accent)) 0%, transparent 30%)
             `,
-            mask: `radial-gradient(
-              circle at 50% 50%,
-              transparent 0%,
-              transparent 10%,
-              black 25%
-            )`
+            filter: 'blur(2px)'
           }}
         />
       </div>
+
+      {/* Loading Progress Indicator */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
+        <div className="flex space-x-2">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full bg-primary/40 animate-pulse"
+              style={{
+                animationDelay: `${i * 0.2}s`,
+                animationDuration: '1.2s'
+              }}
+            />
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground text-center mt-2 tracking-wider">
+          Loading Excellence...
+        </p>
+      </div>
+
+      {/* Subtle Glow Effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-xl animate-pulse" />
     </div>
   );
 };
