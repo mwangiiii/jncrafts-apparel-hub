@@ -15,6 +15,7 @@ import { Plus, Edit2, Trash2, Eye, EyeOff, X, ChevronUp, ChevronDown, Package, L
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
 import { useAdminProductsUltraFast, useRefreshAdminProductsUltraFast } from '@/hooks/useAdminProductsUltraFast';
+import { useCompleteProductManagement } from '@/hooks/useCompleteProductManagement';
 import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
 import AdminProductImageManager from '@/components/admin/AdminProductImageManager';
 import ProductMediaManager from '@/components/admin/ProductMediaManager';
@@ -29,21 +30,9 @@ const AdminProducts = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
   // ULTRA-FAST MATERIALIZED VIEW QUERY - FORCE OPTIMIZED
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = useAdminProductsUltraFast({ 
-    enabled: !!user && isAdmin,
-    pageSize: 8 // FORCE OPTIMIZED: Reduced batch size for ultra-fast loading
-  });
-  
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useAdminProductsUltraFast({ enabled: !!user && isAdmin });
   const { refreshProducts } = useRefreshAdminProductsUltraFast();
+  const { createCompleteProduct, updateCompleteProduct, isCreating, isUpdating } = useCompleteProductManagement();
   
   // Flatten paginated data
   const products = data?.pages.flatMap(page => page.products) || [];
@@ -175,7 +164,7 @@ const AdminProducts = () => {
         category: formData.category,
         images: formData.images,
         videos: formData.videos,
-        thumbnail_index: formData.thumbnailIndex,
+        thumbnailIndex: formData.thumbnailIndex,
         sizes: formData.sizes,
         colors: formData.colors,
         stock_quantity: parseInt(formData.stock_quantity),
@@ -183,44 +172,24 @@ const AdminProducts = () => {
       };
 
       if (editingProduct) {
-        console.log('🔒 ADMIN PRODUCT UPDATE - ROLE-BASED ISOLATION');
-        const { error } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', editingProduct.id);
-
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Product updated successfully",
+        console.log('🔒 ADMIN PRODUCT UPDATE - NORMALIZED STRUCTURE');
+        await updateCompleteProduct.mutateAsync({
+          productId: editingProduct.id,
+          productData
         });
-        console.log('✅ ADMIN PRODUCT UPDATED - NO USER DATA INVOLVED');
+        console.log('✅ ADMIN PRODUCT UPDATED WITH NORMALIZED STRUCTURE');
       } else {
-        console.log('🔒 ADMIN PRODUCT CREATE - ROLE-BASED ISOLATION');
-        const { error } = await supabase
-          .from('products')
-          .insert(productData);
-
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Product created successfully",
-        });
-        console.log('✅ ADMIN PRODUCT CREATED - NO USER DATA INVOLVED');
+        console.log('🔒 ADMIN PRODUCT CREATE - NORMALIZED STRUCTURE');
+        await createCompleteProduct.mutateAsync({ productData });
+        console.log('✅ ADMIN PRODUCT CREATED WITH NORMALIZED STRUCTURE');
       }
 
       setIsDialogOpen(false);
       resetForm();
       refreshProducts();
     } catch (error) {
-      console.error('Error saving product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save product",
-        variant: "destructive"
-      });
+      console.error('💥 Error saving product with normalized structure:', error);
+      // Error handling is done in the hook
     }
   };
 
@@ -616,8 +585,18 @@ const AdminProducts = () => {
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">
-                      {editingProduct ? 'Update Product' : 'Create Product'}
+                    <Button 
+                      type="submit" 
+                      disabled={isCreating || isUpdating}
+                    >
+                      {(isCreating || isUpdating) ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {editingProduct ? 'Updating...' : 'Creating...'}
+                        </>
+                      ) : (
+                        editingProduct ? 'Update Product' : 'Create Product'
+                      )}
                     </Button>
                   </div>
                 </form>
@@ -626,7 +605,7 @@ const AdminProducts = () => {
           </div>
         </div>
 
-        {isError ? (
+        {error ? (
           <AdminProductsErrorBoundary 
             error={error}
             onRetry={handleRetry}
