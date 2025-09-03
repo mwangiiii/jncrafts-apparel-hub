@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import ProductCard from "./ProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
 import CategoryDropdown from "./CategoryDropdown";
+import { SectionLoader } from "@/components/ui/section-loader";
 import { Product } from '@/types/database';
 import { useUltraFastProducts, type UltraFastProduct } from '@/hooks/useUltraFastProducts';
 import { useCategories } from '@/hooks/useCategories';
@@ -80,11 +81,16 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {Array.from({ length: 16 }).map((_, index) => (
-              <ProductCardSkeleton key={index} />
-            ))}
-          </div>
+          <SectionLoader 
+            isLoading={true}
+            className="min-h-[600px]"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {Array.from({ length: 16 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
+            </div>
+          </SectionLoader>
         </div>
       </section>
     );
@@ -163,22 +169,28 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
             {/* Load More Button */}
             {hasNextPage && (
               <div className="flex justify-center mt-12">
-                <Button 
-                  onClick={handleLoadMore} 
-                  disabled={isFetchingNextPage}
-                  size="lg"
-                  variant="outline"
-                  className="bg-background hover:bg-muted"
+                <SectionLoader 
+                  isLoading={isFetchingNextPage}
+                  className="min-w-[300px]"
+                  overlay={false}
                 >
-                  {isFetchingNextPage ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading more products...
-                    </>
-                  ) : (
-                    'Load More Products'
-                  )}
-                </Button>
+                  <Button 
+                    onClick={handleLoadMore} 
+                    disabled={isFetchingNextPage}
+                    size="lg"
+                    variant="outline"
+                    className="bg-background hover:bg-muted"
+                  >
+                    {isFetchingNextPage ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading more products...
+                      </>
+                    ) : (
+                      'Load More Products'
+                    )}
+                  </Button>
+                </SectionLoader>
               </div>
             )}
           </>
