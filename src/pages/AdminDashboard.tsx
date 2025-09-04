@@ -18,6 +18,7 @@ import { Package, DollarSign, Users, TrendingUp, Eye, CheckCircle, Truck, X, Plu
 import adminAnalytics from '@/assets/admin-analytics.jpg';
 import orderFlow from '@/assets/order-flow.jpg';
 import SpecialOffersManager from '@/components/admin/SpecialOffersManager';
+import { OptimizedProductsSection } from '@/components/admin/OptimizedProductsSection';
 import AdminOrdersTable from '@/components/admin/AdminOrdersTable';
 import AdminHeader from '@/components/AdminHeader';
 
