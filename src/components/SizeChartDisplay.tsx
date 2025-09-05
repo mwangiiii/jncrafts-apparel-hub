@@ -78,7 +78,7 @@ export const SizeChartDisplay: React.FC<SizeChartDisplayProps> = ({
                     </div>
                     <div className="rounded-lg overflow-hidden border shadow-lg">
                       <img
-                        src="/jacket-size-chart.png"
+                        src="/jacket_chart.jpg"
                         alt="Jacket Size Chart"
                         className="w-full h-auto object-contain bg-background"
                         loading="lazy"
@@ -94,7 +94,7 @@ export const SizeChartDisplay: React.FC<SizeChartDisplayProps> = ({
                     </div>
                     <div className="rounded-lg overflow-hidden border shadow-lg">
                       <img
-                        src="/pants-size-chart.png"
+                        src="/pants_chart.jpg"
                         alt="Pants Size Chart"
                         className="w-full h-auto object-contain bg-background"
                         loading="lazy"
