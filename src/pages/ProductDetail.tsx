@@ -81,8 +81,8 @@ const ProductDetail = () => {
         thumbnail_index: productData.thumbnail_index,
         created_at: productData.created_at,
         updated_at: productData.updated_at,
-        show_jacket_size_chart: productData.show_jacket_size_chart || false,
-        show_pants_size_chart: productData.show_pants_size_chart || false,
+        show_jacket_size_chart: (productData as any).show_jacket_size_chart || false,
+        show_pants_size_chart: (productData as any).show_pants_size_chart || false,
         images: Array.isArray(productData.images) 
           ? productData.images.map((img: any) => ({
               id: img.id || 'temp',
