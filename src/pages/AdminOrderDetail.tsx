@@ -76,6 +76,7 @@ const AdminOrderDetail = () => {
 
   const fetchOrder = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -86,6 +87,8 @@ const AdminOrderDetail = () => {
         .single();
 
       if (error) throw error;
+      
+      console.log('Fetched order data:', data); // Debug log
       setOrder(data);
     } catch (error) {
       console.error('Error fetching order:', error);
@@ -107,7 +110,10 @@ const AdminOrderDetail = () => {
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', order.id);
 
       if (error) throw error;
@@ -139,9 +145,20 @@ const AdminOrderDetail = () => {
         });
       } catch (emailError) {
         console.error('Error sending status update email:', emailError);
+        // Don't fail the status update if email fails
+        toast({
+          title: "Status Updated",
+          description: "Order status updated but email notification failed to send.",
+          variant: "destructive"
+        });
       }
 
+      // Update local state and refresh from database to ensure consistency
       setOrder({ ...order, status: newStatus });
+      
+      // Refresh order data to ensure persistence
+      await fetchOrder();
+      
       toast({
         title: "Order Updated",
         description: `Order status changed to ${newStatus}. Customer has been notified.`

@@ -71,12 +71,12 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
       <section id="products" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Our <span className="text-brand-beige">Collection</span>
+              Loading Our <span className="text-brand-beige">Collection</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Discover our premium streetwear pieces, crafted with attention to detail 
-              and designed for comfort and style.
+              Please wait while we load our premium streetwear pieces...
             </p>
           </div>
 

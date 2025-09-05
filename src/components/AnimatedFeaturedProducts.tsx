@@ -38,9 +38,12 @@ const AnimatedFeaturedProducts = () => {
     return (
       <section className="py-16 bg-gradient-to-b from-background to-muted/30">
         <div className="container mx-auto px-4">
-          <div className="h-96 bg-muted rounded-lg animate-pulse flex items-center justify-center">
-            <span className="text-muted-foreground">Loading featured products...</span>
+          <div className="text-center mb-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <h2 className="text-3xl font-bold">Loading Featured Products...</h2>
+            <p className="text-muted-foreground mt-2">Please wait while we load our featured collection</p>
           </div>
+          <div className="h-96 bg-muted rounded-lg animate-pulse"></div>
         </div>
       </section>
     );

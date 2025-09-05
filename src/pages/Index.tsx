@@ -29,7 +29,8 @@ const Index = () => {
     isCartOpen,
     openCart,
     closeCart,
-    totalItems
+    totalItems,
+    isLoading: cartLoading
   } = useGlobalCart();
 
   useEffect(() => {
@@ -90,6 +91,7 @@ const Index = () => {
         onUpdateQuantity={updateQuantity}
         onRemoveItem={removeItem}
         onClearCart={clearCart}
+        isLoading={cartLoading}
       />
     </div>
   );

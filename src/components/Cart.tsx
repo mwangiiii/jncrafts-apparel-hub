@@ -39,9 +39,10 @@ interface CartProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveItem: (id: string) => void;
   onClearCart: () => void;
+  isLoading?: boolean;
 }
 
-const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onClearCart }: CartProps) => {
+const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onClearCart, isLoading = false }: CartProps) => {
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
     email: "",
@@ -407,8 +408,19 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
               </div>
             )}
             
-            <div className="space-y-4">
-              {items.map((item) => (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading cart items...</p>
+              </div>
+            ) : items.length === 0 ? (
+              <div className="text-center py-12">
+                <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Your cart is empty</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {items.map((item) => (
                 <div key={item.id} className="flex items-center gap-4 border-b pb-4">
                   <a 
                     href={`/product/${item.product_id}`}
@@ -468,17 +480,11 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
-            </div>
-
-            {items.length === 0 && (
-              <div className="text-center py-12">
-                <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Your cart is empty</p>
+                ))}
               </div>
             )}
 
-            {items.length > 0 && (
+            {!isLoading && items.length > 0 && (
               <>
                 {/* Discount applied by manager will show here */}
                 {appliedDiscount && (
