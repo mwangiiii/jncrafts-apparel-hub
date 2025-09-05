@@ -49,7 +49,9 @@ const AdminProducts = () => {
     sizes: [] as string[],
     colors: [] as string[],
     stock_quantity: '',
-    is_active: true
+    is_active: true,
+    show_jacket_size_chart: false,
+    show_pants_size_chart: false
   });
 
   const [categories, setCategories] = useState<string[]>([]);
@@ -120,7 +122,9 @@ const AdminProducts = () => {
       sizes: [],
       colors: [],
       stock_quantity: '',
-      is_active: true
+      is_active: true,
+      show_jacket_size_chart: false,
+      show_pants_size_chart: false
     });
     setEditingProduct(null);
   };
@@ -148,7 +152,9 @@ const AdminProducts = () => {
       sizes: convertToStringArray(product.sizes || []),
       colors: convertToStringArray(product.colors || []),
       stock_quantity: product.stock_quantity.toString(),
-      is_active: product.is_active
+      is_active: product.is_active,
+      show_jacket_size_chart: (product as any).show_jacket_size_chart || false,
+      show_pants_size_chart: (product as any).show_pants_size_chart || false
     });
     setIsDialogOpen(true);
   };
@@ -168,7 +174,9 @@ const AdminProducts = () => {
         sizes: formData.sizes,
         colors: formData.colors,
         stock_quantity: parseInt(formData.stock_quantity),
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        show_jacket_size_chart: formData.show_jacket_size_chart,
+        show_pants_size_chart: formData.show_pants_size_chart
       };
 
       if (editingProduct) {
@@ -550,7 +558,7 @@ const AdminProducts = () => {
                     </div>
                   </div>
 
-                  {/* Colors */}
+                   {/* Colors */}
                   <div>
                     <Label>Available Colors</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -564,6 +572,39 @@ const AdminProducts = () => {
                           {color}
                         </Badge>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Size Charts */}
+                  <div>
+                    <Label className="text-base font-semibold">Size Charts</Label>
+                    <div className="space-y-3 mt-3">
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id="jacket-chart"
+                            checked={formData.show_jacket_size_chart}
+                            onChange={(e) => setFormData(prev => ({ ...prev, show_jacket_size_chart: e.target.checked }))}
+                            className="h-4 w-4 text-primary"
+                          />
+                          <Label htmlFor="jacket-chart" className="text-sm font-medium">Show Jacket Size Chart</Label>
+                        </div>
+                        <span className="text-xs text-muted-foreground">For jacket products</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id="pants-chart"
+                            checked={formData.show_pants_size_chart}
+                            onChange={(e) => setFormData(prev => ({ ...prev, show_pants_size_chart: e.target.checked }))}
+                            className="h-4 w-4 text-primary"
+                          />
+                          <Label htmlFor="pants-chart" className="text-sm font-medium">Show Pants Size Chart</Label>
+                        </div>
+                        <span className="text-xs text-muted-foreground">For pants/trouser products</span>
+                      </div>
                     </div>
                   </div>
 

@@ -14,6 +14,8 @@ interface ProductFormData {
   colors: string[];
   stock_quantity: number;
   is_active: boolean;
+  show_jacket_size_chart?: boolean;
+  show_pants_size_chart?: boolean;
 }
 
 interface CreateProductParams {
@@ -45,7 +47,9 @@ export const useCompleteProductManagement = () => {
             stock_quantity: productData.stock_quantity,
             is_active: productData.is_active,
             new_arrival_date: null, // Can be set later if needed
-            thumbnail_index: productData.thumbnailIndex || 0
+            thumbnail_index: productData.thumbnailIndex || 0,
+            show_jacket_size_chart: productData.show_jacket_size_chart || false,
+            show_pants_size_chart: productData.show_pants_size_chart || false
           })
           .select()
           .single();
@@ -242,7 +246,9 @@ export const useCompleteProductManagement = () => {
             category: productData.category,
             stock_quantity: productData.stock_quantity,
             is_active: productData.is_active,
-            thumbnail_index: productData.thumbnailIndex || 0
+            thumbnail_index: productData.thumbnailIndex || 0,
+            show_jacket_size_chart: productData.show_jacket_size_chart || false,
+            show_pants_size_chart: productData.show_pants_size_chart || false
           })
           .eq('id', productId);
 
