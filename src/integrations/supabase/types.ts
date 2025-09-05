@@ -877,8 +877,6 @@ export type Database = {
           name: string
           new_arrival_date: string | null
           price: number
-          show_jacket_size_chart: boolean | null
-          show_pants_size_chart: boolean | null
           stock_quantity: number | null
           thumbnail_index: number | null
           updated_at: string
@@ -892,8 +890,6 @@ export type Database = {
           name: string
           new_arrival_date?: string | null
           price: number
-          show_jacket_size_chart?: boolean | null
-          show_pants_size_chart?: boolean | null
           stock_quantity?: number | null
           thumbnail_index?: number | null
           updated_at?: string
@@ -907,8 +903,6 @@ export type Database = {
           name?: string
           new_arrival_date?: string | null
           price?: number
-          show_jacket_size_chart?: boolean | null
-          show_pants_size_chart?: boolean | null
           stock_quantity?: number | null
           thumbnail_index?: number | null
           updated_at?: string

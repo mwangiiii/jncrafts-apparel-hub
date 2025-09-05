@@ -17,7 +17,6 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
 import BackButton from '@/components/BackButton';
 import Cart from '@/components/Cart';
-import SizeChartDisplay from '@/components/SizeChartDisplay';
 
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import ProductVideoPlayer from '@/components/admin/ProductVideoPlayer';
@@ -81,8 +80,6 @@ const ProductDetail = () => {
         thumbnail_index: productData.thumbnail_index,
         created_at: productData.created_at,
         updated_at: productData.updated_at,
-        show_jacket_size_chart: (productData as any).show_jacket_size_chart || false,
-        show_pants_size_chart: (productData as any).show_pants_size_chart || false,
         images: Array.isArray(productData.images) 
           ? productData.images.map((img: any) => ({
               id: img.id || 'temp',
@@ -485,13 +482,6 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
-
-        {/* Size Charts */}
-        <SizeChartDisplay 
-          showJacketChart={(product as any).show_jacket_size_chart}
-          showPantsChart={(product as any).show_pants_size_chart}
-          className="mt-8"
-        />
 
         {/* Product Videos */}
         {product.videos && product.videos.length > 0 && (
