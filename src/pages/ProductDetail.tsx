@@ -173,8 +173,12 @@ const ProductDetail = () => {
     if (!email || !product) return;
 
     try {
-      // Create stock alert directly - works for both authenticated and anonymous users
-      const emailHash = btoa(email.toLowerCase().trim()); // Simple base64 encoding
+      // Create stock alert - generate proper SHA-256 hash for email
+      const encoder = new TextEncoder();
+      const data = encoder.encode(email.toLowerCase().trim());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const emailHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       
       const { error } = await supabase
         .from('stock_alerts')
