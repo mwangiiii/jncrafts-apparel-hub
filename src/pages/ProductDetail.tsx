@@ -172,6 +172,16 @@ const ProductDetail = () => {
   const handleStockAlert = async () => {
     if (!email || !product) return;
 
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to set stock alerts",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       // Create stock alert directly to avoid RPC issues
       // Use a simple hash of the email for now
@@ -180,7 +190,7 @@ const ProductDetail = () => {
       const { error } = await supabase
         .from('stock_alerts')
         .insert({
-          user_id: user?.id || null,
+          user_id: user.id,
           product_id: product.id,
           email_hash: emailHash
         });
