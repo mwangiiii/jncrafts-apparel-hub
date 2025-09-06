@@ -172,25 +172,14 @@ const ProductDetail = () => {
   const handleStockAlert = async () => {
     if (!email || !product) return;
 
-    // Check if user is authenticated
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to set stock alerts",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      // Create stock alert directly to avoid RPC issues
-      // Use a simple hash of the email for now
+      // Create stock alert directly - works for both authenticated and anonymous users
       const emailHash = btoa(email.toLowerCase().trim()); // Simple base64 encoding
       
       const { error } = await supabase
         .from('stock_alerts')
         .insert({
-          user_id: user.id,
+          user_id: user?.id || null, // Can be null for anonymous users
           product_id: product.id,
           email_hash: emailHash
         });
@@ -442,19 +431,6 @@ const ProductDetail = () => {
               </Button>
 
               <div className="flex gap-2">
-                {user && (
-                  <Button
-                    variant="outline"
-                    onClick={handleWishlistToggle}
-                    className="flex-1"
-                  >
-                    <Heart 
-                      className={`h-4 w-4 mr-2 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
-                    />
-                    {isInWishlist(product.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                  </Button>
-                )}
-
                 {product.stock_quantity === 0 && (
                   <Dialog open={isStockAlertDialogOpen} onOpenChange={setIsStockAlertDialogOpen}>
                     <DialogTrigger asChild>
