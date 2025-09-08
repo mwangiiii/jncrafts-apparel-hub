@@ -569,7 +569,47 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_with_status"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      order_status: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       orders: {
         Row: {
@@ -582,6 +622,7 @@ export type Database = {
           order_number: string
           shipping_address: Json
           status: string
+          status_id: string
           total_amount: number
           transaction_code: string | null
           updated_at: string
@@ -597,6 +638,7 @@ export type Database = {
           order_number: string
           shipping_address: Json
           status?: string
+          status_id: string
           total_amount: number
           transaction_code?: string | null
           updated_at?: string
@@ -612,12 +654,21 @@ export type Database = {
           order_number?: string
           shipping_address?: Json
           status?: string
+          status_id?: string
           total_amount?: number
           transaction_code?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_orders_status_id"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "order_status"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_colors: {
         Row: {
@@ -1206,6 +1257,36 @@ export type Database = {
         }
         Relationships: []
       }
+      orders_with_status: {
+        Row: {
+          created_at: string | null
+          customer_info: Json | null
+          delivery_details: Json | null
+          discount_amount: number | null
+          discount_code: string | null
+          id: string | null
+          order_number: string | null
+          shipping_address: Json | null
+          status: string | null
+          status_description: string | null
+          status_display_name: string | null
+          status_id: string | null
+          status_name: string | null
+          total_amount: number | null
+          transaction_code: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_orders_status_id"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "order_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles_secure: {
         Row: {
           address: string | null
@@ -1354,6 +1435,15 @@ export type Database = {
           price: number
           stock_quantity: number
           thumbnail_image: string
+        }[]
+      }
+      get_valid_status_transitions: {
+        Args: { current_status_name: string }
+        Returns: {
+          description: string
+          display_name: string
+          id: string
+          name: string
         }[]
       }
       hash_email: {
