@@ -25,11 +25,11 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
           throw error;
         }
 
-        if (!data || data.length === 0) {
+        if (!data || typeof data !== 'object') {
           return null;
         }
 
-        const productData = data[0];
+        const productData = data as any;
         
         // Transform the response to match our Product interface
         return {

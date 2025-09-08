@@ -46,7 +46,10 @@ import {
 interface Order {
   id: string;
   order_number: string;
-  status: string;
+  status: string; // Legacy field for backward compatibility
+  status_id: string;
+  status_name: string;
+  status_display_name: string;
   total_amount: number;
   discount_amount: number;
   discount_code: string | null;
@@ -58,6 +61,13 @@ interface Order {
   order_items: any[];
 }
 
+interface OrderStatus {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string;
+}
+
 const AdminOrderDetail = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -65,6 +75,7 @@ const AdminOrderDetail = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [availableStatuses, setAvailableStatuses] = useState<OrderStatus[]>([]);
   const [processingDocument, setProcessingDocument] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -74,11 +85,17 @@ const AdminOrderDetail = () => {
     }
   }, [orderId, isAdmin]);
 
+  useEffect(() => {
+    if (order?.status_name) {
+      fetchAvailableStatuses(order.status_name);
+    }
+  }, [order?.status_name]);
+
   const fetchOrder = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('orders')
+        .from('orders_with_status')
         .select(`
           *,
           order_items (*)
@@ -89,7 +106,7 @@ const AdminOrderDetail = () => {
       if (error) throw error;
       
       console.log('Fetched order data:', data); // Debug log
-      setOrder(data);
+      setOrder(data as Order);
     } catch (error) {
       console.error('Error fetching order:', error);
       toast({
@@ -103,7 +120,19 @@ const AdminOrderDetail = () => {
     }
   };
 
-  const updateOrderStatus = async (newStatus: string) => {
+  const fetchAvailableStatuses = async (currentStatusName: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_valid_status_transitions', { current_status_name: currentStatusName });
+
+      if (error) throw error;
+      setAvailableStatuses(data || []);
+    } catch (error) {
+      console.error('Error fetching available statuses:', error);
+    }
+  };
+
+  const updateOrderStatus = async (newStatusId: string) => {
     if (!order) return;
     
     setUpdatingStatus(true);
@@ -111,12 +140,19 @@ const AdminOrderDetail = () => {
       const { error } = await supabase
         .from('orders')
         .update({ 
-          status: newStatus,
+          status_id: newStatusId,
           updated_at: new Date().toISOString() 
         })
         .eq('id', order.id);
 
       if (error) throw error;
+
+      // Get the new status name for email notification
+      const { data: newStatus } = await supabase
+        .from('order_status')
+        .select('name, display_name')
+        .eq('id', newStatusId)
+        .single();
 
       // Send status update email
       try {
@@ -126,7 +162,7 @@ const AdminOrderDetail = () => {
             adminEmail: "craftsjn@gmail.com",
             orderNumber: order.order_number,
             customerName: order.customer_info.fullName,
-            orderStatus: newStatus,
+            orderStatus: newStatus?.name || 'unknown',
             items: order.order_items.map((item: any) => ({
               product_name: item.product_name,
               quantity: item.quantity,
@@ -153,15 +189,12 @@ const AdminOrderDetail = () => {
         });
       }
 
-      // Update local state and refresh from database to ensure consistency
-      setOrder({ ...order, status: newStatus });
-      
       // Refresh order data to ensure persistence
       await fetchOrder();
       
       toast({
         title: "Order Updated",
-        description: `Order status changed to ${newStatus}. Customer has been notified.`
+        description: `Order status changed to ${newStatus?.display_name || 'new status'}. Customer has been notified.`
       });
     } catch (error) {
       console.error('Error updating order:', error);
@@ -175,29 +208,22 @@ const AdminOrderDetail = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (statusName: string) => {
+    switch (statusName) {
       case 'pending': return 'bg-amber-500';
       case 'confirmed': return 'bg-blue-500';
       case 'processing': return 'bg-orange-500';
+      case 'packed': return 'bg-indigo-500';
       case 'shipped': return 'bg-purple-500';
+      case 'out_for_delivery': return 'bg-cyan-500';
       case 'delivered': return 'bg-emerald-500';
       case 'cancelled': return 'bg-red-500';
+      case 'refunded': return 'bg-gray-500';
+      case 'failed': return 'bg-red-600';
       default: return 'bg-gray-500';
     }
   };
 
-  const getAvailableStatusOptions = (currentStatus: string) => {
-    const statusFlow = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['processing', 'cancelled'],
-      processing: ['shipped', 'cancelled'],
-      shipped: ['delivered'],
-      delivered: [],
-      cancelled: ['pending'] // Can revive cancelled orders
-    };
-    return statusFlow[currentStatus] || [];
-  };
 
   const handlePrintInvoice = async () => {
     if (!order || !user?.id) return;
@@ -331,8 +357,8 @@ const AdminOrderDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge className={`${getStatusColor(order.status)} text-white px-4 py-2`}>
-              {order.status.toUpperCase()}
+            <Badge className={`${getStatusColor(order.status_name)} text-white px-4 py-2`}>
+              {order.status_display_name.toUpperCase()}
             </Badge>
             <div className="flex items-center gap-2">
               <Button 
@@ -571,12 +597,12 @@ const AdminOrderDetail = () => {
                   <span>Payment Method:</span>
                   <span className="font-medium">Cash on Delivery</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Payment Status:</span>
-                  <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>
-                    {order.status === 'delivered' ? 'Paid' : 'Pending'}
-                  </Badge>
-                </div>
+                 <div className="flex justify-between">
+                   <span>Payment Status:</span>
+                   <Badge variant={order.status_name === 'delivered' ? 'default' : 'secondary'}>
+                     {order.status_name === 'delivered' ? 'Paid' : 'Pending'}
+                   </Badge>
+                 </div>
               </div>
               
               <hr />
@@ -609,26 +635,28 @@ const AdminOrderDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Update Status:</label>
-                <Select
-                  value={order.status}
-                  onValueChange={updateOrderStatus}
-                  disabled={updatingStatus}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={order.status}>{order.status.toUpperCase()}</SelectItem>
-                    {getAvailableStatusOptions(order.status).map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status.toUpperCase()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+               <div>
+                 <label className="text-sm font-medium mb-2 block">Update Status:</label>
+                 <Select
+                   value={order.status_id}
+                   onValueChange={updateOrderStatus}
+                   disabled={updatingStatus}
+                 >
+                   <SelectTrigger>
+                     <SelectValue>{order.status_display_name}</SelectValue>
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value={order.status_id} disabled>
+                       {order.status_display_name} (Current)
+                     </SelectItem>
+                     {availableStatuses.map((status) => (
+                       <SelectItem key={status.id} value={status.id}>
+                         {status.display_name}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
 
               <div className="space-y-2">
                 <Button 

@@ -25,7 +25,10 @@ import AdminHeader from '@/components/AdminHeader';
 interface Order {
   id: string;
   order_number: string;
-  status: string;
+  status: string; // Legacy field for backward compatibility
+  status_id: string;
+  status_name: string;
+  status_display_name: string;
   total_amount: number;
   discount_amount: number;
   discount_code: string | null;
@@ -179,7 +182,7 @@ const AdminDashboard = () => {
   const fetchOrders = async () => {
     try {
       const { data, error } = await supabase
-        .from('orders')
+        .from('orders_with_status')
         .select(`
           *,
           order_items (*)
@@ -204,8 +207,8 @@ const AdminDashboard = () => {
     try {
       // Total orders and revenue
       const { data: ordersData } = await supabase
-        .from('orders')
-        .select('total_amount, status');
+        .from('orders_with_status')
+        .select('total_amount, status_name');
 
       // Total customers
       const { data: customersData } = await supabase
@@ -215,7 +218,7 @@ const AdminDashboard = () => {
       if (ordersData) {
         const totalOrders = ordersData.length;
         const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total_amount), 0);
-        const pendingOrders = ordersData.filter(order => order.status === 'pending').length;
+        const pendingOrders = ordersData.filter(order => order.status_name === 'pending').length;
         const totalCustomers = customersData?.length || 0;
 
         setStats({ totalOrders, totalRevenue, pendingOrders, totalCustomers });
@@ -227,15 +230,29 @@ const AdminDashboard = () => {
 
   const reviveOrder = async (orderId: string) => {
     try {
+      // Get the "pending" status ID for revive functionality
+      const { data: pendingStatus } = await supabase
+        .from('order_status')
+        .select('id')
+        .eq('name', 'pending')
+        .single();
+
+      if (!pendingStatus) throw new Error('Pending status not found');
+
       const { error } = await supabase
         .from('orders')
-        .update({ status: 'pending' })
+        .update({ status_id: pendingStatus.id })
         .eq('id', orderId);
 
       if (error) throw error;
 
       setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: 'pending' } : order
+        order.id === orderId ? { 
+          ...order, 
+          status_id: pendingStatus.id,
+          status_name: 'pending',
+          status_display_name: 'Pending' 
+        } : order
       ));
 
       toast({
@@ -254,18 +271,25 @@ const AdminDashboard = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const updateOrderStatus = async (orderId: string, newStatusId: string) => {
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update({ status_id: newStatusId })
         .eq('id', orderId);
 
       if (error) throw error;
 
+      // Get the new status details
+      const { data: newStatus } = await supabase
+        .from('order_status')
+        .select('name, display_name')
+        .eq('id', newStatusId)
+        .single();
+
       // Find the order to get customer details for email
       const order = orders.find(o => o.id === orderId);
-      if (order) {
+      if (order && newStatus) {
         // Send status update email
         try {
           await supabase.functions.invoke('send-order-status-update', {
