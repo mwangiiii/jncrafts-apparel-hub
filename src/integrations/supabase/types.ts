@@ -569,13 +569,6 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "order_items_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders_with_status"
-            referencedColumns: ["id"]
-          },
         ]
       }
       order_status: {
@@ -1256,36 +1249,6 @@ export type Database = {
           thumbnail_image: string | null
         }
         Relationships: []
-      }
-      orders_with_status: {
-        Row: {
-          created_at: string | null
-          customer_info: Json | null
-          delivery_details: Json | null
-          discount_amount: number | null
-          discount_code: string | null
-          id: string | null
-          order_number: string | null
-          shipping_address: Json | null
-          status: string | null
-          status_description: string | null
-          status_display_name: string | null
-          status_id: string | null
-          status_name: string | null
-          total_amount: number | null
-          transaction_code: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_orders_status_id"
-            columns: ["status_id"]
-            isOneToOne: false
-            referencedRelation: "order_status"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       profiles_secure: {
         Row: {

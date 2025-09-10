@@ -46,10 +46,7 @@ import {
 interface Order {
   id: string;
   order_number: string;
-  status: string; // Legacy field for backward compatibility
   status_id: string;
-  status_name: string;
-  status_display_name: string;
   total_amount: number;
   discount_amount: number;
   discount_code: string | null;
@@ -59,13 +56,18 @@ interface Order {
   created_at: string;
   transaction_code?: string | null;
   order_items: any[];
+  order_status?: {
+    id: string;
+    name: string;
+    display_name: string;
+  };
 }
 
 interface OrderStatus {
   id: string;
   name: string;
   display_name: string;
-  description: string;
+  description?: string;
 }
 
 const AdminOrderDetail = () => {
@@ -82,41 +84,71 @@ const AdminOrderDetail = () => {
   useEffect(() => {
     if (orderId && isAdmin) {
       fetchOrder();
+      fetchStatusOptions();
     }
   }, [orderId, isAdmin]);
-
-  useEffect(() => {
-    if (order?.status_name) {
-      fetchAvailableStatuses(order.status_name);
-    }
-  }, [order?.status_name]);
 
   const fetchOrder = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('orders_with_status')
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
         .select(`
           *,
-          order_items (*)
+          order_status:status_id (
+            id,
+            name,
+            display_name
+          )
         `)
         .eq('id', orderId)
         .single();
 
-      if (error) throw error;
-      
-      console.log('Fetched order data:', data); // Debug log
-      setOrder(data as Order);
+      if (orderError) {
+        console.error('Error fetching order:', orderError);
+        throw orderError;
+      }
+
+      // Fetch order items
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+
+      if (itemsError) {
+        console.error('Error fetching order items:', itemsError);
+        throw itemsError;
+      }
+
+      setOrder({ ...orderData, order_items: itemsData || [] });
     } catch (error) {
-      console.error('Error fetching order:', error);
+      console.error('Failed to fetch order:', error);
       toast({
-        variant: "destructive",
         title: "Error",
-        description: "Failed to fetch order details"
+        description: "Failed to fetch order details",
+        variant: "destructive",
       });
       navigate('/admin');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStatusOptions = async () => {
+    try {
+      const { data: statusData, error: statusError } = await supabase
+        .from('order_status')
+        .select('id, name, display_name')
+        .eq('is_active', true)
+        .order('display_order');
+
+      if (statusError) {
+        throw statusError;
+      }
+
+      setAvailableStatuses(statusData || []);
+    } catch (error) {
+      console.error('Failed to fetch status options:', error);
     }
   };
 
