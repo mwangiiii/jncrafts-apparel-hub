@@ -44,27 +44,32 @@ const AdminCategories = () => {
   const { user, isAdmin } = useAuth();
 
   useEffect(() => {
-    if (user && isAdmin) {
-      fetchCategories();
-    } else {
-      setLoading(false);
-    }
+    fetchCategories();
   }, [user, isAdmin]);
 
   const fetchCategories = async () => {
     try {
       console.log('🔍 FETCHING CATEGORIES - ADMIN CHECK:', { user: !!user, isAdmin });
-      
-      if (!user || !isAdmin) {
-        console.log('⚠️ User not authenticated or not admin');
-        setCategories([]);
-        return;
-      }
 
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("display_order", { ascending: true });
+      let data: any[] | null = null;
+      let error: any = null;
+
+      if (user && isAdmin) {
+        const resp = await supabase
+          .from("categories")
+          .select("*")
+          .order("display_order", { ascending: true });
+        data = resp.data;
+        error = resp.error;
+      } else {
+        const resp = await supabase
+          .from("categories")
+          .select("id, name, description, display_order, is_active, created_at, updated_at")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
+        data = resp.data;
+        error = resp.error;
+      }
 
       if (error) {
         console.error('❌ CATEGORY FETCH ERROR:', error);
@@ -72,8 +77,8 @@ const AdminCategories = () => {
       }
       
       console.log('✅ CATEGORIES FETCHED SUCCESSFULLY:', data?.length || 0);
-      setCategories(data || []);
-    } catch (error) {
+      setCategories((data as any[]) || []);
+    } catch (error: any) {
       console.error("🚨 Error fetching categories:", error);
       toast({
         title: "Error",
@@ -209,19 +214,6 @@ const AdminCategories = () => {
     );
   }
 
-  if (!user || !isAdmin) {
-    return (
-      <div className="min-h-screen bg-background">
-        <AdminHeader />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-muted-foreground mb-4">You need to be logged in as an admin to access this page.</p>
-            <Button onClick={() => window.location.href = '/auth'}>Go to Login</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
