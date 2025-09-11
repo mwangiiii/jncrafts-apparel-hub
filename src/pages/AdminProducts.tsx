@@ -73,15 +73,17 @@ const AdminProducts = () => {
 
   const fetchCategories = async () => {
     try {
-      console.log('🔒 ADMIN-ONLY CATEGORY FETCH - ROLE-BASED ISOLATION');
-      // STRICT: Only category data for product management - NO USER DATA
+      console.log('🔒 ADMIN-ONLY CATEGORY FETCH - FORCE CORRECT RLS');
       const { data, error } = await supabase
         .from('categories')
-        .select('name, is_active')
+        .select('id, name, description, display_order, is_active')
         .eq('is_active', true)
         .order('display_order', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ CATEGORY FETCH ERROR:', error);
+        throw error;
+      }
       
       const categoryNames = data?.map(cat => cat.name) || [];
       setCategories(categoryNames);
@@ -89,6 +91,7 @@ const AdminProducts = () => {
       console.log('✅ ADMIN CATEGORIES FETCHED:', categoryNames.length, 'categories:', categoryNames);
       
       if (categoryNames.length === 0) {
+        console.warn('⚠️ NO CATEGORIES FOUND IN DATABASE');
         toast({
           title: "No Categories Found",
           description: "Please add categories in the categories management section first.",
@@ -98,11 +101,11 @@ const AdminProducts = () => {
     } catch (error) {
       console.error('🚨 ADMIN CATEGORY FETCH FAILED:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch categories from database",
+        title: "Category Fetch Error",
+        description: `Database error: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
-      // Fallback to basic categories if database fetch fails
+      // Force fallback to ensure form still works
       setCategories(['Custom tees', 'Croptops', 'Tote bag', 'Signature tracksuit', 'Debut Tracksuit']);
     }
   };
@@ -526,19 +529,19 @@ const AdminProducts = () => {
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder={categories.length > 0 ? "Select category" : "Loading categories..."} />
                         </SelectTrigger>
-                        <SelectContent className="bg-background border">
-                          {categories.length > 0 ? (
-                            categories.map(cat => (
-                              <SelectItem key={cat} value={cat} className="hover:bg-muted">
-                                {cat}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="" disabled className="text-muted-foreground">
-                              No categories available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
+                         <SelectContent className="bg-background border border-input shadow-lg z-[100]">
+                           {categories.length > 0 ? (
+                             categories.map(cat => (
+                               <SelectItem key={cat} value={cat} className="hover:bg-accent">
+                                 {cat}
+                               </SelectItem>
+                             ))
+                           ) : (
+                             <SelectItem value="" disabled className="text-muted-foreground">
+                               No categories available - Add categories first
+                             </SelectItem>
+                           )}
+                         </SelectContent>
                       </Select>
                       {categories.length === 0 && (
                         <p className="text-xs text-muted-foreground mt-1">

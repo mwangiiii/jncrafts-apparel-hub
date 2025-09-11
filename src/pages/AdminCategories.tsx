@@ -45,20 +45,31 @@ const AdminCategories = () => {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    // Force refresh categories on mount to ensure fresh data
+    fetchCategories();
+  }, []);
+
   const fetchCategories = async () => {
     try {
+      console.log('🔍 FETCHING CATEGORIES WITH IMPROVED RLS');
       const { data, error } = await supabase
         .from("categories")
         .select("*")
         .order("display_order", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ CATEGORY FETCH ERROR:', error);
+        throw error;
+      }
+      
+      console.log('✅ CATEGORIES FETCHED SUCCESSFULLY:', data?.length || 0);
       setCategories(data || []);
     } catch (error) {
-      console.error("Error fetching categories:", error);
+      console.error("🚨 Error fetching categories:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch categories",
+        description: `Failed to fetch categories: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
