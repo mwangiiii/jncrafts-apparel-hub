@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AdminHeader from "@/components/AdminHeader";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Category {
   id: string;
@@ -40,19 +41,26 @@ const AdminCategories = () => {
     is_active: true,
   });
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    // Force refresh categories on mount to ensure fresh data
-    fetchCategories();
-  }, []);
+    if (user && isAdmin) {
+      fetchCategories();
+    } else {
+      setLoading(false);
+    }
+  }, [user, isAdmin]);
 
   const fetchCategories = async () => {
     try {
-      console.log('🔍 FETCHING CATEGORIES WITH IMPROVED RLS');
+      console.log('🔍 FETCHING CATEGORIES - ADMIN CHECK:', { user: !!user, isAdmin });
+      
+      if (!user || !isAdmin) {
+        console.log('⚠️ User not authenticated or not admin');
+        setCategories([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("categories")
         .select("*")
@@ -196,6 +204,20 @@ const AdminCategories = () => {
         <AdminHeader />
         <div className="flex items-center justify-center h-64">
           <div className="text-center">Loading categories...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AdminHeader />
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">You need to be logged in as an admin to access this page.</p>
+            <Button onClick={() => window.location.href = '/auth'}>Go to Login</Button>
+          </div>
         </div>
       </div>
     );
