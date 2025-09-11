@@ -571,6 +571,39 @@ export type Database = {
           },
         ]
       }
+      order_status: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
@@ -582,6 +615,7 @@ export type Database = {
           order_number: string
           shipping_address: Json
           status: string
+          status_id: string
           total_amount: number
           transaction_code: string | null
           updated_at: string
@@ -597,6 +631,7 @@ export type Database = {
           order_number: string
           shipping_address: Json
           status?: string
+          status_id: string
           total_amount: number
           transaction_code?: string | null
           updated_at?: string
@@ -612,12 +647,21 @@ export type Database = {
           order_number?: string
           shipping_address?: Json
           status?: string
+          status_id?: string
           total_amount?: number
           transaction_code?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_orders_status_id"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "order_status"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_colors: {
         Row: {
@@ -1306,22 +1350,7 @@ export type Database = {
       }
       get_product_complete: {
         Args: { p_product_id: string }
-        Returns: {
-          category: string
-          colors: Json
-          created_at: string
-          description: string
-          id: string
-          images: Json
-          is_active: boolean
-          name: string
-          new_arrival_date: string
-          price: number
-          sizes: Json
-          stock_quantity: number
-          thumbnail_index: number
-          updated_at: string
-        }[]
+        Returns: Json
       }
       get_products_lightweight: {
         Args: {
@@ -1369,6 +1398,15 @@ export type Database = {
           price: number
           stock_quantity: number
           thumbnail_image: string
+        }[]
+      }
+      get_valid_status_transitions: {
+        Args: { current_status_name: string }
+        Returns: {
+          description: string
+          display_name: string
+          id: string
+          name: string
         }[]
       }
       hash_email: {

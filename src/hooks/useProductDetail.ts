@@ -7,62 +7,79 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
   return useQuery({
     queryKey: ['product', 'detail', productId],
     queryFn: async (): Promise<Product | null> => {
-      const { data, error } = await supabase
-        .rpc('get_product_complete', { p_product_id: productId });
-
-      if (error) {
-        console.error('Error fetching product detail:', error);
-        throw error;
-      }
-
-      if (!data || data.length === 0) {
-        return null;
-      }
-
-      const productData = data[0];
+      // Create an AbortController for timeout
+      const controller = new AbortController();
       
-      // Transform the response to match our Product interface
-      return {
-        id: productData.id,
-        name: productData.name,
-        price: productData.price,
-        description: productData.description,
-        category: productData.category,
-        stock_quantity: productData.stock_quantity,
-        is_active: productData.is_active,
-        new_arrival_date: productData.new_arrival_date,
-        thumbnail_index: productData.thumbnail_index,
-        created_at: productData.created_at,
-        updated_at: productData.updated_at,
-        images: Array.isArray(productData.images) 
-          ? productData.images.map((img: any) => ({
-              id: img.id || 'temp',
-              image_url: img.url || img.image_url || img,
-              is_primary: img.is_primary || false,
-              display_order: img.order || img.display_order || 0,
-              product_id: productId,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }))
-          : [],
-        colors: Array.isArray(productData.colors) 
-          ? productData.colors.map((color: any) => ({
-              id: color.id,
-              name: color.name,
-              hex: color.hex || color.hex_code,
-              available: color.available !== false
-            }))
-          : [],
-        sizes: Array.isArray(productData.sizes) 
-          ? productData.sizes.map((size: any) => ({
-              id: size.id,
-              name: size.name,
-              category: size.category,
-              available: size.available !== false
-            }))
-          : [],
-        videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
-      };
+      // Set 7-second timeout (less than server timeout of 8s)
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      
+      try {
+        const { data, error } = await supabase
+          .rpc('get_product_complete', { p_product_id: productId })
+          .abortSignal(controller.signal);
+
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('Error fetching product detail:', error);
+          throw error;
+        }
+
+        if (!data || typeof data !== 'object') {
+          return null;
+        }
+
+        const productData = data as any;
+        
+        // Transform the response to match our Product interface
+        return {
+          id: productData.id,
+          name: productData.name,
+          price: productData.price,
+          description: productData.description,
+          category: productData.category,
+          stock_quantity: productData.stock_quantity,
+          is_active: productData.is_active,
+          new_arrival_date: productData.new_arrival_date,
+          thumbnail_index: productData.thumbnail_index,
+          created_at: productData.created_at,
+          updated_at: productData.updated_at,
+          images: Array.isArray(productData.images) 
+            ? productData.images.map((img: any) => ({
+                id: img.id || 'temp',
+                image_url: img.url || img.image_url || img,
+                is_primary: img.is_primary || false,
+                display_order: img.order || img.display_order || 0,
+                product_id: productId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }))
+            : [],
+          colors: Array.isArray(productData.colors) 
+            ? productData.colors.map((color: any) => ({
+                id: color.id,
+                name: color.name,
+                hex: color.hex || color.hex_code,
+                available: color.available !== false
+              }))
+            : [],
+          sizes: Array.isArray(productData.sizes) 
+            ? productData.sizes.map((size: any) => ({
+                id: size.id,
+                name: size.name,
+                category: size.category,
+                available: size.available !== false
+              }))
+            : [],
+          videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
+        };
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('Request timed out - please try again');
+        }
+        throw err;
+      }
     },
     enabled: enabled && !!productId,
     staleTime: 5 * 60 * 1000, // 5 minutes

@@ -44,11 +44,11 @@ export const useWishlist = () => {
             return { ...item, product: null };
           }
 
-          if (!productData || productData.length === 0) {
+          if (!productData || typeof productData !== 'object') {
             return { ...item, product: null };
           }
 
-          const product = productData[0];
+          const product = productData as any;
           // Transform the product data to match expected format
           const transformedProduct = {
             id: product.id,

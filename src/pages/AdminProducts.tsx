@@ -53,7 +53,7 @@ const AdminProducts = () => {
   });
 
   const [categories, setCategories] = useState<string[]>([]);
-  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '4XL', '5XL'];
+  const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
   const availableColors = ['Black', 'White', 'Grey', 'Red', 'Jungle Green', 'Baby Pink', 'Beige'];
 
   useEffect(() => {
@@ -77,21 +77,33 @@ const AdminProducts = () => {
       // STRICT: Only category data for product management - NO USER DATA
       const { data, error } = await supabase
         .from('categories')
-        .select('name')
+        .select('name, is_active')
         .eq('is_active', true)
-        .order('display_order', { ascending: true })
-        .limit(50); // Efficiency limit for admin operations
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
-      setCategories(data?.map(cat => cat.name) || []);
-      console.log('✅ ADMIN CATEGORIES FETCHED:', data?.length || 0, 'categories (NO USER DATA)');
+      
+      const categoryNames = data?.map(cat => cat.name) || [];
+      setCategories(categoryNames);
+      
+      console.log('✅ ADMIN CATEGORIES FETCHED:', categoryNames.length, 'categories:', categoryNames);
+      
+      if (categoryNames.length === 0) {
+        toast({
+          title: "No Categories Found",
+          description: "Please add categories in the categories management section first.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('🚨 ADMIN CATEGORY FETCH FAILED:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch categories",
+        description: "Failed to fetch categories from database",
         variant: "destructive"
       });
+      // Fallback to basic categories if database fetch fails
+      setCategories(['Custom tees', 'Croptops', 'Tote bag', 'Signature tracksuit', 'Debut Tracksuit']);
     }
   };
 
@@ -511,15 +523,28 @@ const AdminProducts = () => {
                     <div>
                       <Label htmlFor="category">Category</Label>
                       <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder={categories.length > 0 ? "Select category" : "Loading categories..."} />
                         </SelectTrigger>
-                        <SelectContent>
-                          {categories.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                          ))}
+                        <SelectContent className="bg-background border">
+                          {categories.length > 0 ? (
+                            categories.map(cat => (
+                              <SelectItem key={cat} value={cat} className="hover:bg-muted">
+                                {cat}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled className="text-muted-foreground">
+                              No categories available
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
+                      {categories.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Add categories in Admin → Categories first
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="stock">Stock Quantity</Label>
