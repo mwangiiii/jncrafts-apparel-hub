@@ -263,7 +263,13 @@ const AdminOrderDetail = () => {
     setProcessingDocument('print');
     try {
       const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { order, companyInfo };
+    const invoiceData: InvoiceData = { 
+      order: { 
+        ...order, 
+        status: order.order_status?.name || 'unknown' 
+      }, 
+      companyInfo 
+    };
       
       const invoiceNumber = await printInvoice(invoiceData, user.id);
       toast({
@@ -288,7 +294,13 @@ const AdminOrderDetail = () => {
     setProcessingDocument('invoice');
     try {
       const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { order, companyInfo };
+      const invoiceData: InvoiceData = { 
+        order: { 
+          ...order, 
+          status: order.order_status?.name || 'unknown' 
+        }, 
+        companyInfo 
+      };
       
       const invoiceNumber = await exportInvoicePDF(invoiceData, user.id);
       toast({
@@ -313,7 +325,13 @@ const AdminOrderDetail = () => {
     setProcessingDocument('receipt');
     try {
       const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { order, companyInfo };
+      const invoiceData: InvoiceData = { 
+        order: { 
+          ...order, 
+          status: order.order_status?.name || 'unknown' 
+        }, 
+        companyInfo 
+      };
       
       const receiptNumber = await exportReceiptPDF(invoiceData, user.id);
       toast({
@@ -389,8 +407,8 @@ const AdminOrderDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge className={`${getStatusColor(order.status_name)} text-white px-4 py-2`}>
-              {order.status_display_name.toUpperCase()}
+            <Badge className={`${getStatusColor(order.order_status?.name || '')} text-white px-4 py-2`}>
+              {order.order_status?.display_name?.toUpperCase() || 'UNKNOWN'}
             </Badge>
             <div className="flex items-center gap-2">
               <Button 
@@ -631,8 +649,8 @@ const AdminOrderDetail = () => {
                 </div>
                  <div className="flex justify-between">
                    <span>Payment Status:</span>
-                   <Badge variant={order.status_name === 'delivered' ? 'default' : 'secondary'}>
-                     {order.status_name === 'delivered' ? 'Paid' : 'Pending'}
+                   <Badge variant={order.order_status?.name === 'delivered' ? 'default' : 'secondary'}>
+                     {order.order_status?.name === 'delivered' ? 'Paid' : 'Pending'}
                    </Badge>
                  </div>
               </div>
@@ -675,11 +693,11 @@ const AdminOrderDetail = () => {
                    disabled={updatingStatus}
                  >
                    <SelectTrigger>
-                     <SelectValue>{order.status_display_name}</SelectValue>
+                     <SelectValue>{order.order_status?.display_name}</SelectValue>
                    </SelectTrigger>
                    <SelectContent>
                      <SelectItem value={order.status_id} disabled>
-                       {order.status_display_name} (Current)
+                       {order.order_status?.display_name} (Current)
                      </SelectItem>
                      {availableStatuses.map((status) => (
                        <SelectItem key={status.id} value={status.id}>
