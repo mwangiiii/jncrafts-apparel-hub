@@ -1306,7 +1306,22 @@ export type Database = {
       }
       get_product_complete: {
         Args: { p_product_id: string }
-        Returns: Json
+        Returns: {
+          category: string
+          colors: Json
+          created_at: string
+          description: string
+          id: string
+          images: Json
+          is_active: boolean
+          name: string
+          new_arrival_date: string
+          price: number
+          sizes: Json
+          stock_quantity: number
+          thumbnail_index: number
+          updated_at: string
+        }[]
       }
       get_products_lightweight: {
         Args: {
