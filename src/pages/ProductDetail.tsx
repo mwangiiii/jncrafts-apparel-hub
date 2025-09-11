@@ -63,11 +63,11 @@ const ProductDetail = () => {
 
       if (error) throw error;
       
-      if (!data || typeof data !== 'object') {
+      if (!data || data.length === 0) {
         throw new Error('Product not found');
       }
 
-      const productData = data as any;
+      const productData = data[0];
       const product = {
         id: productData.id,
         name: productData.name,

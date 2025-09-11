@@ -33,7 +33,7 @@ const ProductReferenceCard = ({ productId }: ProductReferenceCardProps) => {
 
         if (error) throw error;
         
-        if (!data || typeof data !== 'object') {
+        if (!data || data.length === 0) {
           console.error('Product not found:', productId);
           return;
         }

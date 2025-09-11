@@ -211,24 +211,12 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       const timestamp = Date.now();
       const orderNumber = `JNC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${timestamp.toString().slice(-10)}`;
 
-      // Get the "pending" status ID
-      const { data: pendingStatus, error: statusError } = await supabase
-        .from('order_status')
-        .select('id')
-        .eq('name', 'pending')
-        .single();
-
-      if (statusError || !pendingStatus) {
-        throw new Error('Failed to fetch pending status');
-      }
-
       // Create order with transaction code
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user!.id,
           order_number: orderNumber,
-          status_id: pendingStatus.id,
           total_amount: finalTotal,
           discount_amount: discountAmount,
           discount_code: appliedDiscount?.code || null,

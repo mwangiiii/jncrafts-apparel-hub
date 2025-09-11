@@ -29,10 +29,7 @@ import {
 interface Order {
   id: string;
   order_number: string;
-  status: string; // Legacy field for backward compatibility
-  status_id: string;
-  status_name: string;
-  status_display_name: string;
+  status: string;
   total_amount: number;
   discount_amount: number;
   discount_code: string | null;
@@ -66,7 +63,7 @@ const AdminOrdersTable = ({
   const navigate = useNavigate();
 
   const filteredOrders = orders.filter(order => {
-    const matchesStatus = selectedOrderStatus === 'all' || order.status_name === selectedOrderStatus;
+    const matchesStatus = selectedOrderStatus === 'all' || order.status === selectedOrderStatus;
     const matchesSearch = searchTerm === '' || 
       order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer_info?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,8 +71,7 @@ const AdminOrdersTable = ({
       order.customer_info?.phone?.includes(searchTerm.toLowerCase()) ||
       order.shipping_address?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.shipping_address?.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.status_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.status_display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.order_items?.some((item: any) => 
         item.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.size?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,7 +87,7 @@ const AdminOrdersTable = ({
 
   const getOrderStatusData = () => {
     const statusCounts = orders.reduce((acc, order) => {
-      acc[order.status_name] = (acc[order.status_name] || 0) + 1;
+      acc[order.status] = (acc[order.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -99,13 +95,9 @@ const AdminOrdersTable = ({
       { name: 'Pending', value: statusCounts.pending || 0, color: '#f59e0b' },
       { name: 'Confirmed', value: statusCounts.confirmed || 0, color: '#3b82f6' },
       { name: 'Processing', value: statusCounts.processing || 0, color: '#f97316' },
-      { name: 'Packed', value: statusCounts.packed || 0, color: '#6366f1' },
       { name: 'Shipped', value: statusCounts.shipped || 0, color: '#8b5cf6' },
-      { name: 'Out for Delivery', value: statusCounts.out_for_delivery || 0, color: '#06b6d4' },
       { name: 'Delivered', value: statusCounts.delivered || 0, color: '#10b981' },
-      { name: 'Cancelled', value: statusCounts.cancelled || 0, color: '#ef4444' },
-      { name: 'Refunded', value: statusCounts.refunded || 0, color: '#6b7280' },
-      { name: 'Failed', value: statusCounts.failed || 0, color: '#dc2626' }
+      { name: 'Cancelled', value: statusCounts.cancelled || 0, color: '#ef4444' }
     ];
   };
 
@@ -150,13 +142,9 @@ const AdminOrdersTable = ({
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="packed">Packed</SelectItem>
                   <SelectItem value="shipped">Shipped</SelectItem>
-                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                   <SelectItem value="delivered">Delivered</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -278,8 +266,8 @@ const AdminOrdersTable = ({
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge className={`${getStatusColor(order.status_name)} text-white text-xs`}>
-                              {order.status_display_name.toUpperCase()}
+                            <Badge className={`${getStatusColor(order.status)} text-white text-xs`}>
+                              {order.status.toUpperCase()}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -321,8 +309,8 @@ const AdminOrdersTable = ({
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           <div className="flex items-center gap-3">
                             <h3 className="font-bold text-lg sm:text-xl text-primary">#{order.order_number}</h3>
-                            <Badge className={`${getStatusColor(order.status_name)} text-white text-xs sm:text-sm px-2 sm:px-3 py-1 font-medium`}>
-                              {order.status_display_name.toUpperCase()}
+                            <Badge className={`${getStatusColor(order.status)} text-white text-xs sm:text-sm px-2 sm:px-3 py-1 font-medium`}>
+                              {order.status.toUpperCase()}
                             </Badge>
                           </div>
                           <ChevronRight className="h-5 w-5 text-muted-foreground self-end sm:self-auto" />

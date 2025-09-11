@@ -46,7 +46,7 @@ import {
 interface Order {
   id: string;
   order_number: string;
-  status_id: string;
+  status: string;
   total_amount: number;
   discount_amount: number;
   discount_code: string | null;
@@ -56,18 +56,6 @@ interface Order {
   created_at: string;
   transaction_code?: string | null;
   order_items: any[];
-  order_status?: {
-    id: string;
-    name: string;
-    display_name: string;
-  };
-}
-
-interface OrderStatus {
-  id: string;
-  name: string;
-  display_name: string;
-  description?: string;
 }
 
 const AdminOrderDetail = () => {
@@ -77,56 +65,37 @@ const AdminOrderDetail = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [availableStatuses, setAvailableStatuses] = useState<OrderStatus[]>([]);
   const [processingDocument, setProcessingDocument] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (orderId && isAdmin) {
       fetchOrder();
-      fetchStatusOptions();
     }
   }, [orderId, isAdmin]);
 
   const fetchOrder = async () => {
     try {
       setLoading(true);
-      const { data: orderData, error: orderError } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
-          order_status:status_id (
-            id,
-            name,
-            display_name
-          )
+          order_items (*)
         `)
         .eq('id', orderId)
         .single();
 
-      if (orderError) {
-        console.error('Error fetching order:', orderError);
-        throw orderError;
-      }
-
-      // Fetch order items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderId);
-
-      if (itemsError) {
-        console.error('Error fetching order items:', itemsError);
-        throw itemsError;
-      }
-
-      setOrder({ ...orderData, order_items: itemsData || [] });
+      if (error) throw error;
+      
+      console.log('Fetched order data:', data); // Debug log
+      setOrder(data);
     } catch (error) {
-      console.error('Failed to fetch order:', error);
+      console.error('Error fetching order:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch order details",
         variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch order details"
       });
       navigate('/admin');
     } finally {
@@ -134,37 +103,7 @@ const AdminOrderDetail = () => {
     }
   };
 
-  const fetchStatusOptions = async () => {
-    try {
-      const { data: statusData, error: statusError } = await supabase
-        .from('order_status')
-        .select('id, name, display_name')
-        .eq('is_active', true)
-        .order('display_order');
-
-      if (statusError) {
-        throw statusError;
-      }
-
-      setAvailableStatuses(statusData || []);
-    } catch (error) {
-      console.error('Failed to fetch status options:', error);
-    }
-  };
-
-  const fetchAvailableStatuses = async (currentStatusName: string) => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_valid_status_transitions', { current_status_name: currentStatusName });
-
-      if (error) throw error;
-      setAvailableStatuses(data || []);
-    } catch (error) {
-      console.error('Error fetching available statuses:', error);
-    }
-  };
-
-  const updateOrderStatus = async (newStatusId: string) => {
+  const updateOrderStatus = async (newStatus: string) => {
     if (!order) return;
     
     setUpdatingStatus(true);
@@ -172,19 +111,12 @@ const AdminOrderDetail = () => {
       const { error } = await supabase
         .from('orders')
         .update({ 
-          status_id: newStatusId,
+          status: newStatus,
           updated_at: new Date().toISOString() 
         })
         .eq('id', order.id);
 
       if (error) throw error;
-
-      // Get the new status name for email notification
-      const { data: newStatus } = await supabase
-        .from('order_status')
-        .select('name, display_name')
-        .eq('id', newStatusId)
-        .single();
 
       // Send status update email
       try {
@@ -194,7 +126,7 @@ const AdminOrderDetail = () => {
             adminEmail: "craftsjn@gmail.com",
             orderNumber: order.order_number,
             customerName: order.customer_info.fullName,
-            orderStatus: newStatus?.name || 'unknown',
+            orderStatus: newStatus,
             items: order.order_items.map((item: any) => ({
               product_name: item.product_name,
               quantity: item.quantity,
@@ -221,12 +153,15 @@ const AdminOrderDetail = () => {
         });
       }
 
+      // Update local state and refresh from database to ensure consistency
+      setOrder({ ...order, status: newStatus });
+      
       // Refresh order data to ensure persistence
       await fetchOrder();
       
       toast({
         title: "Order Updated",
-        description: `Order status changed to ${newStatus?.display_name || 'new status'}. Customer has been notified.`
+        description: `Order status changed to ${newStatus}. Customer has been notified.`
       });
     } catch (error) {
       console.error('Error updating order:', error);
@@ -240,22 +175,29 @@ const AdminOrderDetail = () => {
     }
   };
 
-  const getStatusColor = (statusName: string) => {
-    switch (statusName) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
       case 'pending': return 'bg-amber-500';
       case 'confirmed': return 'bg-blue-500';
       case 'processing': return 'bg-orange-500';
-      case 'packed': return 'bg-indigo-500';
       case 'shipped': return 'bg-purple-500';
-      case 'out_for_delivery': return 'bg-cyan-500';
       case 'delivered': return 'bg-emerald-500';
       case 'cancelled': return 'bg-red-500';
-      case 'refunded': return 'bg-gray-500';
-      case 'failed': return 'bg-red-600';
       default: return 'bg-gray-500';
     }
   };
 
+  const getAvailableStatusOptions = (currentStatus: string) => {
+    const statusFlow = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      delivered: [],
+      cancelled: ['pending'] // Can revive cancelled orders
+    };
+    return statusFlow[currentStatus] || [];
+  };
 
   const handlePrintInvoice = async () => {
     if (!order || !user?.id) return;
@@ -263,13 +205,7 @@ const AdminOrderDetail = () => {
     setProcessingDocument('print');
     try {
       const companyInfo = await getCompanyInfo();
-    const invoiceData: InvoiceData = { 
-      order: { 
-        ...order, 
-        status: order.order_status?.name || 'unknown' 
-      }, 
-      companyInfo 
-    };
+      const invoiceData: InvoiceData = { order, companyInfo };
       
       const invoiceNumber = await printInvoice(invoiceData, user.id);
       toast({
@@ -294,13 +230,7 @@ const AdminOrderDetail = () => {
     setProcessingDocument('invoice');
     try {
       const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { 
-        order: { 
-          ...order, 
-          status: order.order_status?.name || 'unknown' 
-        }, 
-        companyInfo 
-      };
+      const invoiceData: InvoiceData = { order, companyInfo };
       
       const invoiceNumber = await exportInvoicePDF(invoiceData, user.id);
       toast({
@@ -325,13 +255,7 @@ const AdminOrderDetail = () => {
     setProcessingDocument('receipt');
     try {
       const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { 
-        order: { 
-          ...order, 
-          status: order.order_status?.name || 'unknown' 
-        }, 
-        companyInfo 
-      };
+      const invoiceData: InvoiceData = { order, companyInfo };
       
       const receiptNumber = await exportReceiptPDF(invoiceData, user.id);
       toast({
@@ -407,8 +331,8 @@ const AdminOrderDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge className={`${getStatusColor(order.order_status?.name || '')} text-white px-4 py-2`}>
-              {order.order_status?.display_name?.toUpperCase() || 'UNKNOWN'}
+            <Badge className={`${getStatusColor(order.status)} text-white px-4 py-2`}>
+              {order.status.toUpperCase()}
             </Badge>
             <div className="flex items-center gap-2">
               <Button 
@@ -647,12 +571,12 @@ const AdminOrderDetail = () => {
                   <span>Payment Method:</span>
                   <span className="font-medium">Cash on Delivery</span>
                 </div>
-                 <div className="flex justify-between">
-                   <span>Payment Status:</span>
-                   <Badge variant={order.order_status?.name === 'delivered' ? 'default' : 'secondary'}>
-                     {order.order_status?.name === 'delivered' ? 'Paid' : 'Pending'}
-                   </Badge>
-                 </div>
+                <div className="flex justify-between">
+                  <span>Payment Status:</span>
+                  <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>
+                    {order.status === 'delivered' ? 'Paid' : 'Pending'}
+                  </Badge>
+                </div>
               </div>
               
               <hr />
@@ -685,28 +609,26 @@ const AdminOrderDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-               <div>
-                 <label className="text-sm font-medium mb-2 block">Update Status:</label>
-                 <Select
-                   value={order.status_id}
-                   onValueChange={updateOrderStatus}
-                   disabled={updatingStatus}
-                 >
-                   <SelectTrigger>
-                     <SelectValue>{order.order_status?.display_name}</SelectValue>
-                   </SelectTrigger>
-                   <SelectContent>
-                     <SelectItem value={order.status_id} disabled>
-                       {order.order_status?.display_name} (Current)
-                     </SelectItem>
-                     {availableStatuses.map((status) => (
-                       <SelectItem key={status.id} value={status.id}>
-                         {status.display_name}
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Update Status:</label>
+                <Select
+                  value={order.status}
+                  onValueChange={updateOrderStatus}
+                  disabled={updatingStatus}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={order.status}>{order.status.toUpperCase()}</SelectItem>
+                    {getAvailableStatusOptions(order.status).map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status.toUpperCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="space-y-2">
                 <Button 
