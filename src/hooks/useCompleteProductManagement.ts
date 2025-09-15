@@ -59,8 +59,10 @@ export const useCompleteProductManagement = () => {
 
         // 2. Handle images
         if (productData.images && productData.images.length > 0) {
-          const imagePromises = productData.images.map((imageUrl, index) => 
-            supabase
+          console.log(`📸 Processing ${productData.images.length} images for product ${product.id}`);
+          
+          const imagePromises = productData.images.map(async (imageUrl, index) => {
+            const result = await supabase
               .from('product_images')
               .insert({
                 product_id: product.id,
@@ -68,19 +70,34 @@ export const useCompleteProductManagement = () => {
                 alt_text: `${productData.name} image ${index + 1}`,
                 display_order: index,
                 is_primary: index === (productData.thumbnailIndex || 0)
-              })
-          );
+              });
+            
+            if (result.error) {
+              console.error(`❌ Failed to insert image ${index + 1}:`, result.error);
+            } else {
+              console.log(`✅ Successfully inserted image ${index + 1}`);
+            }
+            
+            return result;
+          });
 
           const imageResults = await Promise.all(imagePromises);
           const imageErrors = imageResults.filter(result => result.error);
           
           if (imageErrors.length > 0) {
-            console.error('⚠️ Some images failed to save:', imageErrors);
-            toast({
-              title: "Warning",
-              description: `Product created but ${imageErrors.length} images failed to save`,
-              variant: "destructive"
+            console.error('⚠️ Some images failed to save:', imageErrors.map(r => r.error));
+            
+            // Log detailed error information
+            imageErrors.forEach((result, idx) => {
+              console.error(`Image ${idx + 1} error details:`, {
+                message: result.error?.message,
+                code: result.error?.code,
+                details: result.error?.details,
+                hint: result.error?.hint
+              });
             });
+            
+            throw new Error(`Failed to save ${imageErrors.length} out of ${productData.images.length} images. Check console for details.`);
           } else {
             console.log('✅ All images saved successfully');
           }
