@@ -1352,24 +1352,6 @@ export type Database = {
         Args: { p_product_id: string }
         Returns: Json
       }
-      get_products_lightweight: {
-        Args: {
-          p_category?: string
-          p_cursor_created_at?: string
-          p_cursor_id?: string
-          p_limit?: number
-        }
-        Returns: {
-          category: string
-          created_at: string
-          id: string
-          name: string
-          new_arrival_date: string
-          price: number
-          stock_quantity: number
-          thumbnail_image: string
-        }[]
-      }
       get_products_lightweight_v2: {
         Args: { p_category?: string; p_limit?: number; p_offset?: number }
         Returns: {
