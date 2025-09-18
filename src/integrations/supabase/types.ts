@@ -1242,6 +1242,7 @@ export type Database = {
           has_colors: boolean | null
           has_sizes: boolean | null
           id: string | null
+          is_active: boolean | null
           name: string | null
           new_arrival_date: string | null
           price: number | null
