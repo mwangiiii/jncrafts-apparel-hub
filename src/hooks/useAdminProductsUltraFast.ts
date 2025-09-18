@@ -44,7 +44,7 @@ export const useAdminProductsUltraFast = ({
       
       // Create AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for ultra speed
       
       try {
         // CALL OPTIMIZED DATABASE FUNCTION WITH MATERIALIZED VIEW
@@ -77,19 +77,13 @@ export const useAdminProductsUltraFast = ({
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: 0,
-    staleTime: 30000, // 30 seconds cache for materialized view
-    gcTime: 5 * 60 * 1000, // 5 minute cache
+    staleTime: 15000, // 15 seconds for ultra-fast admin updates
+    gcTime: 2 * 60 * 1000, // 2 minute cache
     enabled,
-    refetchOnWindowFocus: false, // Reduce unnecessary calls
-    refetchOnMount: false, // Use cache first
-    retry: (failureCount, error) => {
-      // Only retry network errors, not database errors
-      if (error.message.includes('database') || error.message.includes('timeout')) {
-        return failureCount < 1;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
+    refetchOnWindowFocus: false, // Aggressive caching for speed
+    refetchOnMount: false, // Use cache first for ultra speed
+    refetchOnReconnect: false, // Maximum speed optimization
+    retry: false, // No retries for maximum speed
   });
 };
 

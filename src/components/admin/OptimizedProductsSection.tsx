@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminProductsUltraFast, useRefreshAdminProductsUltraFast } from '@/hooks/useAdminProductsUltraFast';
+import { UltraFastImage } from '../UltraFastImage';
 import { 
   Package, 
   Plus,
@@ -159,24 +160,15 @@ export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }:
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {products.map((product: any) => (
+              {products.map((product: any, index: number) => (
                 <Card key={product.id} className="product-card overflow-hidden hover:shadow-lg transition-all duration-300 group">
                   <div className="relative aspect-square">
-                    {product.thumbnail_image ? (
-                      <img 
-                        src={product.thumbnail_image}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : null}
-                    <div className={`w-full h-full flex items-center justify-center bg-muted ${product.thumbnail_image ? 'hidden' : ''}`}>
-                      <Package className="h-12 w-12 text-muted-foreground" />
-                    </div>
+                    <UltraFastImage
+                      src={product.thumbnail_image}
+                      alt={product.name}
+                      className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                      priority={index < 8} // First 8 images are priority loaded
+                    />
                     {product.stock_quantity < 10 && (
                       <Badge className="absolute top-2 left-2 bg-red-500 text-white">
                         Low Stock

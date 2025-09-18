@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import ProductCard from "./ProductCard";
+import { UltraFastProductCard } from "./UltraFastProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
 import CategoryDropdown from "./CategoryDropdown";
 import { Product } from '@/types/database';
@@ -42,7 +43,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     refetch
   } = useUltraFastProducts({ 
     category: actualCategory,
-    pageSize: 12 // Optimized batch size for performance
+    pageSize: 20 // Increased batch size for faster loading
   });
 
   // Ultra-fast products with proper typing
@@ -135,8 +136,8 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {products.map((product) => (
-                <ProductCard
+              {products.map((product, index) => (
+                <UltraFastProductCard
                   key={product.id}
                   product={{
                     id: product.id,
@@ -145,6 +146,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
                     category: product.category,
                     stock_quantity: product.stock_quantity,
                     is_active: true,
+                    thumbnail_image: product.thumbnail_image,
                     images: product.thumbnail_image ? [product.thumbnail_image] : [],
                     colors: [],
                     sizes: [],
@@ -156,6 +158,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
                     has_sizes: product.has_sizes,
                   }}
                   onAddToCart={onAddToCart}
+                  priority={index < 8} // First 8 images load with priority
                 />
               ))}
             </div>

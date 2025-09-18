@@ -55,15 +55,13 @@ export const useUltraFastProducts = ({
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: 0,
-    staleTime: 2 * 60 * 1000, // 2 minutes - faster refresh for landing page
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 30 * 1000, // 30 seconds - ultra-fast refresh
+    gcTime: 5 * 60 * 1000, // 5 minutes
     enabled,
-    retry: (failureCount, error) => {
-      if (failureCount >= 2) return false; // Faster failure for performance
-      return true;
-    },
+    retry: false, // No retries for maximum speed
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Rely on cache for ultra-fast loading
+    refetchOnMount: false, // Aggressive caching for ultra-fast loading
+    refetchOnReconnect: false,
   });
 };
 
@@ -93,13 +91,24 @@ export const useUltraFastFeatured = (limit: number = 6) => {
         throw error;
       }
 
-      return (data || []) as UltraFastFeaturedProduct[];
+      const products = (data || []) as UltraFastFeaturedProduct[];
+      
+      // Preload images aggressively
+      products.forEach((product) => {
+        if (product.thumbnail_image) {
+          const img = new Image();
+          img.src = product.thumbnail_image;
+        }
+      });
+
+      return products;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - featured products rarely change
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 30 * 1000, // 30 seconds - aggressive refresh
+    gcTime: 10 * 60 * 1000, // 10 minutes
     retry: false, // No retries for ultra-fast performance
     refetchOnWindowFocus: false,
     refetchOnMount: false, // Aggressive caching for performance
+    refetchOnReconnect: false,
   });
 };
 

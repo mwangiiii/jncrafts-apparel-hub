@@ -1433,7 +1433,30 @@ export type Database = {
         Args: { phone_number: string }
         Returns: string
       }
+      prefetch_products_next_page: {
+        Args: {
+          p_category?: string
+          p_current_offset?: number
+          p_page_size?: number
+        }
+        Returns: {
+          category: string
+          created_at: string
+          has_colors: boolean
+          has_sizes: boolean
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          stock_quantity: number
+          thumbnail_image: string
+        }[]
+      }
       refresh_admin_products_view: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      refresh_all_product_views: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
