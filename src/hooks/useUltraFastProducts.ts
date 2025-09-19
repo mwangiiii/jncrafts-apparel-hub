@@ -29,17 +29,34 @@ interface UseUltraFastProductsOptions {
 // Ultra-fast products hook using materialized view and optimized indexes
 export const useUltraFastProducts = ({ 
   category = 'all', 
-  pageSize = 20, 
+  pageSize = 16, // Reduced for ultra-fast loading
   enabled = true 
 }: UseUltraFastProductsOptions = {}) => {
   return useInfiniteQuery({
     queryKey: ['products', 'ultra-fast', category],
     queryFn: async ({ pageParam = 0 }): Promise<UltraFastProductPage> => {
-      const { data, error } = await supabase.rpc('get_products_ultra_fast', {
-        p_category: category,
-        p_limit: pageSize,
-        p_offset: pageParam * pageSize
-      });
+      // Try ultra-fast function first, with fallback to direct function
+      let data, error;
+      
+      try {
+        const result = await supabase.rpc('get_products_ultra_fast', {
+          p_category: category,
+          p_limit: Math.min(pageSize, 30), // Cap at 30 for speed
+          p_offset: pageParam * pageSize
+        });
+        data = result.data;
+        error = result.error;
+      } catch (timeoutError) {
+        console.warn('Primary function timed out, using fallback:', timeoutError);
+        // Fallback to direct function if timeout occurs
+        const fallbackResult = await supabase.rpc('get_products_direct_fast', {
+          p_category: category,
+          p_limit: Math.min(pageSize, 20),
+          p_offset: pageParam * pageSize
+        });
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+      }
 
       if (error) {
         console.error('Error fetching ultra-fast products:', error);
@@ -50,17 +67,18 @@ export const useUltraFastProducts = ({
 
       return {
         products,
-        nextCursor: products.length === pageSize ? pageParam + 1 : undefined,
+        nextCursor: products.length >= Math.min(pageSize, 20) ? pageParam + 1 : undefined,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: 0,
-    staleTime: 30 * 1000, // 30 seconds - ultra-fast refresh
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 60 * 1000, // 1 minute - aggressive caching
+    gcTime: 10 * 60 * 1000, // 10 minutes
     enabled,
-    retry: false, // No retries for maximum speed
+    retry: 1, // One retry with fallback
+    retryDelay: 500,
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Aggressive caching for ultra-fast loading
+    refetchOnMount: false,
     refetchOnReconnect: false,
   });
 };
@@ -78,12 +96,12 @@ export interface UltraFastFeaturedProduct {
   new_arrival_date: string | null;
 }
 
-export const useUltraFastFeatured = (limit: number = 6) => {
+export const useUltraFastFeatured = (limit: number = 4) => { // Reduced default limit
   return useQuery({
     queryKey: ['featured-products', 'ultra-fast', limit],
     queryFn: async (): Promise<UltraFastFeaturedProduct[]> => {
       const { data, error } = await supabase.rpc('get_featured_products_ultra_fast', {
-        p_limit: limit
+        p_limit: Math.min(limit, 6) // Cap at 6 for speed
       });
 
       if (error) {
@@ -103,11 +121,11 @@ export const useUltraFastFeatured = (limit: number = 6) => {
 
       return products;
     },
-    staleTime: 30 * 1000, // 30 seconds - aggressive refresh
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: false, // No retries for ultra-fast performance
+    staleTime: 2 * 60 * 1000, // 2 minutes - featured products cache longer
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: false,
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Aggressive caching for performance
+    refetchOnMount: false,
     refetchOnReconnect: false,
   });
 };
