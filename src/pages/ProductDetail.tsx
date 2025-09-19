@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell } from 'lucide-react';
+import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -15,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useGlobalCart } from '@/hooks/useGlobalCart';
+import { useProductDetail } from '@/hooks/useProductDetail';
 import BackButton from '@/components/BackButton';
 import Cart from '@/components/Cart';
 
@@ -40,8 +40,9 @@ const ProductDetail = () => {
     closeCart
   } = useGlobalCart();
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Use the optimized product detail hook
+  const { data: product, isLoading, error } = useProductDetail(id || '', !!id);
+  
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -50,81 +51,29 @@ const ProductDetail = () => {
   const [email, setEmail] = useState('');
   const [isStockAlertDialogOpen, setIsStockAlertDialogOpen] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchProduct();
-    }
-  }, [id]);
-
-  const fetchProduct = async () => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_product_complete', { p_product_id: id });
-
-      if (error) throw error;
-      
-      if (!data || typeof data !== 'object') {
-        throw new Error('Product not found');
+  // Set initial selections when product loads
+  React.useEffect(() => {
+    if (product) {
+      if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+        setSelectedSize(getSizeName(product.sizes[0]));
       }
+      if (product.colors && product.colors.length > 0 && !selectedColor) {
+        setSelectedColor(getColorName(product.colors[0]));
+      }
+    }
+  }, [product, selectedSize, selectedColor]);
 
-      const productData = data as any;
-      const product = {
-        id: productData.id,
-        name: productData.name,
-        price: productData.price,
-        description: productData.description,
-        category: productData.category,
-        stock_quantity: productData.stock_quantity,
-        is_active: productData.is_active,
-        new_arrival_date: productData.new_arrival_date,
-        thumbnail_index: productData.thumbnail_index,
-        created_at: productData.created_at,
-        updated_at: productData.updated_at,
-        images: Array.isArray(productData.images) 
-          ? productData.images.map((img: any) => ({
-              id: img.id || 'temp',
-              image_url: img.url || img.image_url || img,
-              is_primary: img.is_primary || false,
-              display_order: img.order || img.display_order || 0,
-              product_id: productData.id,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }))
-          : [],
-        colors: Array.isArray(productData.colors) 
-          ? productData.colors.map((color: any) => ({
-              id: color.id,
-              name: color.name,
-              hex: color.hex || color.hex_code,
-              available: color.available !== false
-            }))
-          : [],
-        sizes: Array.isArray(productData.sizes) 
-          ? productData.sizes.map((size: any) => ({
-              id: size.id,
-              name: size.name,
-              category: size.category,
-              available: size.available !== false
-            }))
-          : [],
-        videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
-      };
-
-      setProduct(product);
-      if (product.sizes.length > 0) setSelectedSize(product.sizes[0].name);
-      if (product.colors.length > 0) setSelectedColor(product.colors[0].name);
-    } catch (error) {
-      console.error('Error fetching product:', error);
+  // Handle error state
+  React.useEffect(() => {
+    if (error) {
       toast({
         title: "Error",
         description: "Product not found",
         variant: "destructive"
       });
       navigate('/');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [error, navigate, toast]);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -243,15 +192,18 @@ const ProductDetail = () => {
     return { status: 'in', message: 'In Stock', variant: 'default' as const };
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background animate-fade-in">
         <Header 
           cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
           onCartClick={openCart} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <div className="text-center">Loading product...</div>
+          <div className="text-center space-y-4 animate-scale-in">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <div className="text-muted-foreground">Loading product...</div>
+          </div>
         </div>
       </div>
     );
@@ -259,13 +211,19 @@ const ProductDetail = () => {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background animate-fade-in">
         <Header 
           cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
           onCartClick={openCart} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <div className="text-center">Product not found</div>
+          <div className="text-center space-y-4 animate-scale-in">
+            <AlertTriangle className="h-16 w-16 text-muted-foreground mx-auto" />
+            <div className="text-muted-foreground">Product not found</div>
+            <Button onClick={() => navigate('/')} variant="outline">
+              Return Home
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -274,26 +232,26 @@ const ProductDetail = () => {
   const stockStatus = getStockStatus();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-fade-in">
         <Header 
           cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
           onCartClick={openCart} 
         />
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
-        <BackButton className="mb-6" />
+        <BackButton className="mb-6 animate-slide-in-right" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-scale-in">
           {/* Image Gallery */}
           <div className="space-y-4">
             {/* Main Image */}
-            <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+            <div className="aspect-square overflow-hidden rounded-lg bg-muted shadow-elegant hover:shadow-glow transition-all duration-500">
               <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogTrigger asChild>
                   <img
                      src={getPrimaryImage(product)}
                      alt={product.name}
-                     className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform duration-300"
+                     className="w-full h-full object-cover cursor-zoom-in hover:scale-110 transition-all duration-500 ease-out"
                   />
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[90vh] p-0">
@@ -321,22 +279,22 @@ const ProductDetail = () => {
             </div>
 
             {/* Thumbnail Images */}
-            {product.images.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
+            {product.images && product.images.length > 1 && (
+              <div className="grid grid-cols-4 gap-2 animate-fade-in">
                 {product.images.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`aspect-square overflow-hidden rounded border-2 transition-colors ${
+                    className={`aspect-square overflow-hidden rounded border-2 transition-all duration-300 hover:scale-105 ${
                       selectedImage === index 
-                        ? 'border-primary' 
+                        ? 'border-primary shadow-glow' 
                         : 'border-transparent hover:border-muted-foreground'
                     }`}
                   >
                      <img
                        src={getPrimaryImage({ images: [image] } as Product)}
                        alt={`${product.name} thumbnail ${index + 1}`}
-                       className="w-full h-full object-cover"
+                       className="w-full h-full object-cover transition-all duration-300"
                      />
                   </button>
                 ))}
@@ -345,14 +303,20 @@ const ProductDetail = () => {
           </div>
 
           {/* Product Details */}
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{product.name}</h1>
-              <p className="text-lg text-muted-foreground uppercase tracking-wide">{product.category}</p>
-              <div className="flex items-center gap-3 mt-2">
-                <p className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{formatPrice(product.price)}</p>
+          <div className="space-y-6 animate-slide-in-right">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-fade-in">
+                {product.name}
+              </h1>
+              <p className="text-lg text-muted-foreground uppercase tracking-wide animate-fade-in">
+                {product.category}
+              </p>
+              <div className="flex items-center gap-3 animate-scale-in">
+                <p className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  {formatPrice(product.price)}
+                </p>
                 {stockStatus && (
-                  <Badge variant={stockStatus.variant} className="flex items-center gap-1">
+                  <Badge variant={stockStatus.variant} className="flex items-center gap-1 animate-fade-in">
                     {stockStatus.status === 'out' && <AlertTriangle className="h-3 w-3" />}
                     {stockStatus.message}
                   </Badge>
@@ -369,7 +333,7 @@ const ProductDetail = () => {
 
             {/* Size Selection */}
             {hasRealSizes(product) && (
-              <div>
+              <div className="animate-fade-in">
                 <Label className="text-base font-semibold text-foreground">Size</Label>
                 <div className="flex gap-2 mt-2">
                   {product.sizes!.map((size) => (
@@ -377,7 +341,7 @@ const ProductDetail = () => {
                       key={getSizeName(size)}
                       variant={selectedSize === getSizeName(size) ? "default" : "outline"}
                       onClick={() => setSelectedSize(getSizeName(size))}
-                      className="min-w-[3rem]"
+                      className="min-w-[3rem] hover-scale transition-all duration-200"
                     >
                       {getSizeName(size)}
                     </Button>
@@ -388,7 +352,7 @@ const ProductDetail = () => {
 
             {/* Color Selection */}
             {hasRealColors(product) && (
-              <div>
+              <div className="animate-fade-in">
                 <Label className="text-base font-semibold text-foreground">Color</Label>
                 <div className="flex gap-2 mt-2">
                   {product.colors!.map((color) => (
@@ -396,7 +360,7 @@ const ProductDetail = () => {
                       key={getColorName(color)}
                       variant={selectedColor === getColorName(color) ? "default" : "outline"}
                       onClick={() => setSelectedColor(getColorName(color))}
-                      className="capitalize"
+                      className="capitalize hover-scale transition-all duration-200"
                     >
                       {getColorName(color)}
                     </Button>
@@ -406,7 +370,7 @@ const ProductDetail = () => {
             )}
 
             {/* Quantity */}
-            <div>
+            <div className="animate-fade-in">
               <Label className="text-base font-semibold text-foreground">Quantity</Label>
               <div className="flex items-center gap-3 mt-2">
                 <Button
@@ -414,15 +378,17 @@ const ProductDetail = () => {
                   size="icon"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={product.stock_quantity === 0}
+                  className="hover-scale transition-all duration-200"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="text-lg font-medium w-12 text-center">{quantity}</span>
+                <span className="text-lg font-medium w-12 text-center animate-scale-in">{quantity}</span>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
                   disabled={product.stock_quantity === 0}
+                  className="hover-scale transition-all duration-200"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -430,10 +396,10 @@ const ProductDetail = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3">
+            <div className="space-y-3 animate-slide-in-right">
               <Button 
                 onClick={handleAddToCart}
-                className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant"
+                className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant hover:shadow-glow transition-all duration-300 hover:scale-105"
                 size="lg"
                 disabled={product.stock_quantity === 0}
               >
@@ -446,10 +412,10 @@ const ProductDetail = () => {
                   <Button
                     variant="outline"
                     onClick={handleWishlistToggle}
-                    className="flex-1"
+                    className="flex-1 hover-scale transition-all duration-200"
                   >
                     <Heart 
-                      className={`h-4 w-4 mr-2 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                      className={`h-4 w-4 mr-2 transition-all duration-200 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
                     {isInWishlist(product.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </Button>
@@ -458,7 +424,7 @@ const ProductDetail = () => {
                 {product.stock_quantity === 0 && (
                   <Dialog open={isStockAlertDialogOpen} onOpenChange={setIsStockAlertDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="flex-1">
+                      <Button variant="outline" className="flex-1 hover-scale transition-all duration-200">
                         <Bell className="h-4 w-4 mr-2" />
                         Notify When Available
                       </Button>
@@ -481,7 +447,7 @@ const ProductDetail = () => {
                             onChange={(e) => setEmail(e.target.value)}
                           />
                         </div>
-                        <Button onClick={handleStockAlert} className="w-full">
+                        <Button onClick={handleStockAlert} className="w-full hover-scale transition-all duration-200">
                           Set Alert
                         </Button>
                       </div>
@@ -495,7 +461,7 @@ const ProductDetail = () => {
 
         {/* Product Videos */}
         {product.videos && product.videos.length > 0 && (
-          <div className="mt-8">
+          <div className="mt-8 animate-fade-in">
             <ProductVideoPlayer 
               videos={product.videos} 
               productName={product.name}
