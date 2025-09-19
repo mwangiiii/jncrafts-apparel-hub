@@ -1353,6 +1353,21 @@ export type Database = {
         Args: { p_product_id: string }
         Returns: Json
       }
+      get_products_by_category_fast: {
+        Args: { p_category: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          category: string
+          created_at: string
+          has_colors: boolean
+          has_sizes: boolean
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          stock_quantity: number
+          thumbnail_image: string
+        }[]
+      }
       get_products_direct_fast: {
         Args: { p_category?: string; p_limit?: number; p_offset?: number }
         Returns: {
@@ -1370,6 +1385,21 @@ export type Database = {
       }
       get_products_lightweight_v2: {
         Args: { p_category?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          category: string
+          created_at: string
+          has_colors: boolean
+          has_sizes: boolean
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          stock_quantity: number
+          thumbnail_image: string
+        }[]
+      }
+      get_products_minimal: {
+        Args: { p_limit?: number; p_offset?: number }
         Returns: {
           category: string
           created_at: string
