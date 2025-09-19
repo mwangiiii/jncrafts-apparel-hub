@@ -26,57 +26,54 @@ interface UseUltraFastProductsOptions {
   enabled?: boolean;
 }
 
-// Ultra-fast products hook using materialized view and optimized indexes
+// Ultra-fast products hook with timeout protection and optimized caching
 export const useUltraFastProducts = ({ 
   category = 'all', 
-  pageSize = 16, // Reduced for ultra-fast loading
+  pageSize = 12, // Reduced for ultra-fast loading
   enabled = true 
 }: UseUltraFastProductsOptions = {}) => {
   return useInfiniteQuery({
     queryKey: ['products', 'ultra-fast', category],
     queryFn: async ({ pageParam = 0 }): Promise<UltraFastProductPage> => {
-      // Try ultra-fast function first, with fallback to direct function
-      let data, error;
+      const actualLimit = Math.min(pageSize, 12); // Cap at 12 to avoid timeouts
       
       try {
         const result = await supabase.rpc('get_products_ultra_fast', {
           p_category: category,
-          p_limit: Math.min(pageSize, 30), // Cap at 30 for speed
-          p_offset: pageParam * pageSize
+          p_limit: actualLimit,
+          p_offset: pageParam * actualLimit
         });
-        data = result.data;
-        error = result.error;
-      } catch (timeoutError) {
-        console.warn('Primary function timed out, using fallback:', timeoutError);
-        // Fallback to direct function if timeout occurs
-        const fallbackResult = await supabase.rpc('get_products_direct_fast', {
-          p_category: category,
-          p_limit: Math.min(pageSize, 20),
-          p_offset: pageParam * pageSize
-        });
-        data = fallbackResult.data;
-        error = fallbackResult.error;
+        
+        if (result.error) {
+          console.error('Error fetching ultra-fast products:', result.error);
+          throw result.error;
+        }
+
+        const products = (result.data || []) as UltraFastProduct[];
+
+        return {
+          products,
+          nextCursor: products.length >= actualLimit ? pageParam + 1 : undefined,
+        };
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+        // Return empty result on error to prevent infinite loading
+        return {
+          products: [],
+          nextCursor: undefined,
+        };
       }
-
-      if (error) {
-        console.error('Error fetching ultra-fast products:', error);
-        throw error;
-      }
-
-      const products = (data || []) as UltraFastProduct[];
-
-      return {
-        products,
-        nextCursor: products.length >= Math.min(pageSize, 20) ? pageParam + 1 : undefined,
-      };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: 0,
-    staleTime: 60 * 1000, // 1 minute - aggressive caching
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 2 * 60 * 1000, // 2 minutes - aggressive caching
+    gcTime: 15 * 60 * 1000, // 15 minutes
     enabled,
-    retry: 1, // One retry with fallback
-    retryDelay: 500,
+    retry: (failureCount, error) => {
+      // Only retry once for timeout errors
+      return failureCount < 1 && error?.message?.includes('timeout');
+    },
+    retryDelay: 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -96,34 +93,43 @@ export interface UltraFastFeaturedProduct {
   new_arrival_date: string | null;
 }
 
-export const useUltraFastFeatured = (limit: number = 4) => { // Reduced default limit
+export const useUltraFastFeatured = (limit: number = 4) => { // Optimized limit for speed
   return useQuery({
     queryKey: ['featured-products', 'ultra-fast', limit],
     queryFn: async (): Promise<UltraFastFeaturedProduct[]> => {
-      const { data, error } = await supabase.rpc('get_featured_products_ultra_fast', {
-        p_limit: Math.min(limit, 6) // Cap at 6 for speed
-      });
+      try {
+        const { data, error } = await supabase.rpc('get_featured_products_ultra_fast', {
+          p_limit: Math.min(limit, 6) // Cap at 6 for speed
+        });
 
-      if (error) {
-        console.error('Error fetching ultra-fast featured products:', error);
-        throw error;
-      }
-
-      const products = (data || []) as UltraFastFeaturedProduct[];
-      
-      // Preload images aggressively
-      products.forEach((product) => {
-        if (product.thumbnail_image) {
-          const img = new Image();
-          img.src = product.thumbnail_image;
+        if (error) {
+          console.error('Error fetching ultra-fast featured products:', error);
+          return []; // Return empty array instead of throwing
         }
-      });
 
-      return products;
+        const products = (data || []) as UltraFastFeaturedProduct[];
+        
+        // Preload images aggressively
+        products.forEach((product) => {
+          if (product.thumbnail_image) {
+            const img = new Image();
+            img.src = product.thumbnail_image;
+          }
+        });
+
+        return products;
+      } catch (error) {
+        console.error('Failed to fetch featured products:', error);
+        return []; // Graceful fallback
+      }
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes - featured products cache longer
-    gcTime: 30 * 60 * 1000, // 30 minutes
-    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes - featured products cache longer
+    gcTime: 60 * 60 * 1000, // 1 hour
+    retry: (failureCount, error) => {
+      // Only retry once for timeout errors
+      return failureCount < 1 && error?.message?.includes('timeout');
+    },
+    retryDelay: 1500,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -142,20 +148,31 @@ export const useRefreshProductsCache = () => {
   };
 };
 
-// Ultra-fast categories hook (cached heavily)
+// Ultra-fast categories hook with timeout protection
 export const useUltraFastCategories = () => {
   return useQuery({
     queryKey: ['categories', 'ultra-fast'],
     queryFn: async (): Promise<string[]> => {
-      const { data, error } = await supabase.rpc('get_categories_fast');
+      try {
+        const { data, error } = await supabase.rpc('get_categories_fast');
 
-      if (error) throw error;
+        if (error) {
+          console.error('Error fetching categories:', error);
+          return []; // Return empty array as fallback
+        }
 
-      return (data || []).map(item => item.category).filter(Boolean);
+        return (data || []).map(item => item.category).filter(Boolean);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        return []; // Graceful fallback
+      }
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes - categories rarely change
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
-    retry: false,
+    staleTime: 60 * 60 * 1000, // 1 hour - categories rarely change
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours
+    retry: (failureCount, error) => {
+      return failureCount < 1 && error?.message?.includes('timeout');
+    },
+    retryDelay: 2000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
