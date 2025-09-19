@@ -28,10 +28,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   // Prepare categories array with "all" first, then admin categories (lowercase for display)
   const categories = ["all", ...(adminCategories?.map(cat => cat.name.toLowerCase()) || [])];
 
-  // Use ultra-fast infinite products hook for <100ms loading
-  // Map selected category to actual category name for proper filtering
-  const actualCategory = categoryMap.get(selectedCategory) || selectedCategory;
-  
+  // Fetch ALL products for category grouping
   const {
     data,
     fetchNextPage,
@@ -42,12 +39,29 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     error,
     refetch
   } = useUltraFastProducts({ 
-    category: actualCategory,
-    pageSize: 20 // Increased batch size for faster loading
+    category: "all", // Always fetch all to group by categories
+    pageSize: 50 // Larger batch for category grouping
   });
 
   // Ultra-fast products with proper typing
-  const products: UltraFastProduct[] = data?.pages.flatMap(page => page.products) || [];
+  const allProducts: UltraFastProduct[] = data?.pages.flatMap(page => page.products) || [];
+  
+  // Group products by category, only show categories with visible products
+  const productsByCategory = allProducts.reduce((acc, product) => {
+    if (!acc[product.category]) {
+      acc[product.category] = [];
+    }
+    acc[product.category].push(product);
+    return acc;
+  }, {} as Record<string, UltraFastProduct[]>);
+
+  // Filter categories to only show those that have products
+  const categoriesWithProducts = Object.keys(productsByCategory).sort();
+  
+  // If a specific category is selected, show only that category's products
+  const filteredCategories = selectedCategory === "all" 
+    ? categoriesWithProducts 
+    : categoriesWithProducts.filter(cat => cat.toLowerCase() === selectedCategory);
 
   // Handle load more
   const handleLoadMore = useCallback(() => {
@@ -67,7 +81,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   };
 
   // Show initial loading state
-  if (isLoading && products.length === 0) {
+  if (isLoading && allProducts.length === 0) {
     return (
       <section id="products" className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
@@ -129,38 +143,64 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
               Try Again
             </Button>
           </div>
-        ) : products.length === 0 && !isLoading ? (
+        ) : filteredCategories.length === 0 && !isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             No products found in this category.
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {products.map((product, index) => (
-                <UltraFastProductCard
-                  key={product.id}
-                  product={{
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    category: product.category,
-                    stock_quantity: product.stock_quantity,
-                    is_active: true,
-                    thumbnail_image: product.thumbnail_image,
-                    images: product.thumbnail_image ? [product.thumbnail_image] : [],
-                    colors: [],
-                    sizes: [],
-                    new_arrival_date: product.new_arrival_date,
-                    created_at: product.created_at,
-                    updated_at: product.created_at,
-                    // Include variant flags for better UX
-                    has_colors: product.has_colors,
-                    has_sizes: product.has_sizes,
-                  }}
-                  onAddToCart={onAddToCart}
-                  priority={index < 8} // First 8 images load with priority
-                />
-              ))}
+            {/* Display products grouped by categories */}
+            <div className="space-y-16">
+              {filteredCategories.map((categoryName, categoryIndex) => {
+                const categoryProducts = productsByCategory[categoryName] || [];
+                let globalIndex = 0;
+                
+                // Calculate global index for priority loading
+                for (let i = 0; i < categoryIndex; i++) {
+                  globalIndex += (productsByCategory[filteredCategories[i]] || []).length;
+                }
+                
+                return (
+                  <div key={categoryName} className="animate-fade-in">
+                    {/* Category Header */}
+                    <div className="mb-8 text-center">
+                      <h3 className="text-3xl font-bold capitalize bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
+                        {categoryName}
+                      </h3>
+                      <div className="w-24 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                    </div>
+                    
+                    {/* Products Grid for this category */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                      {categoryProducts.map((product, productIndex) => (
+                        <div key={product.id} className="animate-scale-in" style={{ animationDelay: `${productIndex * 100}ms` }}>
+                          <UltraFastProductCard
+                            product={{
+                              id: product.id,
+                              name: product.name,
+                              price: product.price,
+                              category: product.category,
+                              stock_quantity: product.stock_quantity,
+                              is_active: true,
+                              thumbnail_image: product.thumbnail_image,
+                              images: product.thumbnail_image ? [product.thumbnail_image] : [],
+                              colors: [],
+                              sizes: [],
+                              new_arrival_date: product.new_arrival_date,
+                              created_at: product.created_at,
+                              updated_at: product.created_at,
+                              has_colors: product.has_colors,
+                              has_sizes: product.has_sizes,
+                            }}
+                            onAddToCart={onAddToCart}
+                            priority={globalIndex + productIndex < 8}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             
             {/* Load More Button */}
@@ -171,7 +211,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
                   disabled={isFetchingNextPage}
                   size="lg"
                   variant="outline"
-                  className="bg-background hover:bg-muted"
+                  className="bg-background hover:bg-muted hover-scale transition-all duration-300"
                 >
                   {isFetchingNextPage ? (
                     <>

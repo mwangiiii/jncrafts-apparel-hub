@@ -13,8 +13,10 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  Move
 } from 'lucide-react';
+import { ProductImageReorder } from './ProductImageReorder';
 
 interface OptimizedProductsSectionProps {
   onOpenProductDialog: () => void;
@@ -23,6 +25,7 @@ interface OptimizedProductsSectionProps {
 
 export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }: OptimizedProductsSectionProps) => {
   const { toast } = useToast();
+  const [reorderProductId, setReorderProductId] = useState<string | null>(null);
   
   // Use optimized products hook
   const {
@@ -183,8 +186,18 @@ export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }:
                           <Button
                             size="sm"
                             variant="outline"
+                            onClick={() => setReorderProductId(product.id)}
+                            className="h-8 w-8 p-0"
+                            title="Reorder images"
+                          >
+                            <Move className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => toggleProductStatus(product)}
                             className="h-8 w-8 p-0"
+                            title={product.is_active ? "Hide product" : "Show product"}
                           >
                             {product.is_active ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                           </Button>
@@ -193,6 +206,7 @@ export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }:
                             variant="outline"
                             onClick={() => onEditProduct(product)}
                             className="h-8 w-8 p-0"
+                            title="Edit product"
                           >
                             <Edit2 className="h-3 w-3" />
                           </Button>
@@ -201,6 +215,7 @@ export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }:
                             variant="destructive"
                             onClick={() => deleteProduct(product.id)}
                             className="h-8 w-8 p-0"
+                            title="Delete product"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -238,6 +253,17 @@ export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }:
               </div>
             )}
           </>
+        )}
+        
+        {/* Image Reorder Dialog */}
+        {reorderProductId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <ProductImageReorder
+              productId={reorderProductId}
+              onClose={() => setReorderProductId(null)}
+              onUpdate={handleRefresh}
+            />
+          </div>
         )}
       </CardContent>
     </Card>
