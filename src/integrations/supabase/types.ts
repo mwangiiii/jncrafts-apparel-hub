@@ -1428,6 +1428,21 @@ export type Database = {
           thumbnail_image: string
         }[]
       }
+      get_products_ultra_fast_v2: {
+        Args: { p_category?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          category: string
+          created_at: string
+          has_colors: boolean
+          has_sizes: boolean
+          id: string
+          name: string
+          new_arrival_date: string
+          price: number
+          stock_quantity: number
+          thumbnail_image: string
+        }[]
+      }
       get_valid_status_transitions: {
         Args: { current_status_name: string }
         Returns: {
