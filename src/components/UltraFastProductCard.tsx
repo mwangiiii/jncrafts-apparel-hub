@@ -25,6 +25,7 @@ export const UltraFastProductCard: React.FC<UltraFastProductCardProps> = ({
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -38,7 +39,9 @@ export const UltraFastProductCard: React.FC<UltraFastProductCardProps> = ({
   const isOutOfStock = product.stock_quantity <= 0;
   const isInUserWishlist = user ? isInWishlist(product.id) : false;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (isAddingToCart) return;
+    
     if (!selectedSize && product.sizes && product.sizes.length > 0) {
       toast({
         title: "Size Required",
@@ -57,10 +60,43 @@ export const UltraFastProductCard: React.FC<UltraFastProductCardProps> = ({
       return;
     }
 
-    const size = selectedSize || (typeof product.sizes?.[0] === 'string' ? product.sizes[0] : product.sizes?.[0]?.name) || 'One Size';
-    const color = selectedColor || (typeof product.colors?.[0] === 'string' ? product.colors[0] : product.colors?.[0]?.name) || 'Default';
-    
-    onAddToCart(product, quantity, size, color);
+    if (isOutOfStock) {
+      toast({
+        title: "Out of Stock",
+        description: "This product is currently out of stock",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsAddingToCart(true);
+      
+      // Show immediate feedback
+      toast({
+        title: "Adding to cart...",
+        description: `${product.name} is being added to your cart`,
+      });
+
+      const size = selectedSize || (typeof product.sizes?.[0] === 'string' ? product.sizes[0] : product.sizes?.[0]?.name) || 'One Size';
+      const color = selectedColor || (typeof product.colors?.[0] === 'string' ? product.colors[0] : product.colors?.[0]?.name) || 'Default';
+      
+      await onAddToCart(product, quantity, size, color);
+      
+      // Show success feedback
+      toast({
+        title: "Added to cart!",
+        description: `${product.name} has been added to your cart`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   const toggleWishlist = async () => {
@@ -115,7 +151,7 @@ export const UltraFastProductCard: React.FC<UltraFastProductCardProps> = ({
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => navigate(`/products/${product.id}`)}
+            onClick={() => navigate(`/product/${product.id}`)}
             className="bg-white/90 hover:bg-white"
           >
             <Eye className="w-4 h-4" />
@@ -203,12 +239,12 @@ export const UltraFastProductCard: React.FC<UltraFastProductCardProps> = ({
 
         <Button
           onClick={handleAddToCart}
-          disabled={isOutOfStock}
-          className="w-full"
+          disabled={isOutOfStock || isAddingToCart}
+          className={`w-full transition-all duration-200 ${isAddingToCart ? 'animate-pulse' : 'hover-scale'}`}
           size="sm"
         >
           <ShoppingCart className="w-4 h-4 mr-2" />
-          {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+          {isAddingToCart ? 'Adding...' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
         </Button>
       </CardContent>
     </Card>

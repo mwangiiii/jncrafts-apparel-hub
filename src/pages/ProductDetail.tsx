@@ -50,6 +50,7 @@ const ProductDetail = () => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [isStockAlertDialogOpen, setIsStockAlertDialogOpen] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // Set initial selections when product loads
   React.useEffect(() => {
@@ -75,8 +76,8 @@ const ProductDetail = () => {
     }
   }, [error, navigate, toast]);
 
-  const handleAddToCart = () => {
-    if (!product) return;
+  const handleAddToCart = async () => {
+    if (!product || isAddingToCart) return;
     
     if (hasRealSizes(product) && !selectedSize) {
       toast({
@@ -105,7 +106,36 @@ const ProductDetail = () => {
       return;
     }
 
-    addToCart(product, quantity, selectedSize, selectedColor);
+    try {
+      setIsAddingToCart(true);
+      
+      // Show immediate feedback
+      toast({
+        title: "Adding to cart...",
+        description: `${product.name} is being added to your cart`,
+      });
+
+      await addToCart(product, quantity, selectedSize || 'One Size', selectedColor || 'Default');
+      
+      // Show success feedback and open cart
+      toast({
+        title: "Added to cart!",
+        description: `${product.name} has been added to your cart`,
+      });
+      
+      // Optionally open the cart to show the item was added
+      setTimeout(() => {
+        openCart();
+      }, 500);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   const handleWishlistToggle = () => {
@@ -377,7 +407,7 @@ const ProductDetail = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={product.stock_quantity === 0}
+                  disabled={product.stock_quantity === 0 || isAddingToCart}
                   className="hover-scale transition-all duration-200"
                 >
                   <Minus className="h-4 w-4" />
@@ -387,7 +417,7 @@ const ProductDetail = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
-                  disabled={product.stock_quantity === 0}
+                  disabled={product.stock_quantity === 0 || isAddingToCart}
                   className="hover-scale transition-all duration-200"
                 >
                   <Plus className="h-4 w-4" />
@@ -399,12 +429,12 @@ const ProductDetail = () => {
             <div className="space-y-3 animate-slide-in-right">
               <Button 
                 onClick={handleAddToCart}
-                className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant hover:shadow-glow transition-all duration-300 hover:scale-105"
+                className={`w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground shadow-elegant hover:shadow-glow transition-all duration-300 hover:scale-105 ${isAddingToCart ? 'animate-pulse' : ''}`}
                 size="lg"
-                disabled={product.stock_quantity === 0}
+                disabled={product.stock_quantity === 0 || isAddingToCart}
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
-                {product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                {isAddingToCart ? 'Adding...' : product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
               </Button>
 
               <div className="flex gap-2">
