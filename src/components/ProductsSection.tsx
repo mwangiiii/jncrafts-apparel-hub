@@ -143,9 +143,9 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
               Try Again
             </Button>
           </div>
-        ) : filteredCategories.length === 0 && !isLoading ? (
+        ) : allProducts.length === 0 && !isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
-            No products found in this category.
+            No products available at the moment.
           </div>
         ) : (
           <>
@@ -153,6 +153,10 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
             <div className="space-y-16">
               {filteredCategories.map((categoryName, categoryIndex) => {
                 const categoryProducts = productsByCategory[categoryName] || [];
+                
+                // Skip empty categories
+                if (categoryProducts.length === 0) return null;
+                
                 let globalIndex = 0;
                 
                 // Calculate global index for priority loading
@@ -162,13 +166,15 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
                 
                 return (
                   <div key={categoryName} className="animate-fade-in">
-                    {/* Category Header */}
-                    <div className="mb-8 text-center">
-                      <h3 className="text-3xl font-bold capitalize bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
-                        {categoryName}
-                      </h3>
-                      <div className="w-24 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-                    </div>
+                    {/* Category Header - only show if displaying all categories */}
+                    {selectedCategory === "all" && (
+                      <div className="mb-8 text-center">
+                        <h3 className="text-3xl font-bold capitalize bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
+                          {categoryName}
+                        </h3>
+                        <div className="w-24 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
+                      </div>
+                    )}
                     
                     {/* Products Grid for this category */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -191,6 +197,8 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
                               updated_at: product.created_at,
                               has_colors: product.has_colors,
                               has_sizes: product.has_sizes,
+                              description: '',
+                              thumbnail_index: 0
                             }}
                             onAddToCart={onAddToCart}
                             priority={globalIndex + productIndex < 8}
