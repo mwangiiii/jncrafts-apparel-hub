@@ -27,7 +27,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
   // Prepare categories array with "all" first, then admin categories (lowercase for display)
   const categories = ["all", ...(adminCategories?.map(cat => cat.name.toLowerCase()) || [])];
 
-  // Fetch ALL products for category grouping
+  // Fetch ALL products for category grouping - using correct page size
   const {
     data,
     fetchNextPage,
@@ -38,41 +38,25 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     error,
     refetch
   } = useUltraFastProducts({ 
-    category: "all", // Always fetch all to group by categories
-    pageSize: 50 // Larger batch for category grouping
+    category: selectedCategory === "all" ? "all" : categoryMap.get(selectedCategory) || "all",
+    pageSize: 20 // Optimized batch size for fast loading
   });
 
   // Ultra-fast products with proper typing
   const allProducts: UltraFastProduct[] = data?.pages.flatMap(page => page.products) || [];
   
-  // Group products by category, only show categories with visible products
-  const productsByCategory = allProducts.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = [];
-    }
-    acc[product.category].push(product);
-    return acc;
-  }, {} as Record<string, UltraFastProduct[]>);
-
-  // Filter categories to only show those that have products
-  const categoriesWithProducts = Object.keys(productsByCategory).sort();
-  
-  // If a specific category is selected, show only that category's products
-  const filteredCategories = selectedCategory === "all" 
-    ? categoriesWithProducts 
-    : categoriesWithProducts.filter(cat => cat.toLowerCase() === selectedCategory);
+  // Handle category change by resetting the query
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
 
   // Handle load more
   const handleLoadMore = useCallback(() => {
+    console.log('Load more clicked:', { hasNextPage, isFetchingNextPage });
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Handle category change
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-  };
 
   // Handle retry
   const handleRetry = () => {
@@ -148,66 +132,35 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
           </div>
         ) : (
           <>
-            {/* Display products grouped by categories */}
-            <div className="space-y-16">
-              {filteredCategories.map((categoryName, categoryIndex) => {
-                const categoryProducts = productsByCategory[categoryName] || [];
-                
-                // Skip empty categories
-                if (categoryProducts.length === 0) return null;
-                
-                let globalIndex = 0;
-                
-                // Calculate global index for priority loading
-                for (let i = 0; i < categoryIndex; i++) {
-                  globalIndex += (productsByCategory[filteredCategories[i]] || []).length;
-                }
-                
-                return (
-                  <div key={categoryName} className="animate-fade-in">
-                    {/* Category Header - only show if displaying all categories */}
-                    {selectedCategory === "all" && (
-                      <div className="mb-8 text-center">
-                        <h3 className="text-3xl font-bold capitalize bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
-                          {categoryName}
-                        </h3>
-                        <div className="w-24 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full"></div>
-                      </div>
-                    )}
-                    
-                    {/* Products Grid for this category */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                      {categoryProducts.map((product, productIndex) => (
-                        <div key={product.id} className="animate-scale-in" style={{ animationDelay: `${productIndex * 100}ms` }}>
-                          <MinimalProductCard
-                            product={{
-                              id: product.id,
-                              name: product.name,
-                              price: product.price,
-                              category: product.category,
-                              stock_quantity: product.stock_quantity,
-                              is_active: true,
-                              thumbnail_image: product.thumbnail_image,
-                              images: product.thumbnail_image ? [product.thumbnail_image] : [],
-                              colors: [],
-                              sizes: [],
-                              new_arrival_date: product.new_arrival_date,
-                              created_at: product.created_at,
-                              updated_at: product.created_at,
-                              has_colors: product.has_colors,
-                              has_sizes: product.has_sizes,
-                              description: '',
-                              thumbnail_index: 0
-                            }}
-                            onAddToCart={onAddToCart}
-                            priority={globalIndex + productIndex < 8}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Products Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {allProducts.map((product, productIndex) => (
+                <div key={product.id} className="animate-scale-in" style={{ animationDelay: `${productIndex * 50}ms` }}>
+                  <MinimalProductCard
+                    product={{
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      category: product.category,
+                      stock_quantity: product.stock_quantity,
+                      is_active: true,
+                      thumbnail_image: product.thumbnail_image,
+                      images: product.thumbnail_image ? [product.thumbnail_image] : [],
+                      colors: [],
+                      sizes: [],
+                      new_arrival_date: product.new_arrival_date,
+                      created_at: product.created_at,
+                      updated_at: product.created_at,
+                      has_colors: product.has_colors,
+                      has_sizes: product.has_sizes,
+                      description: '',
+                      thumbnail_index: 0
+                    }}
+                    onAddToCart={onAddToCart}
+                    priority={productIndex < 8}
+                  />
+                </div>
+              ))}
             </div>
             
             {/* Load More Button */}

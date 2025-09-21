@@ -35,7 +35,7 @@ export const useUltraFastProducts = ({
   return useInfiniteQuery({
     queryKey: ['products', 'ultra-fast', category],
     queryFn: async ({ pageParam = 0 }): Promise<UltraFastProductPage> => {
-      const actualLimit = Math.min(pageSize, 12); // Cap at 12 to avoid timeouts
+      const actualLimit = Math.min(pageSize, 30); // Increased limit for better UX
       
       try {
         const result = await supabase.rpc('get_products_ultra_fast', {
@@ -75,8 +75,8 @@ export const useUltraFastProducts = ({
     },
     retryDelay: 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    refetchOnMount: true, // Allow refetch on mount for fresh data
+    refetchOnReconnect: true, // Allow refetch on reconnect
   });
 };
 
