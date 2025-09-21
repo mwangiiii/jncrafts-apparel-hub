@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
-import ProductCard from "./ProductCard";
-import { UltraFastProductCard } from "./UltraFastProductCard";
+import { MinimalProductCard } from "./MinimalProductCard";
 import ProductCardSkeleton from "./ProductCardSkeleton";
 import CategoryDropdown from "./CategoryDropdown";
 import { Product } from '@/types/database';
@@ -180,7 +179,7 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                       {categoryProducts.map((product, productIndex) => (
                         <div key={product.id} className="animate-scale-in" style={{ animationDelay: `${productIndex * 100}ms` }}>
-                          <UltraFastProductCard
+                          <MinimalProductCard
                             product={{
                               id: product.id,
                               name: product.name,

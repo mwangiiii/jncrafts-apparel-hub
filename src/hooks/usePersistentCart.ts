@@ -5,19 +5,24 @@ import { useSessionId } from './useSessionId';
 import { CartItem, Product } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
-export const usePersistentCart = () => {
+export const usePersistentCart = (shouldInitialize: boolean = true) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(shouldInitialize);
   const { user } = useAuth();
   const sessionId = useSessionId();
   const { toast } = useToast();
 
-  // Load cart items on mount or user change
+  // Load cart items on mount or user change - only if initialized
   useEffect(() => {
+    if (!shouldInitialize) {
+      setIsLoading(false);
+      return;
+    }
+    
     if (user || sessionId) {
       loadCartItems();
     }
-  }, [user, sessionId]);
+  }, [user, sessionId, shouldInitialize]);
 
   const loadCartItems = async () => {
     setIsLoading(true);

@@ -13,7 +13,7 @@ import Cart from "@/components/Cart";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useGlobalCart } from '@/hooks/useGlobalCart';
+import { useLazyCart } from '@/hooks/useLazyCart';
 import { Product } from '@/types/database';
 
 const Index = () => {
@@ -30,14 +30,16 @@ const Index = () => {
     openCart,
     closeCart,
     totalItems,
-    isLoading: cartLoading
-  } = useGlobalCart();
+    isLoading: cartLoading,
+    isInitialized
+  } = useLazyCart();
 
+  // Only migrate cart when user logs in AND cart is already initialized
   useEffect(() => {
-    if (user && user.id) {
+    if (user && user.id && isInitialized) {
       migrateGuestCart(user.id);
     }
-  }, [user]);
+  }, [user, isInitialized]);
 
   const handleAddToCart = async (product: Product, quantity: number, size: string, color: string) => {
     await addToCart(product, quantity, size, color);
