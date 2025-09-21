@@ -13,7 +13,7 @@ import { getPrimaryImage, hasRealSizes, hasRealColors, getSizeName, getColorName
 import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { useGlobalCart } from '@/hooks/useGlobalCart';
+import { useLazyCart } from '@/hooks/useLazyCart';
 import { useProductDetail } from '@/hooks/useProductDetail';
 import BackButton from '@/components/BackButton';
 import Cart from '@/components/Cart';
@@ -37,8 +37,9 @@ const ProductDetail = () => {
     clearCart,
     isCartOpen,
     openCart,
-    closeCart
-  } = useGlobalCart();
+    closeCart,
+    totalItems
+  } = useLazyCart();
 
   // Use the optimized product detail hook
   const { data: product, isLoading, error } = useProductDetail(id || '', !!id);
@@ -226,7 +227,7 @@ const ProductDetail = () => {
     return (
       <div className="min-h-screen bg-background animate-fade-in">
         <Header 
-          cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
+          cartItems={totalItems} 
           onCartClick={openCart} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -243,7 +244,7 @@ const ProductDetail = () => {
     return (
       <div className="min-h-screen bg-background animate-fade-in">
         <Header 
-          cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
+          cartItems={totalItems} 
           onCartClick={openCart} 
         />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -264,7 +265,7 @@ const ProductDetail = () => {
   return (
     <div className="min-h-screen bg-background animate-fade-in">
         <Header 
-          cartItems={cartItems.reduce((sum, item) => sum + item.quantity, 0)} 
+          cartItems={totalItems} 
           onCartClick={openCart} 
         />
       <div className="container mx-auto px-4 py-8">

@@ -7,6 +7,10 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
   return useQuery({
     queryKey: ['product', 'detail', productId],
     queryFn: async (): Promise<Product | null> => {
+      if (!productId) {
+        throw new Error('Product ID is required');
+      }
+      
       // Create an AbortController for timeout
       const controller = new AbortController();
       
@@ -14,6 +18,8 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
       const timeoutId = setTimeout(() => controller.abort(), 7000);
       
       try {
+        console.log('Fetching product detail for ID:', productId);
+        
         const { data, error } = await supabase
           .rpc('get_product_complete', { p_product_id: productId })
           .abortSignal(controller.signal);
@@ -22,17 +28,19 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
 
         if (error) {
           console.error('Error fetching product detail:', error);
-          throw error;
+          throw new Error(`Failed to load product: ${error.message}`);
         }
 
         if (!data || typeof data !== 'object') {
+          console.warn('No product data returned for ID:', productId);
           return null;
         }
 
         const productData = data as any;
+        console.log('Product data received:', productData);
         
         // Transform the response to match our Product interface
-        return {
+        const transformedProduct = {
           id: productData.id,
           name: productData.name,
           price: productData.price,
@@ -73,18 +81,29 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
             : [],
           videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
         };
+        
+        console.log('Transformed product:', transformedProduct);
+        return transformedProduct;
       } catch (err: any) {
         clearTimeout(timeoutId);
         if (err.name === 'AbortError') {
           throw new Error('Request timed out - please try again');
         }
+        console.error('Product detail fetch error:', err);
         throw err;
       }
     },
     enabled: enabled && !!productId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 15 * 60 * 1000, // 15 minutes
-    retry: false, // Don't retry detail queries
+    retry: (failureCount, error) => {
+      // Don't retry on specific errors
+      if (error.message.includes('Product ID is required') || 
+          error.message.includes('Request timed out')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 };
 
