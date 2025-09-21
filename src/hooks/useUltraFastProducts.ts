@@ -26,37 +26,88 @@ interface UseUltraFastProductsOptions {
   enabled?: boolean;
 }
 
-// Ultra-fast products hook with timeout protection and optimized caching
+// Ultra-fast products hook with fallback to direct query
 export const useUltraFastProducts = ({ 
   category = 'all', 
-  pageSize = 12, // Reduced for ultra-fast loading
+  pageSize = 12,
   enabled = true 
 }: UseUltraFastProductsOptions = {}) => {
   return useInfiniteQuery({
     queryKey: ['products', 'ultra-fast', category],
     queryFn: async ({ pageParam = 0 }): Promise<UltraFastProductPage> => {
-      const actualLimit = Math.min(pageSize, 30); // Increased limit for better UX
+      const actualLimit = Math.min(pageSize, 30);
       
       try {
-        const result = await supabase.rpc('get_products_ultra_fast', {
+        // First try the RPC function
+        const rpcResult = await supabase.rpc('get_products_ultra_fast', {
           p_category: category,
           p_limit: actualLimit,
           p_offset: pageParam * actualLimit
         });
-        
-        if (result.error) {
-          console.error('Error fetching ultra-fast products:', result.error);
-          throw result.error;
+
+        if (!rpcResult.error && rpcResult.data) {
+          const products = (rpcResult.data || []) as UltraFastProduct[];
+          return {
+            products,
+            nextCursor: products.length >= actualLimit ? pageParam + 1 : undefined,
+          };
         }
 
-        const products = (result.data || []) as UltraFastProduct[];
+        console.warn('RPC failed, falling back to direct query:', rpcResult.error);
+
+        // Fallback to direct product query
+        let query = supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            price,
+            category,
+            stock_quantity,
+            new_arrival_date,
+            created_at,
+            product_images!left(
+              image_url,
+              is_primary,
+              display_order
+            )
+          `)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .range(pageParam * actualLimit, (pageParam + 1) * actualLimit - 1);
+
+        if (category && category !== 'all') {
+          query = query.eq('category', category);
+        }
+
+        const { data: fallbackData, error: fallbackError } = await query;
+
+        if (fallbackError) {
+          console.error('Fallback query failed:', fallbackError);
+          throw fallbackError;
+        }
+
+        // Transform fallback data to match UltraFastProduct interface
+        const products: UltraFastProduct[] = (fallbackData || []).map(product => ({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          stock_quantity: product.stock_quantity,
+          new_arrival_date: product.new_arrival_date,
+          created_at: product.created_at,
+          thumbnail_image: product.product_images?.find(img => img.display_order === 1)?.image_url || 
+                          product.product_images?.[0]?.image_url || null,
+          has_colors: false,
+          has_sizes: false
+        }));
 
         return {
           products,
           nextCursor: products.length >= actualLimit ? pageParam + 1 : undefined,
         };
       } catch (error) {
-        console.error('Failed to fetch products:', error);
+        console.error('All product fetch methods failed:', error);
         // Return empty result on error to prevent infinite loading
         return {
           products: [],
@@ -148,22 +199,36 @@ export const useRefreshProductsCache = () => {
   };
 };
 
-// Ultra-fast categories hook with timeout protection
+// Ultra-fast categories hook with fallback to direct query
 export const useUltraFastCategories = () => {
   return useQuery({
     queryKey: ['categories', 'ultra-fast'],
     queryFn: async (): Promise<string[]> => {
       try {
-        const { data, error } = await supabase.rpc('get_categories_fast');
+        // First try the RPC function
+        const rpcResult = await supabase.rpc('get_categories_fast');
 
-        if (error) {
-          console.error('Error fetching categories:', error);
-          return []; // Return empty array as fallback
+        if (!rpcResult.error && rpcResult.data) {
+          return (rpcResult.data || []).map(item => item.category).filter(Boolean);
         }
 
-        return (data || []).map(item => item.category).filter(Boolean);
+        console.warn('Categories RPC failed, falling back to direct query:', rpcResult.error);
+
+        // Fallback to direct query
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('products')
+          .select('category')
+          .eq('is_active', true);
+
+        if (fallbackError) {
+          console.error('Fallback categories query failed:', fallbackError);
+          return [];
+        }
+
+        const categories = Array.from(new Set((fallbackData || []).map(item => item.category).filter(Boolean)));
+        return categories;
       } catch (error) {
-        console.error('Failed to fetch categories:', error);
+        console.error('All category fetch methods failed:', error);
         return []; // Graceful fallback
       }
     },

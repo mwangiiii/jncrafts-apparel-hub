@@ -63,6 +63,14 @@ const ProductsSection = ({ onAddToCart }: ProductsSectionProps) => {
     refetch();
   };
 
+  console.log('🔍 ProductsSection state:', {
+    selectedCategory,
+    allProductsLength: allProducts.length,
+    hasNextPage,
+    isLoading,
+    isError
+  });
+
   // Show initial loading state
   if (isLoading && allProducts.length === 0) {
     return (
