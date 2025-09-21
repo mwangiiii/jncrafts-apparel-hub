@@ -27,7 +27,32 @@ export const usePersistentCart = (shouldInitialize: boolean = true) => {
   const loadCartItems = async () => {
     setIsLoading(true);
     try {
-      let query = supabase.from('cart_items_with_details').select('*');
+      let query = supabase
+        .from('cart_items')
+        .select(`
+          *,
+          products!inner(
+            id,
+            name,
+            category,
+            description,
+            price
+          ),
+          colors!inner(
+            id,
+            name,
+            hex_code
+          ),
+          sizes!inner(
+            id,
+            name,
+            category
+          ),
+          product_images!thumbnail_image_id(
+            id,
+            image_url
+          )
+        `);
       
       if (user) {
         query = query.eq('user_id', user.id);
@@ -38,7 +63,21 @@ export const usePersistentCart = (shouldInitialize: boolean = true) => {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      setCartItems(data || []);
+      
+      // Transform data to match expected CartItem structure
+      const transformedItems = (data || []).map((item: any) => ({
+        ...item,
+        product_name: item.products?.name || 'Unknown Product',
+        product_category: item.products?.category || '',
+        product_description: item.products?.description || '',
+        product_image: item.product_images?.image_url || '',
+        color_name: item.colors?.name || 'Unknown Color',
+        color_hex: item.colors?.hex_code || '#000000',
+        size_name: item.sizes?.name || 'Unknown Size',
+        size_category: item.sizes?.category || 'clothing'
+      }));
+      
+      setCartItems(transformedItems);
     } catch (error) {
       console.error('Error loading cart:', error);
       toast({
@@ -53,6 +92,21 @@ export const usePersistentCart = (shouldInitialize: boolean = true) => {
 
   const addToCart = async (product: Product, quantity: number, size: string, color: string) => {
     try {
+      // Get the primary image for the product to store as thumbnail
+      let primaryImageId: string | null = null;
+      
+      if (product.images && product.images.length > 0) {
+        // Find primary image or use first image
+        const primaryImage = product.images.find(img => 
+          typeof img === 'object' && img.is_primary
+        ) || product.images[0];
+        
+        // Extract image ID if it's an object
+        if (typeof primaryImage === 'object' && primaryImage.id) {
+          primaryImageId = primaryImage.id;
+        }
+      }
+
       // Use the normalized function to add items to cart
       const { data: cartItemId, error } = await supabase.rpc('add_to_cart_normalized', {
         p_product_id: product.id,
@@ -65,6 +119,14 @@ export const usePersistentCart = (shouldInitialize: boolean = true) => {
       });
 
       if (error) throw error;
+
+      // Update the cart item with thumbnail image reference if we have one
+      if (cartItemId && primaryImageId) {
+        await supabase
+          .from('cart_items')
+          .update({ thumbnail_image_id: primaryImageId })
+          .eq('id', cartItemId);
+      }
 
       // Reload cart items to get the updated normalized data
       await loadCartItems();

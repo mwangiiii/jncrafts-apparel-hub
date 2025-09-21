@@ -90,6 +90,7 @@ export type Database = {
           quantity: number
           session_id: string | null
           size_id: string
+          thumbnail_image_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -102,6 +103,7 @@ export type Database = {
           quantity?: number
           session_id?: string | null
           size_id: string
+          thumbnail_image_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -114,6 +116,7 @@ export type Database = {
           quantity?: number
           session_id?: string | null
           size_id?: string
+          thumbnail_image_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -151,6 +154,13 @@ export type Database = {
             columns: ["size_id"]
             isOneToOne: false
             referencedRelation: "sizes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_thumbnail_image_id_fkey"
+            columns: ["thumbnail_image_id"]
+            isOneToOne: false
+            referencedRelation: "product_images"
             referencedColumns: ["id"]
           },
         ]
@@ -1154,65 +1164,6 @@ export type Database = {
       }
     }
     Views: {
-      cart_items_with_details: {
-        Row: {
-          color_hex: string | null
-          color_id: string | null
-          color_name: string | null
-          created_at: string | null
-          id: string | null
-          price: number | null
-          product_category: string | null
-          product_description: string | null
-          product_id: string | null
-          product_image: string | null
-          product_name: string | null
-          quantity: number | null
-          session_id: string | null
-          size_category: string | null
-          size_id: string | null
-          size_name: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cart_items_color_id_fkey"
-            columns: ["color_id"]
-            isOneToOne: false
-            referencedRelation: "colors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "mv_admin_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "mv_products_landing"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_size_id_fkey"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mv_admin_products: {
         Row: {
           category: string | null
