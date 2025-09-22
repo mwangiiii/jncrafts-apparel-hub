@@ -14,6 +14,7 @@ import OrderConfirmationDialog from './OrderConfirmationDialog';
 import DeliveryMethodSelector from './DeliveryMethodSelector';
 import AddressAutocomplete from './AddressAutocomplete';
 import MpesaPaymentDialog from './MpesaPaymentDialog';
+import { CartThumbnail } from './CartThumbnail';
 
 import { CartItem } from "@/types/database";
 
@@ -433,21 +434,21 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
             ) : (
               <div className="space-y-4">
                 {items.map((item) => (
-                <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                  <a 
-                    href={`/product/${item.product_id}`}
-                    className="flex-shrink-0 hover:opacity-80 transition-opacity"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.location.href = `/product/${item.product_id}`;
-                    }}
-                  >
-                    <img 
-                      src={item.product_image || '/placeholder.svg'} 
-                      alt={item.product_name}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
-                  </a>
+                  <div key={item.id} className="flex items-center gap-4 border-b pb-4">
+                    <a 
+                      href={`/product/${item.product_id}`}
+                      className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = `/product/${item.product_id}`;
+                      }}
+                    >
+                      <CartThumbnail 
+                        productId={item.product_id}
+                        productImage={item.product_image}
+                        productName={item.product_name}
+                      />
+                    </a>
                   <div className="flex-1">
                     <a 
                       href={`/product/${item.product_id}`}
@@ -641,7 +642,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         onPaymentConfirm={handlePaymentConfirm}
         totalAmount={finalTotal}
         orderNumber="pending"
-        isProcessing={isPlacingOrder}
       />
     </div>
   );
