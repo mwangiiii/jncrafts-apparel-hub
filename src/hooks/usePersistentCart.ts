@@ -25,7 +25,7 @@ export const usePersistentCart = (shouldInitialize: boolean = true) => {
   }, [user, sessionId, shouldInitialize]);
 
   const loadCartItems = async () => {
-    setIsLoading(true);
+    // Skip loading state for seamless updates
     try {
       let query = supabase
         .from('cart_items')
@@ -86,7 +86,8 @@ export const usePersistentCart = (shouldInitialize: boolean = true) => {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      // Only set loading false on initial load
+      if (isLoading) setIsLoading(false);
     }
   };
 

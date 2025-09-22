@@ -421,12 +421,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
               </div>
             )}
             
-            {isLoading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading cart items...</p>
-              </div>
-            ) : items.length === 0 ? (
+            {items.length === 0 ? (
               <div className="text-center py-12">
                 <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">Your cart is empty</p>
