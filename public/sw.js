@@ -39,6 +39,40 @@ const CACHE_STRATEGIES = {
   ]
 };
 
+// Helper function to check if URL is cacheable
+function isCacheableUrl(url) {
+  // Skip chrome-extension, moz-extension, safari-extension URLs
+  if (url.protocol === 'chrome-extension:' || 
+      url.protocol === 'moz-extension:' || 
+      url.protocol === 'safari-extension:') {
+    return false;
+  }
+  
+  // Only cache http and https URLs
+  return url.protocol === 'http:' || url.protocol === 'https:';
+}
+
+// Helper functions to determine resource types
+function isStaticAsset(request) {
+  const url = new URL(request.url);
+  if (!isCacheableUrl(url)) return false;
+  return CACHE_STRATEGIES.static.some(pattern => pattern.test(url.pathname));
+}
+
+function isImageRequest(request) {
+  const url = new URL(request.url);
+  if (!isCacheableUrl(url)) return false;
+  return CACHE_STRATEGIES.imageCache.some(pattern => pattern.test(url.pathname)) ||
+         request.destination === 'image';
+}
+
+function isApiRequest(request) {
+  const url = new URL(request.url);
+  if (!isCacheableUrl(url)) return false;
+  return CACHE_STRATEGIES.networkFirst.some(pattern => pattern.test(url.href)) ||
+         CACHE_STRATEGIES.staleWhileRevalidate.some(pattern => pattern.test(url.pathname));
+}
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -70,8 +104,10 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') return;
+  // Skip non-GET requests and non-cacheable URLs
+  if (request.method !== 'GET' || !isCacheableUrl(url)) {
+    return;
+  }
 
   // Handle different resource types
   if (isStaticAsset(request)) {
@@ -97,7 +133,11 @@ async function cacheFirst(request, cacheName) {
   try {
     const response = await fetch(request);
     if (response.status === 200) {
-      cache.put(request, response.clone());
+      // Only cache if URL is cacheable
+      const url = new URL(request.url);
+      if (isCacheableUrl(url)) {
+        cache.put(request, response.clone());
+      }
     }
     return response;
   } catch (error) {
@@ -123,9 +163,12 @@ async function cacheFirstWithExpiry(request, cacheName, maxAge) {
   try {
     const response = await fetch(request);
     if (response.status === 200) {
-      const responseToCache = response.clone();
-      responseToCache.headers.set('sw-cache-date', new Date().toISOString());
-      cache.put(request, responseToCache);
+      const url = new URL(request.url);
+      if (isCacheableUrl(url)) {
+        const responseToCache = response.clone();
+        responseToCache.headers.set('sw-cache-date', new Date().toISOString());
+        cache.put(request, responseToCache);
+      }
     }
     return response;
   } catch (error) {
@@ -143,9 +186,12 @@ async function networkFirstWithCache(request, cacheName) {
     
     if (response.status === 200) {
       // Cache successful responses with timestamp
-      const responseToCache = response.clone();
-      responseToCache.headers.set('sw-cache-date', new Date().toISOString());
-      cache.put(request, responseToCache);
+      const url = new URL(request.url);
+      if (isCacheableUrl(url)) {
+        const responseToCache = response.clone();
+        responseToCache.headers.set('sw-cache-date', new Date().toISOString());
+        cache.put(request, responseToCache);
+      }
     }
     
     return response;
@@ -177,5 +223,3 @@ async function networkFirstWithFallback(request) {
     throw error;
   }
 }
-
-//... keep existing code (helper functions and background sync)

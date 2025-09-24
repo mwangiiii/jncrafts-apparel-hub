@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, ProductImage } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,33 +10,33 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, Eye, EyeOff, X, ChevronUp, ChevronDown, Package, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
-import { useAdminProductsUltraFast, useRefreshAdminProductsUltraFast } from '@/hooks/useAdminProductsUltraFast';
+import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
 import { useCompleteProductManagement } from '@/hooks/useCompleteProductManagement';
 import AdminProductCardSkeleton from '@/components/admin/AdminProductCardSkeleton';
 import AdminProductImageManager from '@/components/admin/AdminProductImageManager';
-import ProductMediaManager from '@/components/admin/ProductMediaManager';
 import AdminProductsErrorBoundary from '@/components/admin/AdminProductsErrorBoundary';
 import AdminProductsLoadingFallback from '@/components/admin/AdminProductsLoadingFallback';
 import OptimizedAdminImage from '@/components/admin/OptimizedAdminImage';
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  
-  // ULTRA-FAST MATERIALIZED VIEW QUERY - FORCE OPTIMIZED
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useAdminProductsUltraFast({ enabled: !!user && isAdmin });
-  const { refreshProducts } = useRefreshAdminProductsUltraFast();
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useAdminProducts({ enabled: !!user && isAdmin });
+  const { refreshProducts } = useRefreshAdminProducts();
   const { createCompleteProduct, updateCompleteProduct, isCreating, isUpdating } = useCompleteProductManagement();
-  
-  // Flatten paginated data
-  const products = data?.pages.flatMap(page => page.products) || [];
 
-  // Form state - using simple types for form handling
+  const products = data?.pages.flatMap(page => page.products) || [];
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -49,79 +48,50 @@ const AdminProducts = () => {
     sizes: [] as string[],
     colors: [] as string[],
     stock_quantity: '',
-    is_active: true
+    is_active: true,
   });
 
-  const [categories, setCategories] = useState<string[]>([]);
   const availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
   const availableColors = ['Black', 'White', 'Grey', 'Red', 'Jungle Green', 'Baby Pink', 'Beige'];
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setCategories(data || []);
+      if (data.length === 0) {
+        toast({
+          title: "No Categories Found",
+          description: "Please add categories in the categories management section first.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Category fetch error:', error);
+      toast({
+        title: "Category Fetch Error",
+        description: error.message || "Failed to fetch categories",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     if (user && isAdmin) {
       fetchCategories();
-      // FORCE IMMEDIATE PRODUCT FETCH like homepage
       refetch();
     }
   }, [user, isAdmin, refetch]);
 
-  // Infinite scroll handler
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const fetchCategories = async () => {
-    try {
-      console.log('🔒 ADMIN-ONLY CATEGORY FETCH - FORCE CORRECT RLS');
-      const { data, error } = await supabase
-        .from('categories')
-        .select('id, name, description, display_order, is_active')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (error) {
-        console.error('❌ CATEGORY FETCH ERROR:', error);
-        throw error;
-      }
-      
-      const categoryNames = data?.map(cat => cat.name) || [];
-      setCategories(categoryNames);
-      
-      console.log('✅ ADMIN CATEGORIES FETCHED:', categoryNames.length, 'categories:', categoryNames);
-      
-      if (categoryNames.length === 0) {
-        console.warn('⚠️ NO CATEGORIES FOUND IN DATABASE');
-        toast({
-          title: "No Categories Found",
-          description: "Please add categories in the categories management section first.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('🚨 ADMIN CATEGORY FETCH FAILED:', error);
-      toast({
-        title: "Category Fetch Error",
-        description: `Database error: ${error.message || 'Unknown error'}`,
-        variant: "destructive"
-      });
-      // Force fallback to ensure form still works
-      setCategories(['Custom tees', 'Croptops', 'Tote bag', 'Signature tracksuit', 'Debut Tracksuit']);
-    }
-  };
-
-  if (loading) {
-    return <AdminProductsLoadingFallback />;
-  }
-
-  if (!user || !isAdmin) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Error retry handler
-  const handleRetry = () => {
-    refetch();
-  };
 
   const resetForm = () => {
     setFormData({
@@ -135,42 +105,31 @@ const AdminProducts = () => {
       sizes: [],
       colors: [],
       stock_quantity: '',
-      is_active: true
+      is_active: true,
     });
     setEditingProduct(null);
   };
 
-  const openEditDialog = (product: Product) => {
+  const openEditDialog = async (product: any) => {
     setEditingProduct(product);
-    
-    // Convert mixed types to simple arrays for form handling
-    const convertToStringArray = (arr: (string | any)[]): string[] => {
-      return arr?.map(item => typeof item === 'string' ? item : (item.name || item)) || [];
-    };
-    
-    const convertImagesToStrings = (images: (string | ProductImage)[]): string[] => {
-      return images?.map(img => typeof img === 'string' ? img : img.image_url) || [];
-    };
-    
     setFormData({
       name: product.name,
       price: product.price.toString(),
       description: product.description || '',
-      category: product.category,
-      images: convertImagesToStrings(product.images || []),
-      videos: product.videos || [],
-      thumbnailIndex: product.thumbnail_index || 0,
-      sizes: convertToStringArray(product.sizes || []),
-      colors: convertToStringArray(product.colors || []),
+      category: product.category_name,
+      images: [], // Images managed separately via AdminProductImageManager
+      videos: [],
+      thumbnailIndex: 0,
+      sizes: [], // Load via API if needed
+      colors: [],
       stock_quantity: product.stock_quantity.toString(),
-      is_active: product.is_active
+      is_active: product.is_active,
     });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       const productData = {
         name: formData.name,
@@ -183,81 +142,84 @@ const AdminProducts = () => {
         sizes: formData.sizes,
         colors: formData.colors,
         stock_quantity: parseInt(formData.stock_quantity),
-        is_active: formData.is_active
+        is_active: formData.is_active,
       };
 
       if (editingProduct) {
-        console.log('🔒 ADMIN PRODUCT UPDATE - NORMALIZED STRUCTURE');
-        await updateCompleteProduct.mutateAsync({
-          productId: editingProduct.id,
-          productData
-        });
-        console.log('✅ ADMIN PRODUCT UPDATED WITH NORMALIZED STRUCTURE');
+        console.log('🔒 Updating product:', productData.name);
+        await updateCompleteProduct.mutateAsync({ productId: editingProduct.id, productData });
+        console.log('✅ Product updated');
       } else {
-        console.log('🔒 ADMIN PRODUCT CREATE - NORMALIZED STRUCTURE');
+        console.log('🔒 Creating product:', productData.name);
         await createCompleteProduct.mutateAsync({ productData });
-        console.log('✅ ADMIN PRODUCT CREATED WITH NORMALIZED STRUCTURE');
+        console.log('✅ Product created');
       }
 
       setIsDialogOpen(false);
       resetForm();
       refreshProducts();
-    } catch (error) {
-      console.error('💥 Error saving product with normalized structure:', error);
-      // Error handling is done in the hook
+    } catch (error: any) {
+      console.error('Error saving product:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save product",
+        variant: "destructive",
+      });
     }
   };
 
-  const toggleProductStatus = async (product: Product) => {
+  const toggleProductStatus = async (product: any) => {
     try {
-      console.log('🔒 ADMIN PRODUCT STATUS TOGGLE - ROLE-BASED ISOLATION');
+      console.log('🔒 Toggling product status:', product.name);
       const { error } = await supabase
         .from('products')
         .update({ is_active: !product.is_active })
         .eq('id', product.id);
-
       if (error) throw error;
-      
       refreshProducts();
       toast({
         title: "Success",
         description: `Product ${product.is_active ? 'hidden' : 'activated'}`,
       });
-      console.log('✅ ADMIN PRODUCT STATUS UPDATED - NO USER DATA INVOLVED');
-    } catch (error) {
-      console.error('🚨 ADMIN PRODUCT STATUS UPDATE FAILED:', error);
+      console.log('✅ Product status updated');
+    } catch (error: any) {
+      console.error('Error toggling product status:', error);
       toast({
         title: "Error",
-        description: "Failed to update product status",
-        variant: "destructive"
+        description: error.message || "Failed to update product status",
+        variant: "destructive",
       });
     }
   };
 
   const deleteProduct = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
-
     try {
-      console.log('🔒 ADMIN PRODUCT DELETE - ROLE-BASED ISOLATION');
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
-
+      console.log('🔒 Deleting product:', productId);
+      const { data: images } = await supabase
+        .from('product_images')
+        .select('image_url')
+        .eq('product_id', productId);
+      if (images) {
+        const fileNames = images.map(img => img.image_url.split('/').pop());
+        await supabase.storage.from('images').remove(fileNames.map(name => `thumbnails/${name}`));
+      }
+      await supabase.from('product_variants').delete().eq('product_id', productId);
+      await supabase.from('product_images').delete().eq('product_id', productId);
+      const { error } = await supabase.from('products').delete().eq('id', productId);
       if (error) throw error;
-      
       refreshProducts();
       toast({
         title: "Success",
         description: "Product deleted successfully",
       });
-      console.log('✅ ADMIN PRODUCT DELETED - NO USER DATA INVOLVED');
-    } catch (error) {
-      console.error('🚨 ADMIN PRODUCT DELETE FAILED:', error);
+      console.log('✅ Product deleted');
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
       toast({
         title: "Error",
-        description: "Failed to delete product",
-        variant: "destructive"
+        description: error.message || "Failed to delete product",
+        variant: "destructive",
       });
     }
   };
@@ -282,99 +244,74 @@ const AdminProducts = () => {
     setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setFormData(prev => ({ 
-          ...prev, 
-          images: [...prev.images, base64String] 
-        }));
-      };
-      reader.readAsDataURL(file);
-    });
+    const fileArray = Array.from(files);
+    const newImages: string[] = [];
+
+    try {
+      for (const file of fileArray) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast({
+            title: "File too large",
+            description: `${file.name} is over 10MB limit`,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        const fileName = `${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(`thumbnails/${fileName}`, file, { contentType: 'image/jpeg' });
+        if (uploadError) throw uploadError;
+
+        newImages.push(`https://ppljsayhwtlogficifar.supabase.co/storage/v1/object/public/images/thumbnails/${fileName}`);
+      }
+
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+      toast({
+        title: "Images added",
+        description: `Added ${newImages.length} image(s) to form`,
+      });
+    } catch (error: any) {
+      console.error('Error uploading images:', error);
+      toast({
+        title: "Image upload failed",
+        description: error.message || "Failed to upload images",
+        variant: "destructive",
+      });
+    }
   };
 
   const removeImage = (index: number) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      images: prev.images.filter((_, i) => i !== index) 
-    }));
+    setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
 
   const moveImage = (index: number, direction: 'up' | 'down') => {
     const newImages = [...formData.images];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    
     if (newIndex >= 0 && newIndex < newImages.length) {
       [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
       setFormData(prev => ({ ...prev, images: newImages }));
     }
   };
 
-  // Admin Product Card Component matching homepage styling
+  if (loading) return <AdminProductsLoadingFallback />;
+  if (!user || !isAdmin) return <Navigate to="/auth" replace />;
+
   const AdminProductCard = ({ product }: { product: any }) => {
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
-    const imgRef = useRef<HTMLImageElement>(null);
-
-    // Intersection Observer for lazy loading (same as homepage)
-    useEffect(() => {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setIsVisible(true);
-            observer.disconnect();
-          }
-        },
-        { threshold: 0.1 }
-      );
-
-      if (imgRef.current) {
-        observer.observe(imgRef.current);
-      }
-
-      return () => observer.disconnect();
-    }, []);
-
-    // Helper function to get image URL (same as homepage)
-    const getImageUrl = (image: string | ProductImage) => {
-      return typeof image === 'string' ? image : image.image_url;
-    };
-
-    // Use thumbnail from database function - ultra-fast
-    const thumbnailUrl = product.thumbnail_image || '/placeholder.svg';
-
-    const getStockStatus = () => {
-      if (product.stock_quantity === 0) {
-        return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
-      } else if (product.stock_quantity <= 5) {
-        return { status: 'low', message: `Only ${product.stock_quantity} left`, variant: 'secondary' as const };
-      }
-      return null;
-    };
-
-    const stockStatus = getStockStatus();
-
     return (
       <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
-        {/* Image section matching homepage layout */}
         <div className="relative overflow-hidden">
-          {/* Image section with optimized loading */}
           <OptimizedAdminImage
             src={product.thumbnail_image}
             alt={product.name}
             className="w-full h-80"
           />
-          
-          {/* Gradient overlay matching homepage */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          
-          {/* Admin action buttons overlay (replacing homepage view/wishlist buttons) */}
           <div className="absolute top-2 right-2 flex flex-col gap-2">
             <Button
               size="sm"
@@ -401,61 +338,42 @@ const AdminProducts = () => {
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-
-          {/* Status badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {!product.is_active && (
-              <Badge variant="destructive" className="text-xs">
-                Hidden
-              </Badge>
+              <Badge variant="destructive" className="text-xs">Hidden</Badge>
             )}
             {product.new_arrival_date && (
-              <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg text-xs">
-                New
-              </Badge>
+              <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg text-xs">New</Badge>
             )}
           </div>
-
-          {/* Stock status badge matching homepage */}
-          {stockStatus && (
+          {product.stock_quantity <= 5 && (
             <div className="absolute bottom-2 left-2">
-              <Badge variant={stockStatus.variant} className="text-xs">
-                {stockStatus.message}
+              <Badge variant={product.stock_quantity === 0 ? "destructive" : "secondary"} className="text-xs">
+                {product.stock_quantity === 0 ? 'Out of Stock' : `Only ${product.stock_quantity} left`}
               </Badge>
             </div>
           )}
-
-          {/* Image count badge - optimized from database function */}
-          {(product.total_images || 0) > 1 && (
+          {product.total_images > 1 && (
             <div className="absolute bottom-2 right-2 bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full px-2 py-1 text-xs font-medium shadow-lg">
-              {product.total_images || 0} images
+              {product.total_images} images
             </div>
           )}
         </div>
-        
-        {/* Card content matching homepage layout */}
         <CardContent className="p-6">
           <div className="space-y-4">
             <div>
               <h3 className="text-xl font-semibold text-foreground">{product.name}</h3>
-              <p className="text-sm text-muted-foreground">{product.category}</p>
+              <p className="text-sm text-muted-foreground">{product.category_name}</p>
               <p className="text-2xl font-bold text-primary mt-2">KSh {product.price.toLocaleString()}</p>
             </div>
-
-            {/* Product details - optimized from database function */}
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">Stock:</span> {product.stock_quantity}</p>
-              <p><span className="font-medium">Colors:</span> {(product.colors_count || 0) > 0 ? `${product.colors_count} colors` : 'None'}</p>
-              <p><span className="font-medium">Sizes:</span> {(product.sizes_count || 0) > 0 ? `${product.sizes_count} sizes` : 'None'}</p>
-              <p><span className="font-medium">Images:</span> {product.total_images || 0}</p>
+              <p><span className="font-medium">Colors:</span> {product.colors_count > 0 ? `${product.colors_count} colors` : 'None'}</p>
+              <p><span className="font-medium">Sizes:</span> {product.sizes_count > 0 ? `${product.sizes_count} sizes` : 'None'}</p>
+              <p><span className="font-medium">Images:</span> {product.total_images}</p>
             </div>
-            
-            {/* Image Management - CRUD operations on normalized product_images table */}
             <div className="pt-2 border-t">
-              <AdminProductImageManager 
-                product={product} 
-                onUpdate={() => refreshProducts()}
-              />
+              <AdminProductImageManager product={product} onUpdate={() => refreshProducts()} />
             </div>
           </div>
         </CardContent>
@@ -467,7 +385,6 @@ const AdminProducts = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       <AdminHeader />
       <div className="container mx-auto px-4 py-8">
-        {/* Header Section */}
         <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-xl">
           <div className="flex justify-between items-center">
             <div>
@@ -483,11 +400,8 @@ const AdminProducts = () => {
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>
-                    {editingProduct ? 'Edit Product' : 'Add New Product'}
-                  </DialogTitle>
+                  <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
                 </DialogHeader>
-                
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -511,7 +425,6 @@ const AdminProducts = () => {
                       />
                     </div>
                   </div>
-
                   <div>
                     <Label htmlFor="description">Description</Label>
                     <Textarea
@@ -521,32 +434,21 @@ const AdminProducts = () => {
                       rows={3}
                     />
                   </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="category">Category</Label>
                       <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                        <SelectTrigger className="bg-background">
+                        <SelectTrigger>
                           <SelectValue placeholder={categories.length > 0 ? "Select category" : "Loading categories..."} />
                         </SelectTrigger>
-                         <SelectContent className="bg-background border border-input shadow-lg z-[100]">
-                           {categories.length > 0 ? (
-                             categories.map(cat => (
-                               <SelectItem key={cat} value={cat} className="hover:bg-accent">
-                                 {cat}
-                               </SelectItem>
-                             ))
-                           ) : (
-                             <SelectItem value="" disabled className="text-muted-foreground">
-                               No categories available - Add categories first
-                             </SelectItem>
-                           )}
-                         </SelectContent>
+                        <SelectContent>
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                       {categories.length === 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Add categories in Admin → Categories first
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">Add categories in Admin → Categories first</p>
                       )}
                     </div>
                     <div>
@@ -560,8 +462,6 @@ const AdminProducts = () => {
                       />
                     </div>
                   </div>
-
-                  {/* Sizes */}
                   <div>
                     <Label>Available Sizes</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -577,8 +477,6 @@ const AdminProducts = () => {
                       ))}
                     </div>
                   </div>
-
-                  {/* Colors */}
                   <div>
                     <Label>Available Colors</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -594,29 +492,46 @@ const AdminProducts = () => {
                       ))}
                     </div>
                   </div>
-
-                <ProductMediaManager
-                  media={{
-                    images: formData.images,
-                    videos: formData.videos,
-                    thumbnailIndex: formData.thumbnailIndex
-                  }}
-                  onMediaChange={(media) => setFormData(prev => ({
-                    ...prev,
-                    images: media.images,
-                    videos: media.videos,
-                    thumbnailIndex: media.thumbnailIndex
-                  }))}
-                />
-
+                  <div>
+                    <Label>Images</Label>
+                    <Input type="file" accept="image/*" multiple onChange={handleImageUpload} />
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.images.map((image, index) => (
+                        <div key={index} className="relative">
+                          <img src={image} alt={`Preview ${index}`} className="w-20 h-20 object-cover rounded" />
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="absolute top-0 right-0 h-5 w-5 p-0"
+                            onClick={() => removeImage(index)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="absolute top-0 left-0 h-5 w-5 p-0"
+                            onClick={() => moveImage(index, 'up')}
+                            disabled={index === 0}
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="absolute bottom-0 left-0 h-5 w-5 p-0"
+                            onClick={() => moveImage(index, 'down')}
+                            disabled={index === formData.images.length - 1}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={isCreating || isUpdating}
-                    >
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={isCreating || isUpdating}>
                       {(isCreating || isUpdating) ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -632,13 +547,8 @@ const AdminProducts = () => {
             </Dialog>
           </div>
         </div>
-
         {error ? (
-          <AdminProductsErrorBoundary 
-            error={error}
-            onRetry={handleRetry}
-            isRetrying={isLoading}
-          />
+          <AdminProductsErrorBoundary error={error} onRetry={refetch} isRetrying={isLoading} />
         ) : isLoading ? (
           <AdminProductsLoadingFallback />
         ) : products.length === 0 ? (
@@ -654,16 +564,9 @@ const AdminProducts = () => {
                 <AdminProductCard key={product.id} product={product} />
               ))}
             </div>
-            
-            {/* Load More Button */}
             {hasNextPage && (
               <div className="flex justify-center mt-8">
-                <Button 
-                  onClick={handleLoadMore} 
-                  disabled={isFetchingNextPage}
-                  size="lg"
-                  variant="outline"
-                >
+                <Button onClick={handleLoadMore} disabled={isFetchingNextPage} size="lg" variant="outline">
                   {isFetchingNextPage ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />

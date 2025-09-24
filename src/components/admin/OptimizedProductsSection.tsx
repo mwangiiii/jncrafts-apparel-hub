@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAdminProductsUltraFast, useRefreshAdminProductsUltraFast } from '@/hooks/useAdminProductsUltraFast';
+import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
 import { UltraFastImage } from '../UltraFastImage';
 import { 
   Package, 
@@ -27,7 +27,7 @@ export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }:
   const { toast } = useToast();
   const [reorderProductId, setReorderProductId] = useState<string | null>(null);
   
-  // Use optimized products hook
+  // Use standard products hook
   const {
     data: productsData,
     isLoading: loadingProducts,
@@ -35,9 +35,9 @@ export const OptimizedProductsSection = ({ onOpenProductDialog, onEditProduct }:
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
-  } = useAdminProductsUltraFast({ pageSize: 20, enabled: true });
+  } = useAdminProducts({ pageSize: 20, enabled: true });
   
-  const { refreshProducts } = useRefreshAdminProductsUltraFast();
+  const { refreshProducts } = useRefreshAdminProducts();
 
   // Flatten products from paginated data
   const products = productsData?.pages.flatMap(page => page.products) || [];
