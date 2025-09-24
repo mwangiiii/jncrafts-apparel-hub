@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Execute Migration</title>
+</head>
+<body>
+    <h1>Product Images Migration</h1>
+    <button onclick="executeMigration()">Execute Migration</button>
+    <div id="result"></div>
+    
+    <script>
+    async function executeMigration() {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = 'Executing migration...';
+        
+        try {
+            const response = await fetch('https://ppljsayhwtlogficifar.supabase.co/functions/v1/migrate-product-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            });
+            
+            const data = await response.json();
+            console.log('Migration result:', data);
+            
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <h2>Migration Successful!</h2>
+                    <p>Details: ${data.message}</p>
+                    <pre>${JSON.stringify(data.details, null, 2)}</pre>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <h2>Migration Failed</h2>
+                    <p>Error: ${data.error}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            resultDiv.innerHTML = `<h2>Error</h2><p>${error.message}</p>`;
+        }
+    }
+    </script>
+</body>
+</html>

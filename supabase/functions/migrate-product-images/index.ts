@@ -52,23 +52,56 @@ Deno.serve(async (req) => {
       try {
         console.log(`Processing image ${image.id}: ${image.image_url}`)
 
-        // Skip if already in storage
-        if (image.image_url.includes('supabase.co/storage')) {
-          console.log(`Image ${image.id} already in storage, skipping`)
+        // Skip if already in correct storage location
+        const expectedFolder = image.is_primary ? 'thumbnails' : 'other_images'
+        if (image.image_url.includes('supabase.co/storage') && image.image_url.includes(expectedFolder)) {
+          console.log(`Image ${image.id} already in correct storage location, skipping`)
           continue
         }
-
-        // Download the image
-        console.log(`Downloading image from: ${image.image_url}`)
-        const response = await fetch(image.image_url)
         
-        if (!response.ok) {
-          throw new Error(`Failed to download image: ${response.status} ${response.statusText}`)
+        // Handle images that are in storage but wrong folder
+        let sourceUrl = image.image_url
+        let shouldDownload = true
+        
+        if (image.image_url.includes('supabase.co/storage')) {
+          // Extract current file path from storage URL
+          const urlParts = image.image_url.split('/storage/v1/object/public/images/')
+          if (urlParts.length > 1) {
+            const currentPath = urlParts[1]
+            console.log(`Moving image from storage path: ${currentPath}`)
+            
+            // Download from current storage location
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('images')
+              .download(currentPath)
+            
+            if (downloadError) {
+              console.log(`Could not download from storage, will try external URL: ${downloadError.message}`)
+            } else {
+              const arrayBuffer = await fileData.arrayBuffer()
+              var uint8Array = new Uint8Array(arrayBuffer)
+              shouldDownload = false
+              
+              // Delete old file
+              await supabase.storage.from('images').remove([currentPath])
+            }
+          }
         }
+        
+        if (shouldDownload) {
 
-        const blob = await response.blob()
-        const arrayBuffer = await blob.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
+          // Download the image
+          console.log(`Downloading image from: ${sourceUrl}`)
+          const response = await fetch(sourceUrl)
+          
+          if (!response.ok) {
+            throw new Error(`Failed to download image: ${response.status} ${response.statusText}`)
+          }
+
+          const blob = await response.blob()
+          const arrayBuffer = await blob.arrayBuffer()
+          uint8Array = new Uint8Array(arrayBuffer)
+        }
 
         // Determine folder based on is_primary
         const folder = image.is_primary ? 'thumbnails' : 'other_images'
