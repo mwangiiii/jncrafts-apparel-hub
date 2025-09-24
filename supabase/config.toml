@@ -1,4 +1,10 @@
 
+project_id = "ppljsayhwtlogficifar"
+
+[functions.migrate-product-images]
+enabled = true
+verify_jwt = false
+
 [functions.mpesa-stkpush]
 enabled = true
 verify_jwt = true
