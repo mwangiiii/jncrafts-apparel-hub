@@ -8,32 +8,7 @@ verify_jwt = false
 [functions.mpesa-stkpush]
 enabled = true
 verify_jwt = true
-import_map = "./functions/mpesa-stkpush/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/mpesa-stkpush/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/mpesa-stkpush/*.html" ]
 
 [functions.mpesa-callback]
 enabled = true
 verify_jwt = true
-import_map = "./functions/mpesa-callback/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/mpesa-callback/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/mpesa-callback/*.html" ]
-
-[functions.mpesa-oauth-test]
-enabled = true
-verify_jwt = true
-import_map = "./functions/mpesa-oauth-test/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/mpesa-oauth-test/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/mpesa-oauth-test/*.html" ]
