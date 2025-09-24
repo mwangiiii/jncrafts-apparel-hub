@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AdminHeader from '@/components/AdminHeader';
 import { useAdminProducts, useRefreshAdminProducts } from '@/hooks/useAdminProducts';
@@ -41,7 +41,7 @@ const AdminProducts = () => {
     name: '',
     price: '',
     description: '',
-    category: '',
+    category: '', // This will store category UUID, not name
     images: [] as string[],
     videos: [] as string[],
     thumbnailIndex: 0,
@@ -111,39 +111,92 @@ const AdminProducts = () => {
   };
 
   const openEditDialog = async (product: any) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      price: product.price.toString(),
-      description: product.description || '',
-      category: product.category_name,
-      images: [], // Images managed separately via AdminProductImageManager
-      videos: [],
-      thumbnailIndex: 0,
-      sizes: [], // Load via API if needed
-      colors: [],
-      stock_quantity: product.stock_quantity.toString(),
-      is_active: product.is_active,
-    });
-    setIsDialogOpen(true);
+    try {
+      setEditingProduct(product);
+      
+      // Get category UUID from category name
+      const category = categories.find(cat => cat.name === product.category_name);
+      const categoryId = category?.id || '';
+
+      // Load existing variants for this product
+      const { data: variants } = await supabase
+        .from('product_variants')
+        .select(`
+          stock_quantity,
+          colors!inner(name),
+          sizes!inner(name)
+        `)
+        .eq('product_id', product.id);
+
+      const existingSizes = [...new Set(variants?.filter(v => v.sizes?.name).map(v => v.sizes.name) || [])];
+      const existingColors = [...new Set(variants?.filter(v => v.colors?.name).map(v => v.colors.name) || [])];
+      const totalStock = variants?.reduce((sum, v) => sum + v.stock_quantity, 0) || 0;
+
+      setFormData({
+        name: product.name,
+        price: product.price.toString(),
+        description: product.description || '',
+        category: categoryId, // Store UUID, not name
+        images: [], // Images managed separately via AdminProductImageManager
+        videos: [],
+        thumbnailIndex: product.thumbnail_index || 0,
+        sizes: existingSizes,
+        colors: existingColors,
+        stock_quantity: totalStock.toString(),
+        is_active: product.is_active,
+      });
+      setIsDialogOpen(true);
+    } catch (error: any) {
+      console.error('Error loading product for edit:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load product details",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.category) {
+      toast({
+        title: "Error",
+        description: "Please select a category",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.sizes.length === 0 && formData.colors.length === 0) {
+      toast({
+        title: "Error", 
+        description: "Please select at least one size or color",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const productData = {
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description,
-        category: formData.category,
+        category: formData.category, // This is now a UUID
         images: formData.images,
         videos: formData.videos,
         thumbnailIndex: formData.thumbnailIndex,
         sizes: formData.sizes,
         colors: formData.colors,
-        stock_quantity: parseInt(formData.stock_quantity),
+        stock_quantity: parseInt(formData.stock_quantity) || 0,
         is_active: formData.is_active,
       };
+
+      console.log('Submitting product data:', {
+        ...productData,
+        categoryName: categories.find(c => c.id === productData.category)?.name
+      });
 
       if (editingProduct) {
         console.log('🔒 Updating product:', productData.name);
@@ -160,11 +213,7 @@ const AdminProducts = () => {
       refreshProducts();
     } catch (error: any) {
       console.error('Error saving product:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save product",
-        variant: "destructive",
-      });
+      // Don't show error toast here as it's handled by the mutation
     }
   };
 
@@ -196,18 +245,34 @@ const AdminProducts = () => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     try {
       console.log('🔒 Deleting product:', productId);
+      
+      // Get images to delete from storage
       const { data: images } = await supabase
         .from('product_images')
         .select('image_url')
         .eq('product_id', productId);
-      if (images) {
-        const fileNames = images.map(img => img.image_url.split('/').pop());
-        await supabase.storage.from('images').remove(fileNames.map(name => `thumbnails/${name}`));
+      
+      // Delete images from storage
+      if (images && images.length > 0) {
+        const fileNames = images
+          .map(img => img.image_url.split('/').pop())
+          .filter(name => name && !name.includes('default.jpg'));
+        
+        if (fileNames.length > 0) {
+          await supabase.storage
+            .from('images')
+            .remove(fileNames.map(name => `thumbnails/${name}`));
+        }
       }
+
+      // Delete related records (cascade should handle this, but being explicit)
       await supabase.from('product_variants').delete().eq('product_id', productId);
       await supabase.from('product_images').delete().eq('product_id', productId);
+      
+      // Delete the product
       const { error } = await supabase.from('products').delete().eq('id', productId);
       if (error) throw error;
+      
       refreshProducts();
       toast({
         title: "Success",
@@ -262,13 +327,21 @@ const AdminProducts = () => {
           continue;
         }
 
-        const fileName = `${Date.now()}-${file.name}`;
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from('images')
-          .upload(`thumbnails/${fileName}`, file, { contentType: 'image/jpeg' });
-        if (uploadError) throw uploadError;
+          .upload(`thumbnails/${fileName}`, file, { 
+            contentType: file.type,
+            upsert: false 
+          });
+          
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
 
-        newImages.push(`https://ppljsayhwtlogficifar.supabase.co/storage/v1/object/public/images/thumbnails/${fileName}`);
+        const imageUrl = `https://ppljsayhwtlogficifar.supabase.co/storage/v1/object/public/images/thumbnails/${fileName}`;
+        newImages.push(imageUrl);
       }
 
       setFormData(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
@@ -443,7 +516,7 @@ const AdminProducts = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {categories.map(cat => (
-                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -476,6 +549,11 @@ const AdminProducts = () => {
                         </Badge>
                       ))}
                     </div>
+                    {formData.sizes.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Selected: {formData.sizes.join(', ')}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label>Available Colors</Label>
@@ -491,43 +569,53 @@ const AdminProducts = () => {
                         </Badge>
                       ))}
                     </div>
+                    {formData.colors.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Selected: {formData.colors.join(', ')}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label>Images</Label>
                     <Input type="file" accept="image/*" multiple onChange={handleImageUpload} />
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.images.map((image, index) => (
-                        <div key={index} className="relative">
-                          <img src={image} alt={`Preview ${index}`} className="w-20 h-20 object-cover rounded" />
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="absolute top-0 right-0 h-5 w-5 p-0"
-                            onClick={() => removeImage(index)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="absolute top-0 left-0 h-5 w-5 p-0"
-                            onClick={() => moveImage(index, 'up')}
-                            disabled={index === 0}
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="absolute bottom-0 left-0 h-5 w-5 p-0"
-                            onClick={() => moveImage(index, 'down')}
-                            disabled={index === formData.images.length - 1}
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                    {formData.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.images.map((image, index) => (
+                          <div key={index} className="relative">
+                            <img src={image} alt={`Preview ${index}`} className="w-20 h-20 object-cover rounded" />
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="absolute top-0 right-0 h-5 w-5 p-0"
+                              onClick={() => removeImage(index)}
+                              type="button"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-0 left-0 h-5 w-5 p-0"
+                              onClick={() => moveImage(index, 'up')}
+                              disabled={index === 0}
+                              type="button"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute bottom-0 left-0 h-5 w-5 p-0"
+                              onClick={() => moveImage(index, 'down')}
+                              disabled={index === formData.images.length - 1}
+                              type="button"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-end gap-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
