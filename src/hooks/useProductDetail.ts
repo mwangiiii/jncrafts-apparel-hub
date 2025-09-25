@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
 
-// Hook for loading full product details on demand using normalized structure
 export const useProductDetail = (productId: string, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['product', 'detail', productId],
@@ -10,18 +9,16 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
       if (!productId) {
         throw new Error('Product ID is required');
       }
-      
-      // Create an AbortController for timeout
+
       const controller = new AbortController();
-      
-      // Set 7-second timeout (less than server timeout of 8s)
       const timeoutId = setTimeout(() => controller.abort(), 7000);
-      
+
       try {
         console.log('Fetching product detail for ID:', productId);
-        
+
         const { data, error } = await supabase
           .rpc('get_product_complete', { p_product_id: productId })
+          .eq('is_active', true) // Ensure public access respects is_active
           .abortSignal(controller.signal);
 
         clearTimeout(timeoutId);
@@ -38,50 +35,51 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
 
         const productData = data as any;
         console.log('Product data received:', productData);
-        
-        // Transform the response to match our Product interface
-        const transformedProduct = {
+
+        const transformedProduct: Product = {
           id: productData.id,
           name: productData.name,
           price: productData.price,
-          description: productData.description,
-          category: productData.category,
-          stock_quantity: productData.stock_quantity,
+          description: productData.description || null,
+          category: productData.category_name || productData.category || 'Uncategorized',
+          stock_quantity: productData.stock_quantity || 0,
           is_active: productData.is_active,
-          new_arrival_date: productData.new_arrival_date,
-          thumbnail_index: productData.thumbnail_index,
+          new_arrival_date: productData.new_arrival_date || null,
+          thumbnail_index: productData.thumbnail_index || 0,
           created_at: productData.created_at,
           updated_at: productData.updated_at,
-          images: Array.isArray(productData.images) 
+          images: Array.isArray(productData.images)
             ? productData.images.map((img: any) => ({
-                id: img.id || 'temp',
-                image_url: img.url || img.image_url || img,
+                id: img.id || `temp-${img.image_url}`,
+                image_url: img.image_url,
                 is_primary: img.is_primary || false,
-                display_order: img.order || img.display_order || 0,
+                display_order: img.display_order || 0,
                 product_id: productId,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                alt_text: img.alt_text || `${productData.name} image`,
+                created_at: img.created_at || new Date().toISOString(),
+                updated_at: img.updated_at || new Date().toISOString(),
+                is_active: img.is_active !== false,
               }))
             : [],
-          colors: Array.isArray(productData.colors) 
+          colors: Array.isArray(productData.colors)
             ? productData.colors.map((color: any) => ({
                 id: color.id,
                 name: color.name,
-                hex: color.hex || color.hex_code,
-                available: color.available !== false
+                hex: color.hex_code || '#000000',
+                available: color.is_active !== false,
               }))
             : [],
-          sizes: Array.isArray(productData.sizes) 
+          sizes: Array.isArray(productData.sizes)
             ? productData.sizes.map((size: any) => ({
                 id: size.id,
                 name: size.name,
-                category: size.category,
-                available: size.available !== false
+                category: size.category_id || null,
+                available: size.is_active !== false,
               }))
             : [],
-          videos: (productData as any).videos ? Array.isArray((productData as any).videos) ? (productData as any).videos : [] : []
+          videos: Array.isArray(productData.videos) ? productData.videos : [],
         };
-        
+
         console.log('Transformed product:', transformedProduct);
         return transformedProduct;
       } catch (err: any) {
@@ -94,58 +92,13 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
       }
     },
     enabled: enabled && !!productId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 15 * 60 * 1000, // 15 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     retry: (failureCount, error) => {
-      // Don't retry on specific errors
-      if (error.message.includes('Product ID is required') || 
-          error.message.includes('Request timed out')) {
+      if (error.message.includes('Product ID is required') || error.message.includes('Request timed out')) {
         return false;
       }
       return failureCount < 2;
     },
-  });
-};
-
-// Hook for batch loading product details (for cart, wishlist, etc.)
-export const useProductBatch = (productIds: string[], enabled: boolean = true) => {
-  return useQuery({
-    queryKey: ['products', 'batch', productIds.sort().join(',')],
-    queryFn: async (): Promise<Product[]> => {
-      if (productIds.length === 0) return [];
-      
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          price,
-          category,
-          stock_quantity,
-          is_active,
-          created_at,
-          updated_at
-        `)
-        .in('id', productIds)
-        .eq('is_active', true);
-
-      if (error) {
-        console.error('Error fetching product batch:', error);
-        throw error;
-      }
-
-      return (data || []).map(p => ({
-        ...p,
-        images: [],
-        sizes: [],
-        colors: [],
-        videos: [],
-        description: null
-      }));
-    },
-    enabled: enabled && productIds.length > 0,
-    staleTime: 3 * 60 * 1000, // 3 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: false,
   });
 };
