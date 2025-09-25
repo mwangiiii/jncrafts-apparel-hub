@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+// 1. Validate category ID (should already be UUID from form)
+        const categoryId = productDataimport { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -33,20 +34,24 @@ export const useCompleteProductManagement = () => {
       console.log('🚀 CREATING COMPLETE PRODUCT WITH NORMALIZED STRUCTURE');
       
       try {
-        // 1. Get category ID from category name if needed
-        let categoryId = productData.category;
-        if (!productData.category.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
-          const { data: categoryData, error: categoryError } = await supabase
-            .from('categories')
-            .select('id')
-            .eq('name', productData.category)
-            .single();
-
-          if (categoryError || !categoryData) {
-            throw new Error(`Category "${productData.category}" not found`);
-          }
-          categoryId = categoryData.id;
+        // 1. Validate category ID (should already be UUID from form)
+        const categoryId = productData.category;
+        if (!categoryId || !categoryId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
+          throw new Error('Invalid category ID provided');
         }
+
+        // Verify category exists
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('categories')
+          .select('id, name')
+          .eq('id', categoryId)
+          .single();
+
+        if (categoryError || !categoryData) {
+          throw new Error(`Category with ID "${categoryId}" not found`);
+        }
+
+        console.log('✅ Category validated:', categoryData.name);
 
         // 2. Create the main product (stock_quantity goes to product_variants, not products)
         const { data: product, error: productError } = await supabase
@@ -268,20 +273,24 @@ export const useCompleteProductManagement = () => {
       console.log('🚀 UPDATING COMPLETE PRODUCT WITH NORMALIZED STRUCTURE');
       
       try {
-        // 1. Get category ID from category name if needed
-        let categoryId = productData.category;
-        if (!productData.category.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
-          const { data: categoryData, error: categoryError } = await supabase
-            .from('categories')
-            .select('id')
-            .eq('name', productData.category)
-            .single();
-
-          if (categoryError || !categoryData) {
-            throw new Error(`Category "${productData.category}" not found`);
-          }
-          categoryId = categoryData.id;
+        // 1. Validate category ID (should already be UUID from form)
+        const categoryId = productData.category;
+        if (!categoryId || !categoryId.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) {
+          throw new Error('Invalid category ID provided');
         }
+
+        // Verify category exists
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('categories')
+          .select('id, name')
+          .eq('id', categoryId)
+          .single();
+
+        if (categoryError || !categoryData) {
+          throw new Error(`Category with ID "${categoryId}" not found`);
+        }
+
+        console.log('✅ Category validated for update:', categoryData.name);
 
         // 2. Update the main product (stock_quantity goes to product_variants, not products)
         const { error: productError } = await supabase
