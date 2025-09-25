@@ -1,4 +1,3 @@
-// AdminProducts.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -9,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +20,7 @@ import AdminProductImageManager from '@/components/admin/AdminProductImageManage
 import AdminProductsErrorBoundary from '@/components/admin/AdminProductsErrorBoundary';
 import AdminProductsLoadingFallback from '@/components/admin/AdminProductsLoadingFallback';
 import OptimizedAdminImage from '@/components/admin/OptimizedAdminImage';
+import debounce from 'lodash/debounce';
 
 interface Category {
   id: string;
@@ -39,6 +39,8 @@ const AdminProducts = () => {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useAdminProducts({ enabled: !!user && isAdmin });
   const { refreshProducts } = useRefreshAdminProducts();
   const { createCompleteProduct, updateCompleteProduct, isCreating, isUpdating } = useCompleteProductManagement();
@@ -96,7 +98,6 @@ const AdminProducts = () => {
     }
   }, [user, isAdmin, refetch]);
 
-  // Generate variants based on selected colors and sizes, preserving existing stocks
   useEffect(() => {
     const colorSet = new Set(formData.colors);
     const sizeSet = new Set(formData.sizes);
@@ -171,12 +172,8 @@ const AdminProducts = () => {
   const openEditDialog = async (product: any) => {
     try {
       setEditingProduct(product);
-      
-      // Get category UUID from category name
       const category = categories.find(cat => cat.name === product.category_name);
       const categoryId = category?.id || '';
-
-      // Load existing variants
       const { data: variants } = await supabase
         .from('product_variants')
         .select(`
@@ -197,16 +194,13 @@ const AdminProducts = () => {
 
       const existingSizes = [...new Set(variants?.filter(v => v.sizes?.name).map(v => v.sizes.name) || [])];
       const existingColors = [...new Set(variants?.filter(v => v.colors?.name).map(v => v.colors.name) || [])];
-
-      // Load existing images
-      const { data: imagesData } = supabase
+      const { data: imagesData } = await supabase
         .from('product_images')
         .select('image_url')
         .eq('product_id', product.id)
         .order('display_order');
 
       const existingImages = imagesData?.map(i => i.image_url) || [];
-
       const totalStock = existingVariants.reduce((sum, v) => sum + v.stock_quantity, 0);
 
       setFormData({
@@ -236,8 +230,6 @@ const AdminProducts = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate required fields
     if (!formData.category) {
       toast({
         title: "Error",
@@ -246,10 +238,9 @@ const AdminProducts = () => {
       });
       return;
     }
-
     if (formData.variants.length === 0) {
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Please select at least one size or color",
         variant: "destructive",
       });
@@ -269,16 +260,18 @@ const AdminProducts = () => {
         is_active: formData.is_active,
       };
 
-      console.log('Submitting product data:', productData);
-
       if (editingProduct) {
-        console.log('🔒 Updating product:', productData.name);
         await updateCompleteProduct.mutateAsync({ productId: editingProduct.id, productData });
-        console.log('✅ Product updated');
+        toast({
+          title: "Success",
+          description: `Product "${productData.name}" updated successfully`,
+        });
       } else {
-        console.log('🔒 Creating product:', productData.name);
         await createCompleteProduct.mutateAsync({ productData });
-        console.log('✅ Product created');
+        toast({
+          title: "Success",
+          description: `Product "${productData.name}" created successfully`,
+        });
       }
 
       setIsDialogOpen(false);
@@ -286,13 +279,16 @@ const AdminProducts = () => {
       refreshProducts();
     } catch (error: any) {
       console.error('Error saving product:', error);
-      // Error handled in mutation
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save product",
+        variant: "destructive",
+      });
     }
   };
 
   const toggleProductStatus = async (product: any) => {
     try {
-      console.log('🔒 Toggling product status:', product.name);
       const { error } = await supabase
         .from('products')
         .update({ is_active: !product.is_active })
@@ -301,9 +297,8 @@ const AdminProducts = () => {
       refreshProducts();
       toast({
         title: "Success",
-        description: `Product ${product.is_active ? 'hidden' : 'activated'}`,
+        description: `Product "${product.name}" ${product.is_active ? 'hidden' : 'activated'}`,
       });
-      console.log('✅ Product status updated');
     } catch (error: any) {
       console.error('Error toggling product status:', error);
       toast({
@@ -314,53 +309,66 @@ const AdminProducts = () => {
     }
   };
 
-  const deleteProduct = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
-    try {
-      console.log('🔒 Deleting product:', productId);
-      
-      // Get images to delete from storage
-      const { data: images } = await supabase
-        .from('product_images')
-        .select('image_url')
-        .eq('product_id', productId);
-      
-      // Delete images from storage
-      if (images && images.length > 0) {
-        const fileNames = images
-          .map(img => img.image_url.split('/').pop())
-          .filter(name => name && !name.includes('default.jpg'));
-        
-        if (fileNames.length > 0) {
-          await supabase.storage
-            .from('images')
-            .remove(fileNames.map(name => `thumbnails/${name}`));
+  const deleteProduct = useCallback(
+    debounce(async (productId: string, productName: string) => {
+      setDeletingProductId(productId);
+      try {
+        // Verify admin role
+        const { data: { user } } = await supabase.auth.getUser();
+        const isAdminUser = user?.app_metadata?.role === 'admin';
+        if (!isAdminUser) {
+          throw new Error('Unauthorized: Admin access required');
         }
-      }
 
-      // Delete related records (cascade should handle this, but being explicit)
-      await supabase.from('product_variants').delete().eq('product_id', productId);
-      await supabase.from('product_images').delete().eq('product_id', productId);
-      
-      // Delete the product
-      const { error } = await supabase.from('products').delete().eq('id', productId);
-      if (error) throw error;
-      
-      refreshProducts();
-      toast({
-        title: "Success",
-        description: "Product deleted successfully",
-      });
-      console.log('✅ Product deleted');
-    } catch (error: any) {
-      console.error('Error deleting product:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete product",
-        variant: "destructive",
-      });
-    }
-  };
+        // Optimistic update: Remove product from UI
+        const originalProducts = products;
+        data!.pages = data!.pages.map(page => ({
+          ...page,
+          products: page.products.filter(p => p.id !== productId),
+        }));
+
+        // Delete product (cascades to product_images and product_variants due to ON DELETE CASCADE)
+        const { error } = await supabase.from('products').delete().eq('id', productId);
+        if (error) throw error;
+
+        // Clean up storage (optional, as CASCADE may handle images)
+        const { data: images } = await supabase
+          .from('product_images')
+          .select('image_url')
+          .eq('product_id', productId);
+        if (images?.length) {
+          const fileNames = images
+            .map(img => img.image_url.split('/').pop())
+            .filter((name): name is string => !!name && !name.includes('default.jpg'));
+          if (fileNames.length) {
+            await supabase.storage.from('images').remove(fileNames.map(name => `thumbnails/${name}`));
+          }
+        }
+
+        refreshProducts();
+        toast({
+          title: "Success",
+          description: `Product "${productName}" deleted successfully`,
+        });
+      } catch (error: any) {
+        console.error('Error deleting product:', error);
+        // Revert optimistic update
+        data!.pages = data!.pages.map(page => ({
+          ...page,
+          products: originalProducts.filter(p => page.products.some(pp => pp.id === p.id)),
+        }));
+        toast({
+          title: "Error",
+          description: error.message || `Failed to delete product "${productName}"`,
+          variant: "destructive",
+        });
+      } finally {
+        setDeletingProductId(null);
+        setDeleteDialogOpen(false);
+      }
+    }, 300),
+    [data, products, toast, refreshProducts]
+  );
 
   const addSize = (size: string) => {
     if (!formData.sizes.includes(size)) {
@@ -390,7 +398,6 @@ const AdminProducts = () => {
     }));
   };
 
-  // Update variant stock or price
   const updateVariant = (index: number, field: 'stock_quantity' | 'additional_price', value: number) => {
     setFormData(prev => ({
       ...prev,
@@ -409,15 +416,6 @@ const AdminProducts = () => {
 
     try {
       for (const file of fileArray) {
-        if (file.size > 10 * 1024 * 1024) {
-          toast({
-            title: "File too large",
-            description: `${file.name} is over 10MB limit`,
-            variant: "destructive",
-          });
-          continue;
-        }
-
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from('images')
@@ -425,11 +423,7 @@ const AdminProducts = () => {
             contentType: file.type,
             upsert: false 
           });
-          
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw uploadError;
-        }
+        if (uploadError) throw uploadError;
 
         const imageUrl = `https://ppljsayhwtlogficifar.supabase.co/storage/v1/object/public/images/thumbnails/${fileName}`;
         newImages.push(imageUrl);
@@ -473,34 +467,81 @@ const AdminProducts = () => {
           <OptimizedAdminImage
             src={product.thumbnail_image}
             alt={product.name}
-            className="w-full h-80"
+            className="w-full h-80 object-cover"
+            onError={() => console.error(`Failed to load image: ${product.thumbnail_image}`)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="absolute top-2 right-2 flex flex-col gap-2">
             <Button
               size="sm"
               variant="outline"
-              className="p-2 bg-background/80 backdrop-blur-sm"
+              className="p-2 bg-background/80 backdrop-blur-sm hover:bg-background"
               onClick={() => openEditDialog(product)}
+              disabled={deletingProductId === product.id}
+              aria-label={`Edit product ${product.name}`}
             >
               <Edit2 className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="p-2 bg-background/80 backdrop-blur-sm"
+              className="p-2 bg-background/80 backdrop-blur-sm hover:bg-background"
               onClick={() => toggleProductStatus(product)}
+              disabled={deletingProductId === product.id}
+              aria-label={`${product.is_active ? 'Hide' : 'Show'} product ${product.name}`}
             >
               {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              className="p-2 bg-background/80 backdrop-blur-sm"
-              onClick={() => deleteProduct(product.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <Dialog open={deleteDialogOpen && deletingProductId === product.id} onOpenChange={(open) => {
+              if (!open) setDeleteDialogOpen(false);
+            }}>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="p-2 bg-background/80 backdrop-blur-sm hover:bg-red-600"
+                  onClick={() => {
+                    setDeletingProductId(product.id);
+                    setDeleteDialogOpen(true);
+                  }}
+                  disabled={deletingProductId !== null}
+                  aria-label={`Delete product ${product.name}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Delete Product</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete "{product.name}"? This action cannot be undone. All associated images and variants will be removed.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteDialogOpen(false)}
+                    disabled={deletingProductId === product.id}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => deleteProduct(product.id, product.name)}
+                    disabled={deletingProductId === product.id}
+                  >
+                    {deletingProductId === product.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {!product.is_active && (
@@ -575,6 +616,7 @@ const AdminProducts = () => {
                         value={formData.name}
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                         required
+                        aria-required="true"
                       />
                     </div>
                     <div>
@@ -586,6 +628,7 @@ const AdminProducts = () => {
                         value={formData.price}
                         onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                         required
+                        aria-required="true"
                       />
                     </div>
                   </div>
@@ -602,7 +645,7 @@ const AdminProducts = () => {
                     <div>
                       <Label htmlFor="category">Category</Label>
                       <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Select product category">
                           <SelectValue placeholder={categories.length > 0 ? "Select category" : "Loading categories..."} />
                         </SelectTrigger>
                         <SelectContent>
@@ -622,6 +665,7 @@ const AdminProducts = () => {
                         type="number"
                         value={formData.totalStock}
                         disabled
+                        aria-readonly="true"
                       />
                     </div>
                   </div>
@@ -632,8 +676,10 @@ const AdminProducts = () => {
                         <Badge
                           key={size}
                           variant={formData.sizes.includes(size) ? "default" : "outline"}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-accent"
                           onClick={() => formData.sizes.includes(size) ? removeSize(size) : addSize(size)}
+                          role="button"
+                          aria-label={`Toggle size ${size}`}
                         >
                           {size}
                         </Badge>
@@ -652,8 +698,10 @@ const AdminProducts = () => {
                         <Badge
                           key={color}
                           variant={formData.colors.includes(color) ? "default" : "outline"}
-                          className="cursor-pointer"
+                          className="cursor-pointer hover:bg-accent"
                           onClick={() => formData.colors.includes(color) ? removeColor(color) : addColor(color)}
+                          role="button"
+                          aria-label={`Toggle color ${color}`}
                         >
                           {color}
                         </Badge>
@@ -675,22 +723,26 @@ const AdminProducts = () => {
                               {variant.color || 'No Color'} / {variant.size || 'No Size'}
                             </p>
                             <div>
-                              <Label className="text-xs">Stock Quantity</Label>
+                              <Label className="text-xs" htmlFor={`stock-${index}`}>Stock Quantity</Label>
                               <Input
+                                id={`stock-${index}`}
                                 type="number"
                                 value={variant.stock_quantity}
                                 onChange={(e) => updateVariant(index, 'stock_quantity', parseInt(e.target.value) || 0)}
                                 className="text-xs"
+                                aria-label={`Stock quantity for variant ${variant.color || 'No Color'}/${variant.size || 'No Size'}`}
                               />
                             </div>
                             <div>
-                              <Label className="text-xs">Additional Price</Label>
+                              <Label className="text-xs" htmlFor={`price-${index}`}>Additional Price</Label>
                               <Input
+                                id={`price-${index}`}
                                 type="number"
                                 step="0.01"
                                 value={variant.additional_price}
                                 onChange={(e) => updateVariant(index, 'additional_price', parseFloat(e.target.value) || 0)}
                                 className="text-xs"
+                                aria-label={`Additional price for variant ${variant.color || 'No Color'}/${variant.size || 'No Size'}`}
                               />
                             </div>
                           </div>
@@ -700,7 +752,13 @@ const AdminProducts = () => {
                   )}
                   <div>
                     <Label>Images</Label>
-                    <Input type="file" accept="image/*" multiple onChange={handleImageUpload} />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      aria-label="Upload product images"
+                    />
                     {formData.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {formData.images.map((image, index) => (
@@ -712,6 +770,7 @@ const AdminProducts = () => {
                               className="absolute top-0 right-0 h-5 w-5 p-0"
                               onClick={() => removeImage(index)}
                               type="button"
+                              aria-label={`Remove image ${index + 1}`}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -722,6 +781,7 @@ const AdminProducts = () => {
                               onClick={() => moveImage(index, 'up')}
                               disabled={index === 0}
                               type="button"
+                              aria-label={`Move image ${index + 1} up`}
                             >
                               <ChevronUp className="h-3 w-3" />
                             </Button>
@@ -732,6 +792,7 @@ const AdminProducts = () => {
                               onClick={() => moveImage(index, 'down')}
                               disabled={index === formData.images.length - 1}
                               type="button"
+                              aria-label={`Move image ${index + 1} down`}
                             >
                               <ChevronDown className="h-3 w-3" />
                             </Button>
@@ -741,8 +802,19 @@ const AdminProducts = () => {
                     )}
                   </div>
                   <div className="flex justify-end gap-4">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={isCreating || isUpdating}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                      aria-label="Cancel product form"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isCreating || isUpdating}
+                      aria-label={editingProduct ? 'Update product' : 'Create product'}
+                    >
                       {(isCreating || isUpdating) ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -777,7 +849,13 @@ const AdminProducts = () => {
             </div>
             {hasNextPage && (
               <div className="flex justify-center mt-8">
-                <Button onClick={handleLoadMore} disabled={isFetchingNextPage} size="lg" variant="outline">
+                <Button
+                  onClick={handleLoadMore}
+                  disabled={isFetchingNextPage}
+                  size="lg"
+                  variant="outline"
+                  aria-label="Load more products"
+                >
                   {isFetchingNextPage ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
