@@ -1,7 +1,8 @@
 // ProductDetail.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2, Ruler, Palette } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -28,6 +29,7 @@ import { cn } from '@/lib/utils';
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
@@ -44,7 +46,7 @@ const ProductDetail = () => {
     totalItems,
   } = useLazyCart();
 
-  const { data: product, isLoading, error } = useProductDetail(id || '', !!id);
+  const { data: product, isLoading, error, isError } = useProductDetail(id || '', !!id);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -56,11 +58,15 @@ const ProductDetail = () => {
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
   const [isSettingAlert, setIsSettingAlert] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [imageErrors, setImageErrors] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log('Product ID from URL:', id); // Debug log
+    console.log('[ProductDetail] Product ID from URL:', id);
+    console.log('[ProductDetail] isLoading:', isLoading);
+    console.log('[ProductDetail] isError:', isError, 'Error:', error);
+    console.log('[ProductDetail] Product:', product);
     if (product) {
-      console.log('Product loaded:', product); // Debug log
+      console.log('[ProductDetail] Product loaded:', JSON.stringify(product, null, 2));
       if (hasRealSizes(product) && product.sizes?.length > 0 && !selectedSize) {
         const availableSize = product.sizes.find((s) => s.is_active);
         if (availableSize) setSelectedSize(getSizeName(availableSize));
@@ -70,11 +76,12 @@ const ProductDetail = () => {
         if (availableColor) setSelectedColor(getColorName(availableColor));
       }
     }
-  }, [product, id]);
+    queryClient.invalidateQueries(['product', id]);
+  }, [id, product, isLoading, isError, error, queryClient]);
 
   useEffect(() => {
-    if (error) {
-      console.error('Product fetch error:', error); // Debug log
+    if (isError && error) {
+      console.error('[ProductDetail] Product fetch error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Product not found or unavailable',
@@ -82,7 +89,7 @@ const ProductDetail = () => {
       });
       navigate('/');
     }
-  }, [error, navigate, toast]);
+  }, [isError, error, navigate, toast]);
 
   const handleAddToCart = debounce(async () => {
     if (!product || isAddingToCart) return;
@@ -233,7 +240,14 @@ const ProductDetail = () => {
     return { status: 'in', message: 'In Stock', variant: 'default' as const };
   };
 
+  const handleImageError = (index: number, url: string) => {
+    console.error(`[ProductDetail] Image load failed for index ${index}: ${url}`);
+    setImageErrors((prev) => [...prev, url]);
+    setIsImageLoading(false);
+  };
+
   if (isLoading) {
+    console.log('[ProductDetail] Rendering loading state');
     return (
       <div className="min-h-screen bg-background">
         <Header cartItems={totalItems} onCartClick={openCart} />
@@ -274,7 +288,8 @@ const ProductDetail = () => {
     );
   }
 
-  if (!product) {
+  if (!product || isError) {
+    console.log('[ProductDetail] Rendering not found state', { product, isError });
     return (
       <div className="min-h-screen bg-background">
         <Header cartItems={totalItems} onCartClick={openCart} />
@@ -292,6 +307,7 @@ const ProductDetail = () => {
   }
 
   const stockStatus = getStockStatus();
+  const validImages = product.images.filter((img) => !imageErrors.includes(img.image_url));
 
   return (
     <div className="min-h-screen bg-background">
@@ -307,30 +323,36 @@ const ProductDetail = () => {
                   <Loader2 className="h-12 w-12 animate-spin text-primary" aria-hidden="true" />
                 </div>
               )}
+              {validImages.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/80 text-muted-foreground">
+                  <p>No images available</p>
+                </div>
+              )}
               <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogTrigger asChild>
                   <button
                     className="w-full h-full cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     aria-label="Zoom in on product image"
+                    disabled={validImages.length === 0}
                   >
                     <img
-                      src={product.images[selectedImage]?.image_url || getPrimaryImage(product)}
-                      alt={product.images[selectedImage]?.alt_text || `${product.name} - Image ${selectedImage + 1}`}
+                      src={validImages[selectedImage]?.image_url || getPrimaryImage(product)}
+                      alt={validImages[selectedImage]?.alt_text || `${product.name} - Image ${selectedImage + 1}`}
                       className={cn(
                         'w-full h-full object-cover transition-transform duration-500 hover:scale-105',
-                        isImageLoading ? 'opacity-0' : 'opacity-100'
+                        isImageLoading || validImages.length === 0 ? 'opacity-0' : 'opacity-100'
                       )}
                       loading="eager"
                       onLoad={() => setIsImageLoading(false)}
-                      onError={() => setIsImageLoading(false)}
+                      onError={() => handleImageError(selectedImage, validImages[selectedImage]?.image_url || '')}
                     />
                   </button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[90vh] p-0 border-none bg-background">
                   <Carousel className="w-full h-full" setApi={(api) => api?.scrollTo(selectedImage)}>
                     <CarouselContent>
-                      {product.images.length > 0 ? (
-                        product.images.map((image, index) => (
+                      {validImages.length > 0 ? (
+                        validImages.map((image, index) => (
                           <CarouselItem key={image.id}>
                             <div className="flex items-center justify-center h-[80vh] p-4">
                               <img
@@ -338,6 +360,7 @@ const ProductDetail = () => {
                                 alt={image.alt_text || `${product.name} - Image ${index + 1}`}
                                 className="max-w-full max-h-full object-contain"
                                 loading="lazy"
+                                onError={() => handleImageError(index, image.image_url)}
                               />
                             </div>
                           </CarouselItem>
@@ -360,9 +383,9 @@ const ProductDetail = () => {
                 </DialogContent>
               </Dialog>
             </div>
-            {product.images.length > 1 && (
+            {validImages.length > 1 && (
               <div className="grid grid-cols-4 gap-3 md:gap-4">
-                {product.images.map((image, index) => (
+                {validImages.map((image, index) => (
                   <button
                     key={image.id}
                     onClick={() => {
@@ -380,6 +403,7 @@ const ProductDetail = () => {
                       alt={image.alt_text || `${product.name} - Thumbnail ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       loading="lazy"
+                      onError={() => handleImageError(index, image.image_url)}
                     />
                   </button>
                 ))}

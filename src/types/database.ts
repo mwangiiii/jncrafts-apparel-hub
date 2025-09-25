@@ -1,16 +1,16 @@
 // types/database.ts
 export type Product = {
-  id: string; // UUID
+  id: string;
   name: string;
   price: number;
   description: string | null;
-  category_name: string; // From categories.name
-  stock_quantity: number; // Aggregated from product_variants
+  category_name: string;
+  stock_quantity: number;
   is_active: boolean;
-  new_arrival_date: string | null; // TIMESTAMP
+  new_arrival_date: string | null;
   thumbnail_index: number;
-  created_at: string; // TIMESTAMP
-  updated_at: string; // TIMESTAMP
+  created_at: string;
+  updated_at: string;
   show_jacket_size_chart: boolean;
   show_pants_size_chart: boolean;
   images: Array<{
@@ -27,7 +27,6 @@ export type Product = {
     hex_code: string;
     is_active: boolean;
     display_order: number;
-    available?: boolean; // Added by ProductDisplayHelper
   }>;
   sizes: Array<{
     id: string;
@@ -35,6 +34,5 @@ export type Product = {
     category: string;
     is_active: boolean;
     display_order: number;
-    available?: boolean; // Added by ProductDisplayHelper
   }>;
 };
