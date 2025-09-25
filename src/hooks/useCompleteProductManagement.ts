@@ -31,18 +31,22 @@ interface UpdateProductParams {
   productData: ProductFormData;
 }
 
-const normalizeName = (name: string): string => {
+const normalizeColor = (name: string): string => {
   return name.trim().toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+const normalizeSize = (name: string): string => {
+  return name.trim().toUpperCase();
 };
 
 const getOrCreateColors = async (uniqueColors: string[]): Promise<Map<string, string>> => {
   if (uniqueColors.length === 0) return new Map();
-  const normColors = uniqueColors.map(normalizeName);
+  const normColors = uniqueColors.map(normalizeColor);
   const { data: existing } = await supabase
     .from('colors')
     .select('id, name')
     .in('name', normColors);
-  const colorMap = new Map(existing?.map(c => [normalizeName(c.name), c.id]) || []);
+  const colorMap = new Map(existing?.map(c => [normalizeColor(c.name), c.id]) || []);
   const missing = normColors.filter(c => !colorMap.has(c));
   if (missing.length > 0) {
     const newColors = missing.map(c => ({ name: c, display_order: 999, is_active: true }));
@@ -50,19 +54,19 @@ const getOrCreateColors = async (uniqueColors: string[]): Promise<Map<string, st
       .from('colors')
       .insert(newColors)
       .select('id, name');
-    newData?.forEach(nc => colorMap.set(normalizeName(nc.name), nc.id));
+    newData?.forEach(nc => colorMap.set(normalizeColor(nc.name), nc.id));
   }
   return colorMap;
 };
 
 const getOrCreateSizes = async (uniqueSizes: string[]): Promise<Map<string, string>> => {
   if (uniqueSizes.length === 0) return new Map();
-  const normSizes = uniqueSizes.map(normalizeName);
+  const normSizes = uniqueSizes.map(normalizeSize);
   const { data: existing } = await supabase
     .from('sizes')
     .select('id, name')
     .in('name', normSizes);
-  const sizeMap = new Map(existing?.map(s => [normalizeName(s.name), s.id]) || []);
+  const sizeMap = new Map(existing?.map(s => [normalizeSize(s.name), s.id]) || []);
   const missing = normSizes.filter(s => !sizeMap.has(s));
   if (missing.length > 0) {
     const newSizes = missing.map(s => ({ name: s, category: 'clothing', display_order: 999, is_active: true }));
@@ -70,7 +74,7 @@ const getOrCreateSizes = async (uniqueSizes: string[]): Promise<Map<string, stri
       .from('sizes')
       .insert(newSizes)
       .select('id, name');
-    newData?.forEach(ns => sizeMap.set(normalizeName(ns.name), ns.id));
+    newData?.forEach(ns => sizeMap.set(normalizeSize(ns.name), ns.id));
   }
   return sizeMap;
 };
@@ -161,8 +165,8 @@ export const useCompleteProductManagement = () => {
 
           const variantInserts = productData.variants.map(variant => ({
             product_id: productId,
-            color_id: variant.color ? colorMap.get(normalizeName(variant.color)) : null,
-            size_id: variant.size ? sizeMap.get(normalizeName(variant.size)) : null,
+            color_id: variant.color ? colorMap.get(normalizeColor(variant.color)) : null,
+            size_id: variant.size ? sizeMap.get(normalizeSize(variant.size)) : null,
             stock_quantity: variant.stock_quantity,
             additional_price: variant.additional_price,
             is_available: variant.stock_quantity > 0,
@@ -321,8 +325,8 @@ export const useCompleteProductManagement = () => {
 
           const variantInserts = productData.variants.map(variant => ({
             product_id: productId,
-            color_id: variant.color ? colorMap.get(normalizeName(variant.color)) : null,
-            size_id: variant.size ? sizeMap.get(normalizeName(variant.size)) : null,
+            color_id: variant.color ? colorMap.get(normalizeColor(variant.color)) : null,
+            size_id: variant.size ? sizeMap.get(normalizeSize(variant.size)) : null,
             stock_quantity: variant.stock_quantity,
             additional_price: variant.additional_price,
             is_available: variant.stock_quantity > 0,
