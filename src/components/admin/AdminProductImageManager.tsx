@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +29,7 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -49,11 +49,17 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [product.id, toast]);
 
+  // Fetch images on component mount to ensure correct initial count
+  useEffect(() => {
+    fetchImages();
+  }, [fetchImages]);
+
+  // Refetch images when dialog opens
   useEffect(() => {
     if (isDialogOpen) fetchImages();
-  }, [isDialogOpen]);
+  }, [isDialogOpen, fetchImages]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -63,7 +69,10 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
     setUploadingImages(prev => [...prev, ...fileArray.map(f => f.name)]);
 
     try {
-      for (const file of fileArray) {
+      const maxOrder = Math.max(...productImages.map(img => img.display_order || 0), 0);
+      const newImages: ProductImage[] = [];
+
+      for (const [index, file] of fileArray.entries()) {
         if (file.size > 10 * 1024 * 1024) {
           toast({
             title: "File too large",
@@ -76,28 +85,32 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
         const fileName = `${product.id}-${Date.now()}-${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from('images')
-          .upload(`thumbnails/${fileName}`, file, { contentType: 'image/jpeg' });
+          .upload(`thumbnails/${fileName}`, file, { contentType: file.type });
         if (uploadError) throw uploadError;
 
         const imageUrl = `https://ppljsayhwtlogficifar.supabase.co/storage/v1/object/public/images/thumbnails/${fileName}`;
-        const maxOrder = Math.max(...productImages.map(img => img.display_order || 0), 0);
+        const newImage: ProductImage = {
+          id: `temp-${Date.now()}-${index}`,
+          product_id: product.id,
+          image_url: imageUrl,
+          alt_text: `${product.name} - Image ${maxOrder + index + 1}`,
+          display_order: maxOrder + index + 1,
+          is_primary: productImages.length === 0 && index === 0,
+          is_active: true,
+        };
 
+        newImages.push(newImage);
         const { error: insertError } = await supabase
           .from('product_images')
-          .insert({
-            product_id: product.id,
-            image_url: imageUrl,
-            alt_text: `${product.name} - Image ${maxOrder + 1}`,
-            display_order: maxOrder + 1,
-            is_primary: productImages.length === 0,
-            is_active: true,
-          });
+          .insert(newImage);
         if (insertError) throw insertError;
       }
 
+      // Optimistic update
+      setProductImages(prev => [...prev, ...newImages]);
       toast({
         title: "Images uploaded",
-        description: `Successfully uploaded ${fileArray.length} image(s)`,
+        description: `Successfully uploaded ${newImages.length} image(s)`,
       });
       await fetchImages();
       onUpdate?.();
@@ -126,6 +139,8 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
       const { error } = await supabase.from('product_images').delete().eq('id', imageId);
       if (error) throw error;
 
+      // Optimistic update
+      setProductImages(prev => prev.filter(img => img.id !== imageId));
       toast({
         title: "Image deleted",
         description: "Image has been removed from the product",
@@ -149,6 +164,17 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
     if (!targetImage) return;
 
     try {
+      // Optimistic update
+      setProductImages(prev =>
+        prev.map(img =>
+          img.id === image.id
+            ? { ...img, display_order: newOrder }
+            : img.id === targetImage.id
+            ? { ...img, display_order: currentOrder }
+            : img
+        )
+      );
+
       await Promise.all([
         supabase.from('product_images').update({ display_order: newOrder }).eq('id', image.id),
         supabase.from('product_images').update({ display_order: currentOrder }).eq('id', targetImage.id),
@@ -167,15 +193,30 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
         description: error.message || "Failed to move the image",
         variant: "destructive",
       });
+      // Revert optimistic update on error
+      await fetchImages();
     }
   };
 
   const handleSetAsThumbnail = async (image: ProductImage) => {
     try {
+      // Optimistic update
+      setProductImages(prev =>
+        prev.map(img =>
+          img.id === image.id
+            ? { ...img, is_primary: true, display_order: 1 }
+            : { ...img, is_primary: false, display_order: img.is_primary ? img.display_order + 1 : img.display_order }
+        )
+      );
+
       await Promise.all([
         supabase.from('product_images').update({ is_primary: false }).eq('product_id', product.id),
         supabase.from('product_images').update({ is_primary: true, display_order: 1 }).eq('id', image.id),
       ]);
+
+      // Update product thumbnail_index
+      const newThumbnailIndex = productImages.findIndex(img => img.id === image.id);
+      await supabase.from('products').update({ thumbnail_index: newThumbnailIndex }).eq('id', product.id);
 
       toast({
         title: "Thumbnail updated",
@@ -190,6 +231,8 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
         description: error.message || "Failed to set image as thumbnail",
         variant: "destructive",
       });
+      // Revert optimistic update on error
+      await fetchImages();
     }
   };
 
@@ -238,6 +281,27 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
             </div>
           </CardHeader>
           <CardContent>
+            <style>
+              {`
+                .image-card {
+                  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+                }
+                .image-card:hover {
+                  transform: scale(1.05);
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+                .thumbnail {
+                  border-color: #3b82f6;
+                  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+                  animation: pulse 1.5s infinite;
+                }
+                @keyframes pulse {
+                  0% { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+                  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5); }
+                  100% { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+                }
+              `}
+            </style>
             {isLoading ? (
               <div className="flex items-center justify-center p-8">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -249,8 +313,8 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
                   .map((image) => (
                     <div
                       key={image.id}
-                      className={`relative group border-2 rounded-lg overflow-hidden ${
-                        image.is_primary ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+                      className={`relative group border-2 rounded-lg overflow-hidden image-card ${
+                        image.is_primary ? 'thumbnail' : 'border-border'
                       }`}
                     >
                       <div className="aspect-square">
