@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2 } from 'lucide-react';
+import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2, Ruler, Palette, RulerHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
@@ -21,7 +22,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext
 import Header from '@/components/Header';
 import debounce from 'lodash/debounce';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils'; // Assuming shadcn utils are available for className merging
+import { cn } from '@/lib/utils';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,11 +58,11 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (product) {
-      if (product.sizes?.length > 0 && !selectedSize) {
+      if (hasRealSizes(product) && product.sizes?.length > 0 && !selectedSize) {
         const availableSize = product.sizes.find((s) => s.available);
         if (availableSize) setSelectedSize(getSizeName(availableSize));
       }
-      if (product.colors?.length > 0 && !selectedColor) {
+      if (hasRealColors(product) && product.colors?.length > 0 && !selectedColor) {
         const availableColor = product.colors.find((c) => c.available);
         if (availableColor) setSelectedColor(getColorName(availableColor));
       }
@@ -294,7 +295,6 @@ const ProductDetail = () => {
       <div className="container mx-auto px-4 py-8 md:px-6 lg:px-8">
         <BackButton className="mb-6 text-lg" aria-label="Go back to previous page" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
-          {/* Image Section - Sticky on desktop for better UX */}
           <div className="lg:sticky lg:top-20 lg:self-start space-y-4">
             <div className="relative aspect-square overflow-hidden rounded-xl bg-muted shadow-md hover:shadow-xl transition-shadow duration-300">
               {isImageLoading && (
@@ -366,7 +366,6 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
-          {/* Details Section */}
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
@@ -393,6 +392,35 @@ const ProductDetail = () => {
                 <p className="text-lg text-muted-foreground leading-loose whitespace-pre-wrap">
                   {product.description}
                 </p>
+              </div>
+            )}
+            {(product.show_jacket_size_chart || product.show_pants_size_chart) && (
+              <div className="space-y-3">
+                <h3 className="text-2xl font-semibold text-foreground">Size Charts</h3>
+                <div className="flex flex-wrap gap-4">
+                  {product.show_jacket_size_chart && (
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open('/size-charts/jacket', '_blank')}
+                      className="hover-scale transition-all duration-200"
+                      aria-label="View jacket size chart"
+                    >
+                      <Ruler className="h-4 w-4 mr-2" aria-hidden="true" />
+                      Jacket Size Chart
+                    </Button>
+                  )}
+                  {product.show_pants_size_chart && (
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open('/size-charts/pants', '_blank')}
+                      className="hover-scale transition-all duration-200"
+                      aria-label="View pants size chart"
+                    >
+                      <RulerHorizontal className="h-4 w-4 mr-2" aria-hidden="true" />
+                      Pants Size Chart
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
             {hasRealSizes(product) && (
