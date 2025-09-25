@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Images, Star, Upload, Trash2, ChevronUp, ChevronDown, Loader2, ImageIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid'; // Import UUID generator
 
 interface AdminProductImageManagerProps {
   product: { id: string; name: string };
@@ -89,8 +90,7 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
         if (uploadError) throw uploadError;
 
         const imageUrl = `https://ppljsayhwtlogficifar.supabase.co/storage/v1/object/public/images/thumbnails/${fileName}`;
-        const newImage: ProductImage = {
-          id: `temp-${Date.now()}-${index}`,
+        const newImage: Omit<ProductImage, 'id'> = {
           product_id: product.id,
           image_url: imageUrl,
           alt_text: `${product.name} - Image ${maxOrder + index + 1}`,
@@ -99,11 +99,16 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
           is_active: true,
         };
 
-        newImages.push(newImage);
-        const { error: insertError } = await supabase
+        // Insert image without specifying id, letting Supabase generate UUID
+        const { data, error: insertError } = await supabase
           .from('product_images')
-          .insert(newImage);
+          .insert(newImage)
+          .select('id')
+          .single();
         if (insertError) throw insertError;
+
+        // Add the returned ID to the new image for optimistic update
+        newImages.push({ ...newImage, id: data.id });
       }
 
       // Optimistic update
@@ -133,7 +138,9 @@ const AdminProductImageManager = ({ product, onUpdate }: AdminProductImageManage
       const image = productImages.find(img => img.id === imageId);
       if (image) {
         const fileName = image.image_url.split('/').pop();
-        await supabase.storage.from('images').remove([`thumbnails/${fileName}`]);
+        if (fileName) {
+          await supabase.storage.from('images').remove([`thumbnails/${fileName}`]);
+        }
       }
 
       const { error } = await supabase.from('product_images').delete().eq('id', imageId);
