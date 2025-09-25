@@ -1,3 +1,4 @@
+// AdminProducts.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -26,6 +27,13 @@ interface Category {
   name: string;
 }
 
+interface Variant {
+  color: string | null;
+  size: string | null;
+  stock_quantity: number;
+  additional_price: number;
+}
+
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
   const { toast } = useToast();
@@ -41,13 +49,13 @@ const AdminProducts = () => {
     name: '',
     price: '',
     description: '',
-    category: '', // This will store category UUID, not name
+    category: '',
     images: [] as string[],
     videos: [] as string[],
     thumbnailIndex: 0,
     sizes: [] as string[],
     colors: [] as string[],
-    stock_quantity: '',
+    variants: [] as Variant[],
     is_active: true,
   });
 
@@ -87,6 +95,49 @@ const AdminProducts = () => {
     }
   }, [user, isAdmin, refetch]);
 
+  // Generate variants based on selected colors and sizes, preserving existing stocks
+  useEffect(() => {
+    const colorSet = new Set(formData.colors);
+    const sizeSet = new Set(formData.sizes);
+    const newVariants: Variant[] = [];
+
+    if (colorSet.size > 0 && sizeSet.size > 0) {
+      formData.colors.forEach(color => {
+        formData.sizes.forEach(size => {
+          const existing = formData.variants.find(v => v.color === color && v.size === size);
+          newVariants.push({
+            color,
+            size,
+            stock_quantity: existing?.stock_quantity || 0,
+            additional_price: existing?.additional_price || 0,
+          });
+        });
+      });
+    } else if (colorSet.size > 0) {
+      formData.colors.forEach(color => {
+        const existing = formData.variants.find(v => v.color === color && v.size === null);
+        newVariants.push({
+          color,
+          size: null,
+          stock_quantity: existing?.stock_quantity || 0,
+          additional_price: existing?.additional_price || 0,
+        });
+      });
+    } else if (sizeSet.size > 0) {
+      formData.sizes.forEach(size => {
+        const existing = formData.variants.find(v => v.color === null && v.size === size);
+        newVariants.push({
+          color: null,
+          size,
+          stock_quantity: existing?.stock_quantity || 0,
+          additional_price: existing?.additional_price || 0,
+        });
+      });
+    }
+
+    setFormData(prev => ({ ...prev, variants: newVariants }));
+  }, [formData.colors, formData.sizes]);
+
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -104,7 +155,7 @@ const AdminProducts = () => {
       thumbnailIndex: 0,
       sizes: [],
       colors: [],
-      stock_quantity: '',
+      variants: [],
       is_active: true,
     });
     setEditingProduct(null);
@@ -118,31 +169,49 @@ const AdminProducts = () => {
       const category = categories.find(cat => cat.name === product.category_name);
       const categoryId = category?.id || '';
 
-      // Load existing variants for this product
+      // Load existing variants
       const { data: variants } = await supabase
         .from('product_variants')
         .select(`
+          id,
           stock_quantity,
+          additional_price,
           colors!inner(name),
           sizes!inner(name)
         `)
         .eq('product_id', product.id);
 
+      const existingVariants: Variant[] = variants?.map(v => ({
+        color: v.colors?.name || null,
+        size: v.sizes?.name || null,
+        stock_quantity: v.stock_quantity || 0,
+        additional_price: v.additional_price || 0,
+      })) || [];
+
       const existingSizes = [...new Set(variants?.filter(v => v.sizes?.name).map(v => v.sizes.name) || [])];
       const existingColors = [...new Set(variants?.filter(v => v.colors?.name).map(v => v.colors.name) || [])];
-      const totalStock = variants?.reduce((sum, v) => sum + v.stock_quantity, 0) || 0;
+
+      // Load existing images
+      const { data: imagesData } = await supabase
+        .from('product_images')
+        .select('image_url, is_primary')
+        .eq('product_id', product.id)
+        .order('display_order');
+
+      const existingImages = imagesData?.map(i => i.image_url) || [];
+      const primaryIndex = imagesData?.findIndex(i => i.is_primary) ?? 0;
 
       setFormData({
         name: product.name,
         price: product.price.toString(),
         description: product.description || '',
-        category: categoryId, // Store UUID, not name
-        images: [], // Images managed separately via AdminProductImageManager
+        category: categoryId,
+        images: existingImages,
         videos: [],
-        thumbnailIndex: product.thumbnail_index || 0,
+        thumbnailIndex: primaryIndex,
         sizes: existingSizes,
         colors: existingColors,
-        stock_quantity: totalStock.toString(),
+        variants: existingVariants,
         is_active: product.is_active,
       });
       setIsDialogOpen(true);
@@ -169,10 +238,20 @@ const AdminProducts = () => {
       return;
     }
 
-    if (formData.sizes.length === 0 && formData.colors.length === 0) {
+    if (formData.variants.length === 0) {
       toast({
         title: "Error", 
         description: "Please select at least one size or color",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate thumbnail index
+    if (formData.thumbnailIndex < 0 || formData.thumbnailIndex >= formData.images.length) {
+      toast({
+        title: "Error",
+        description: "Invalid thumbnail index",
         variant: "destructive",
       });
       return;
@@ -183,20 +262,15 @@ const AdminProducts = () => {
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description,
-        category: formData.category, // This is now a UUID
+        category: formData.category,
         images: formData.images,
         videos: formData.videos,
         thumbnailIndex: formData.thumbnailIndex,
-        sizes: formData.sizes,
-        colors: formData.colors,
-        stock_quantity: parseInt(formData.stock_quantity) || 0,
+        variants: formData.variants,
         is_active: formData.is_active,
       };
 
-      console.log('Submitting product data:', {
-        ...productData,
-        categoryName: categories.find(c => c.id === productData.category)?.name
-      });
+      console.log('Submitting product data:', productData);
 
       if (editingProduct) {
         console.log('🔒 Updating product:', productData.name);
@@ -213,7 +287,7 @@ const AdminProducts = () => {
       refreshProducts();
     } catch (error: any) {
       console.error('Error saving product:', error);
-      // Don't show error toast here as it's handled by the mutation
+      // Error handled in mutation
     }
   };
 
@@ -296,7 +370,11 @@ const AdminProducts = () => {
   };
 
   const removeSize = (size: string) => {
-    setFormData(prev => ({ ...prev, sizes: prev.sizes.filter(s => s !== size) }));
+    setFormData(prev => ({ 
+      ...prev, 
+      sizes: prev.sizes.filter(s => s !== size),
+      variants: prev.variants.filter(v => v.size !== size)
+    }));
   };
 
   const addColor = (color: string) => {
@@ -306,7 +384,21 @@ const AdminProducts = () => {
   };
 
   const removeColor = (color: string) => {
-    setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }));
+    setFormData(prev => ({ 
+      ...prev, 
+      colors: prev.colors.filter(c => c !== color),
+      variants: prev.variants.filter(v => v.color !== color)
+    }));
+  };
+
+  // Update variant stock or price
+  const updateVariant = (index: number, field: 'stock_quantity' | 'additional_price', value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: prev.variants.map((v, i) => 
+        i === index ? { ...v, [field]: value } : v
+      )
+    }));
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,6 +410,7 @@ const AdminProducts = () => {
 
     try {
       for (const file of fileArray) {
+        // Basic client-side validation: size limit
         if (file.size > 10 * 1024 * 1024) {
           toast({
             title: "File too large",
@@ -326,6 +419,23 @@ const AdminProducts = () => {
           });
           continue;
         }
+
+        // Optional: Image dimension validation using FileReader and canvas
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          if (img.width < 800 || img.height < 800) {
+            toast({
+              title: "Image too small",
+              description: `${file.name} should be at least 800x800 pixels`,
+              variant: "destructive",
+            });
+            URL.revokeObjectURL(url);
+            return;
+          }
+          URL.revokeObjectURL(url);
+        };
+        img.src = url;
 
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
         const { error: uploadError } = await supabase.storage
@@ -361,6 +471,12 @@ const AdminProducts = () => {
 
   const removeImage = (index: number) => {
     setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
+    // Adjust thumbnailIndex if necessary
+    if (formData.thumbnailIndex === index) {
+      setFormData(prev => ({ ...prev, thumbnailIndex: 0 }));
+    } else if (formData.thumbnailIndex > index) {
+      setFormData(prev => ({ ...prev, thumbnailIndex: prev.thumbnailIndex - 1 }));
+    }
   };
 
   const moveImage = (index: number, direction: 'up' | 'down') => {
@@ -368,7 +484,15 @@ const AdminProducts = () => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex >= 0 && newIndex < newImages.length) {
       [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
-      setFormData(prev => ({ ...prev, images: newImages }));
+      // Adjust thumbnailIndex if moved
+      let adjustedIndex = formData.thumbnailIndex;
+      if (adjustedIndex === index) adjustedIndex = newIndex;
+      else if (adjustedIndex === newIndex) adjustedIndex = index;
+      setFormData(prev => ({ 
+        ...prev, 
+        images: newImages,
+        thumbnailIndex: adjustedIndex 
+      }));
     }
   };
 
@@ -471,7 +595,7 @@ const AdminProducts = () => {
                   Add Product
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
                 </DialogHeader>
@@ -525,13 +649,14 @@ const AdminProducts = () => {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="stock">Stock Quantity</Label>
+                      <Label htmlFor="thumbnailIndex">Thumbnail Index</Label>
                       <Input
-                        id="stock"
+                        id="thumbnailIndex"
                         type="number"
-                        value={formData.stock_quantity}
-                        onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: e.target.value }))}
-                        required
+                        min="0"
+                        max={formData.images.length - 1 || 0}
+                        value={formData.thumbnailIndex}
+                        onChange={(e) => setFormData(prev => ({ ...prev, thumbnailIndex: Math.max(0, Math.min(parseInt(e.target.value) || 0, prev.images.length - 1)) }))}
                       />
                     </div>
                   </div>
@@ -575,6 +700,39 @@ const AdminProducts = () => {
                       </p>
                     )}
                   </div>
+                  {formData.variants.length > 0 && (
+                    <div>
+                      <Label>Variant Details (Stock & Additional Price)</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                        {formData.variants.map((variant, index) => (
+                          <div key={index} className="border p-3 rounded-lg space-y-2">
+                            <p className="font-medium text-sm">
+                              {variant.color || 'No Color'} / {variant.size || 'No Size'}
+                            </p>
+                            <div>
+                              <Label className="text-xs">Stock Quantity</Label>
+                              <Input
+                                type="number"
+                                value={variant.stock_quantity}
+                                onChange={(e) => updateVariant(index, 'stock_quantity', parseInt(e.target.value) || 0)}
+                                className="text-xs"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Additional Price</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={variant.additional_price}
+                                onChange={(e) => updateVariant(index, 'additional_price', parseFloat(e.target.value) || 0)}
+                                className="text-xs"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <Label>Images</Label>
                     <Input type="file" accept="image/*" multiple onChange={handleImageUpload} />
