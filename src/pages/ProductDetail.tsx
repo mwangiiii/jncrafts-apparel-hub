@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
+  console.log('[ProductDetail] Extracted ID from useParams:', id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
