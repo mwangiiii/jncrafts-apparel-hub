@@ -56,6 +56,7 @@ const AdminProducts = () => {
     sizes: [] as string[],
     colors: [] as string[],
     variants: [] as Variant[],
+    totalStock: 0,
     is_active: true,
   });
 
@@ -138,6 +139,11 @@ const AdminProducts = () => {
     setFormData(prev => ({ ...prev, variants: newVariants }));
   }, [formData.colors, formData.sizes]);
 
+  useEffect(() => {
+    const total = formData.variants.reduce((sum, v) => sum + v.stock_quantity, 0);
+    setFormData(prev => ({ ...prev, totalStock: total }));
+  }, [formData.variants]);
+
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -156,6 +162,7 @@ const AdminProducts = () => {
       sizes: [],
       colors: [],
       variants: [],
+      totalStock: 0,
       is_active: true,
     });
     setEditingProduct(null);
@@ -192,14 +199,15 @@ const AdminProducts = () => {
       const existingColors = [...new Set(variants?.filter(v => v.colors?.name).map(v => v.colors.name) || [])];
 
       // Load existing images
-      const { data: imagesData } = await supabase
+      const { data: imagesData } = supabase
         .from('product_images')
-        .select('image_url, is_primary')
+        .select('image_url')
         .eq('product_id', product.id)
         .order('display_order');
 
       const existingImages = imagesData?.map(i => i.image_url) || [];
-      const primaryIndex = imagesData?.findIndex(i => i.is_primary) ?? 0;
+
+      const totalStock = existingVariants.reduce((sum, v) => sum + v.stock_quantity, 0);
 
       setFormData({
         name: product.name,
@@ -208,10 +216,11 @@ const AdminProducts = () => {
         category: categoryId,
         images: existingImages,
         videos: [],
-        thumbnailIndex: primaryIndex,
+        thumbnailIndex: product.thumbnail_index || 0,
         sizes: existingSizes,
         colors: existingColors,
         variants: existingVariants,
+        totalStock,
         is_active: product.is_active,
       });
       setIsDialogOpen(true);
@@ -242,16 +251,6 @@ const AdminProducts = () => {
       toast({
         title: "Error", 
         description: "Please select at least one size or color",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate thumbnail index
-    if (formData.thumbnailIndex < 0 || formData.thumbnailIndex >= formData.images.length) {
-      toast({
-        title: "Error",
-        description: "Invalid thumbnail index",
         variant: "destructive",
       });
       return;
@@ -410,7 +409,6 @@ const AdminProducts = () => {
 
     try {
       for (const file of fileArray) {
-        // Basic client-side validation: size limit
         if (file.size > 10 * 1024 * 1024) {
           toast({
             title: "File too large",
@@ -419,23 +417,6 @@ const AdminProducts = () => {
           });
           continue;
         }
-
-        // Optional: Image dimension validation using FileReader and canvas
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          if (img.width < 800 || img.height < 800) {
-            toast({
-              title: "Image too small",
-              description: `${file.name} should be at least 800x800 pixels`,
-              variant: "destructive",
-            });
-            URL.revokeObjectURL(url);
-            return;
-          }
-          URL.revokeObjectURL(url);
-        };
-        img.src = url;
 
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
         const { error: uploadError } = await supabase.storage
@@ -471,12 +452,6 @@ const AdminProducts = () => {
 
   const removeImage = (index: number) => {
     setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
-    // Adjust thumbnailIndex if necessary
-    if (formData.thumbnailIndex === index) {
-      setFormData(prev => ({ ...prev, thumbnailIndex: 0 }));
-    } else if (formData.thumbnailIndex > index) {
-      setFormData(prev => ({ ...prev, thumbnailIndex: prev.thumbnailIndex - 1 }));
-    }
   };
 
   const moveImage = (index: number, direction: 'up' | 'down') => {
@@ -484,15 +459,7 @@ const AdminProducts = () => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex >= 0 && newIndex < newImages.length) {
       [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
-      // Adjust thumbnailIndex if moved
-      let adjustedIndex = formData.thumbnailIndex;
-      if (adjustedIndex === index) adjustedIndex = newIndex;
-      else if (adjustedIndex === newIndex) adjustedIndex = index;
-      setFormData(prev => ({ 
-        ...prev, 
-        images: newImages,
-        thumbnailIndex: adjustedIndex 
-      }));
+      setFormData(prev => ({ ...prev, images: newImages }));
     }
   };
 
@@ -595,7 +562,7 @@ const AdminProducts = () => {
                   Add Product
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
                 </DialogHeader>
@@ -649,14 +616,12 @@ const AdminProducts = () => {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="thumbnailIndex">Thumbnail Index</Label>
+                      <Label htmlFor="totalStock">Total Stock (Computed)</Label>
                       <Input
-                        id="thumbnailIndex"
+                        id="totalStock"
                         type="number"
-                        min="0"
-                        max={formData.images.length - 1 || 0}
-                        value={formData.thumbnailIndex}
-                        onChange={(e) => setFormData(prev => ({ ...prev, thumbnailIndex: Math.max(0, Math.min(parseInt(e.target.value) || 0, prev.images.length - 1)) }))}
+                        value={formData.totalStock}
+                        disabled
                       />
                     </div>
                   </div>

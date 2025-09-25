@@ -42,7 +42,7 @@ const getOrCreateColors = async (uniqueColors: string[]): Promise<Map<string, st
     .from('colors')
     .select('id, name')
     .in('name', normColors);
-  const colorMap = new Map(existing?.map(c => [c.name, c.id]) || []);
+  const colorMap = new Map(existing?.map(c => [normalizeName(c.name), c.id]) || []);
   const missing = normColors.filter(c => !colorMap.has(c));
   if (missing.length > 0) {
     const newColors = missing.map(c => ({ name: c, display_order: 999, is_active: true }));
@@ -50,7 +50,7 @@ const getOrCreateColors = async (uniqueColors: string[]): Promise<Map<string, st
       .from('colors')
       .insert(newColors)
       .select('id, name');
-    newData?.forEach(nc => colorMap.set(nc.name, nc.id));
+    newData?.forEach(nc => colorMap.set(normalizeName(nc.name), nc.id));
   }
   return colorMap;
 };
@@ -62,7 +62,7 @@ const getOrCreateSizes = async (uniqueSizes: string[]): Promise<Map<string, stri
     .from('sizes')
     .select('id, name')
     .in('name', normSizes);
-  const sizeMap = new Map(existing?.map(s => [s.name, s.id]) || []);
+  const sizeMap = new Map(existing?.map(s => [normalizeName(s.name), s.id]) || []);
   const missing = normSizes.filter(s => !sizeMap.has(s));
   if (missing.length > 0) {
     const newSizes = missing.map(s => ({ name: s, category: 'clothing', display_order: 999, is_active: true }));
@@ -70,7 +70,7 @@ const getOrCreateSizes = async (uniqueSizes: string[]): Promise<Map<string, stri
       .from('sizes')
       .insert(newSizes)
       .select('id, name');
-    newData?.forEach(ns => sizeMap.set(ns.name, ns.id));
+    newData?.forEach(ns => sizeMap.set(normalizeName(ns.name), ns.id));
   }
   return sizeMap;
 };
@@ -124,12 +124,16 @@ export const useCompleteProductManagement = () => {
         let productId = product.id;
 
         // Rollback helper
-        const rollbackProduct = async () => {
+        const rollback = async () => {
+          await supabase.from('product_images').delete().eq('product_id', productId);
+          await supabase.from('product_variants').delete().eq('product_id', productId);
           await supabase.from('products').delete().eq('id', productId);
         };
 
         // 3. Handle images
-        if (productData.images.length > 0) {
+        if (productData.images && productData.images.length > 0) {
+          console.log(`📸 Processing ${productData.images.length} images for product ${product.id}`);
+          
           const imageInserts = productData.images.map((imageUrl, index) => ({
             product_id: productId,
             image_url: imageUrl,
@@ -141,48 +145,43 @@ export const useCompleteProductManagement = () => {
 
           const { error: imageError } = await supabase.from('product_images').insert(imageInserts);
           if (imageError) {
-            await rollbackProduct();
-            throw new Error(`Failed to create images: ${imageError.message}`);
+            await rollback();
+            throw new Error(`Failed to insert images: ${imageError.message}`);
           }
-          console.log('✅ Images created');
+          console.log('✅ All images saved successfully');
         }
 
         // 4. Handle variants
-        if (productData.variants.length > 0) {
+        if (productData.variants && productData.variants.length > 0) {
           const uniqueColors = [...new Set(productData.variants.filter(v => v.color).map(v => v.color!))];
           const uniqueSizes = [...new Set(productData.variants.filter(v => v.size).map(v => v.size!))];
 
           const colorMap = await getOrCreateColors(uniqueColors);
           const sizeMap = await getOrCreateSizes(uniqueSizes);
 
-          const variantInserts = productData.variants.map(variant => {
-            const colorId = variant.color ? colorMap.get(normalizeName(variant.color)) || null : null;
-            const sizeId = variant.size ? sizeMap.get(normalizeName(variant.size)) || null : null;
-            return {
-              product_id: productId,
-              color_id: colorId,
-              size_id: sizeId,
-              stock_quantity: variant.stock_quantity,
-              additional_price: variant.additional_price,
-              is_available: variant.stock_quantity > 0,
-            };
-          });
+          const variantInserts = productData.variants.map(variant => ({
+            product_id: productId,
+            color_id: variant.color ? colorMap.get(normalizeName(variant.color)) : null,
+            size_id: variant.size ? sizeMap.get(normalizeName(variant.size)) : null,
+            stock_quantity: variant.stock_quantity,
+            additional_price: variant.additional_price,
+            is_available: variant.stock_quantity > 0,
+          }));
 
           const { error: variantError } = await supabase.from('product_variants').insert(variantInserts);
           if (variantError) {
-            // Rollback images and product
-            await supabase.from('product_images').delete().eq('product_id', productId);
-            await rollbackProduct();
-            throw new Error(`Failed to create variants: ${variantError.message}`);
+            await rollback();
+            throw new Error(`Failed to create product variants: ${variantError.message}`);
           }
-          console.log('✅ Variants created');
+          console.log('✅ Created product variants:', variantInserts.length);
         }
 
-        console.log('🎉 Product creation successful');
+        // 5. Success
+        console.log('🎉 COMPLETE PRODUCT CREATION FINISHED SUCCESSFULLY');
         return product;
 
       } catch (error) {
-        console.error('💥 Product creation failed:', error);
+        console.error('💥 COMPLETE PRODUCT CREATION FAILED:', error);
         throw error;
       }
     },
@@ -193,11 +192,11 @@ export const useCompleteProductManagement = () => {
       
       toast({
         title: "Success",
-        description: "Product created successfully",
+        description: "Product created successfully with all details",
       });
     },
     onError: (error: any) => {
-      console.error('❌ Product creation failed:', error);
+      console.error('❌ Product creation mutation failed:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create product",
@@ -227,9 +226,9 @@ export const useCompleteProductManagement = () => {
           throw new Error(`Category with ID "${categoryId}" not found`);
         }
 
-        console.log('✅ Category validated:', categoryData.name);
+        console.log('✅ Category validated for update:', categoryData.name);
 
-        // 2. Update main product
+        // 2. Update the main product
         const { error: productError } = await supabase
           .from('products')
           .update({
@@ -248,18 +247,19 @@ export const useCompleteProductManagement = () => {
 
         console.log('✅ Main product updated');
 
-        // 3. Handle images diff
+        // 3. Handle images with diff
         const { data: existingImages } = await supabase
           .from('product_images')
-          .select('id, image_url, display_order, is_primary')
+          .select('id, image_url')
           .eq('product_id', productId);
 
-        const imagesToDelete = existingImages?.filter(img => !productData.images.includes(img.image_url)) || [];
+        const existingImageUrls = existingImages?.map(img => img.image_url) || [];
 
-        // Delete from storage and DB
+        // Delete removed images
+        const imagesToDelete = existingImageUrls.filter(url => !productData.images.includes(url));
         if (imagesToDelete.length > 0) {
           const fileNames = imagesToDelete
-            .map(img => img.image_url.split('/').pop())
+            .map(url => url.split('/').pop())
             .filter(name => name && !name.includes('default.jpg'));
           if (fileNames.length > 0) {
             await supabase.storage
@@ -269,155 +269,78 @@ export const useCompleteProductManagement = () => {
           await supabase
             .from('product_images')
             .delete()
-            .in('id', imagesToDelete.map(img => img.id));
+            .eq('product_id', productId)
+            .in('image_url', imagesToDelete);
+          console.log('✅ Deleted removed images');
         }
 
-        // Prepare updates and inserts
-        const updatePromises: any[] = [];
-        const insertImages: any[] = [];
-
-        productData.images.forEach((imageUrl, index) => {
-          const existingImage = existingImages?.find(img => img.image_url === imageUrl);
-          if (existingImage) {
-            updatePromises.push(
-              supabase
-                .from('product_images')
-                .update({
-                  display_order: index + 1,
-                  is_primary: index === productData.thumbnailIndex,
-                  is_active: true,
-                })
-                .eq('id', existingImage.id)
-            );
+        // Insert new images and update orders
+        const imagePromises = productData.images.map(async (imageUrl, index) => {
+          const isNew = !existingImageUrls.includes(imageUrl);
+          const imageData = {
+            product_id: productId,
+            image_url: imageUrl,
+            alt_text: `${productData.name} image ${index + 1}`,
+            display_order: index + 1,
+            is_primary: index === productData.thumbnailIndex,
+            is_active: true,
+          };
+          if (isNew) {
+            return supabase.from('product_images').insert(imageData);
           } else {
-            insertImages.push({
-              product_id: productId,
-              image_url: imageUrl,
-              alt_text: `${productData.name} image ${index + 1}`,
-              display_order: index + 1,
-              is_primary: index === productData.thumbnailIndex,
-              is_active: true,
-            });
+            return supabase
+              .from('product_images')
+              .update(imageData)
+              .eq('product_id', productId)
+              .eq('image_url', imageUrl);
           }
         });
 
-        if (updatePromises.length > 0) {
-          const updateResults = await Promise.all(updatePromises);
-          const hasUpdateError = updateResults.some(r => r.error);
-          if (hasUpdateError) {
-            throw new Error('Failed to update some images');
-          }
+        const imageResults = await Promise.all(imagePromises);
+        const imageErrors = imageResults.filter(result => result.error);
+        if (imageErrors.length > 0) {
+          throw new Error(`Failed to save ${imageErrors.length} images`);
         }
-
-        if (insertImages.length > 0) {
-          const { error: insertError } = await supabase.from('product_images').insert(insertImages);
-          if (insertError) {
-            throw new Error(`Failed to insert new images: ${insertError.message}`);
-          }
-        }
-
         console.log('✅ Images updated');
 
-        // 4. Handle variants diff
-        const { data: existingVariantsRaw } = await supabase
+        // 4. Handle variants with diff
+        const { data: existingVariants } = await supabase
           .from('product_variants')
-          .select(`
-            id, stock_quantity, additional_price,
-            colors!inner(name as color_name),
-            sizes!inner(name as size_name)
-          `)
+          .select('id, color_id, size_id, stock_quantity, additional_price')
           .eq('product_id', productId);
 
-        const existingVariants = existingVariantsRaw || [];
-        const existingMap = new Map<string, { id: string; stock: number; additional_price: number }>();
-        existingVariants.forEach((v: any) => {
-          const normColor = v.color_name ? normalizeName(v.color_name) : '';
-          const normSize = v.size_name ? normalizeName(v.size_name) : '';
-          const key = `${normColor}|${normSize}`;
-          existingMap.set(key, { id: v.id, stock: v.stock_quantity, additional_price: v.additional_price });
-        });
+        // Delete all existing variants to recreate (simple approach, but can optimize with diff later)
+        await supabase.from('product_variants').delete().eq('product_id', productId);
 
-        const desiredMap = new Map<string, { stock: number; additional_price: number }>();
-        productData.variants.forEach(variant => {
-          const normColor = variant.color ? normalizeName(variant.color) : '';
-          const normSize = variant.size ? normalizeName(variant.size) : '';
-          const key = `${normColor}|${normSize}`;
-          desiredMap.set(key, { stock: variant.stock_quantity, additional_price: variant.additional_price });
-        });
+        if (productData.variants.length > 0) {
+          const uniqueColors = [...new Set(productData.variants.filter(v => v.color).map(v => v.color!))];
+          const uniqueSizes = [...new Set(productData.variants.filter(v => v.size).map(v => v.size!))];
 
-        // Delete obsolete
-        const toDeleteIds: string[] = [];
-        existingMap.forEach((_, key) => {
-          if (!desiredMap.has(key)) {
-            toDeleteIds.push(existingMap.get(key)!.id);
+          const colorMap = await getOrCreateColors(uniqueColors);
+          const sizeMap = await getOrCreateSizes(uniqueSizes);
+
+          const variantInserts = productData.variants.map(variant => ({
+            product_id: productId,
+            color_id: variant.color ? colorMap.get(normalizeName(variant.color)) : null,
+            size_id: variant.size ? sizeMap.get(normalizeName(variant.size)) : null,
+            stock_quantity: variant.stock_quantity,
+            additional_price: variant.additional_price,
+            is_available: variant.stock_quantity > 0,
+          }));
+
+          const { error: variantError } = await supabase.from('product_variants').insert(variantInserts);
+
+          if (variantError) {
+            throw new Error(`Failed to update product variants: ${variantError.message}`);
           }
-        });
-        if (toDeleteIds.length > 0) {
-          const { error: deleteError } = await supabase.from('product_variants').delete().in('id', toDeleteIds);
-          if (deleteError) {
-            throw new Error(`Failed to delete obsolete variants: ${deleteError.message}`);
-          }
+          console.log('✅ Variants updated');
         }
 
-        // Get or create colors and sizes for desired
-        const uniqueColors = [...new Set(productData.variants.filter(v => v.color).map(v => v.color!))];
-        const uniqueSizes = [...new Set(productData.variants.filter(v => v.size).map(v => v.size!))];
-        const colorMap = await getOrCreateColors(uniqueColors);
-        const sizeMap = await getOrCreateSizes(uniqueSizes);
-
-        // Updates and inserts
-        const updatePromisesV: any[] = [];
-        const insertVariants: any[] = [];
-        desiredMap.forEach((desired, key) => {
-          const [normColor, normSize] = key.split('|');
-          const colorId = normColor ? colorMap.get(normColor) || null : null;
-          const sizeId = normSize ? sizeMap.get(normSize) || null : null;
-          const existing = existingMap.get(key);
-          if (existing) {
-            updatePromisesV.push(
-              supabase
-                .from('product_variants')
-                .update({
-                  stock_quantity: desired.stock,
-                  additional_price: desired.additional_price,
-                  is_available: desired.stock > 0,
-                })
-                .eq('id', existing.id)
-            );
-          } else {
-            insertVariants.push({
-              product_id: productId,
-              color_id: colorId,
-              size_id: sizeId,
-              stock_quantity: desired.stock,
-              additional_price: desired.additional_price,
-              is_available: desired.stock > 0,
-            });
-          }
-        });
-
-        if (updatePromisesV.length > 0) {
-          const updateResultsV = await Promise.all(updatePromisesV);
-          const hasUpdateErrorV = updateResultsV.some(r => r.error);
-          if (hasUpdateErrorV) {
-            throw new Error('Failed to update some variants');
-          }
-        }
-
-        if (insertVariants.length > 0) {
-          const { error: insertErrorV } = await supabase.from('product_variants').insert(insertVariants);
-          if (insertErrorV) {
-            throw new Error(`Failed to insert new variants: ${insertErrorV.message}`);
-          }
-        }
-
-        console.log('✅ Variants updated');
-
-        console.log('🎉 Product update successful');
+        console.log('🎉 COMPLETE PRODUCT UPDATE FINISHED SUCCESSFULLY');
         return { id: productId };
 
       } catch (error) {
-        console.error('💥 Product update failed:', error);
+        console.error('💥 COMPLETE PRODUCT UPDATE FAILED:', error);
         throw error;
       }
     },
@@ -428,11 +351,11 @@ export const useCompleteProductManagement = () => {
       
       toast({
         title: "Success",
-        description: "Product updated successfully",
+        description: "Product updated successfully with all details",
       });
     },
     onError: (error: any) => {
-      console.error('❌ Product update failed:', error);
+      console.error('❌ Product update mutation failed:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to update product",
