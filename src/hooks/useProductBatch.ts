@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
@@ -15,7 +16,7 @@ export const useProductBatch = (productIds: string[], enabled: boolean = true) =
           name,
           price,
           description,
-          category (id, name),
+          category,
           stock_quantity,
           is_active,
           created_at,
@@ -49,7 +50,7 @@ export const useProductBatch = (productIds: string[], enabled: boolean = true) =
         name: p.name,
         price: p.price,
         description: p.description || null,
-        category: p.category?.name || 'Uncategorized',
+        category: p.category || 'Uncategorized',
         stock_quantity: p.stock_quantity || 0,
         is_active: p.is_active,
         created_at: p.created_at,
@@ -91,7 +92,7 @@ export const useProductBatch = (productIds: string[], enabled: boolean = true) =
               })))
           ]
           : [],
-        videos: [],
+        videos: [], // No videos
       }));
     },
     enabled: enabled && productIds.length > 0,

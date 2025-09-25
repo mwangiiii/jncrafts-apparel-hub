@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -17,8 +18,7 @@ import { useLazyCart } from '@/hooks/useLazyCart';
 import { useProductDetail } from '@/hooks/useProductDetail';
 import BackButton from '@/components/BackButton';
 import Cart from '@/components/Cart';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import ProductVideoPlayer from '@/components/admin/ProductVideoPlayer';
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 import Header from '@/components/Header';
 import debounce from 'lodash/debounce';
 
@@ -41,6 +41,8 @@ const ProductDetail = () => {
     totalItems,
   } = useLazyCart();
 
+  console.log('Product ID from URL:', id); // Debug product ID
+
   const { data: product, isLoading, error } = useProductDetail(id || '', !!id);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
@@ -56,6 +58,7 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (product) {
+      console.log('Product loaded:', product); // Debug product data
       if (product.sizes?.length > 0 && !selectedSize) {
         setSelectedSize(getSizeName(product.sizes[0]));
       }
@@ -67,9 +70,10 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (error) {
+      console.error('ProductDetail error:', error); // Debug error
       toast({
         title: "Error",
-        description: "Product not found or unavailable",
+        description: error.message || "Product not found or unavailable",
         variant: "destructive",
       });
       navigate('/');
@@ -121,6 +125,7 @@ const ProductDetail = () => {
       });
       setTimeout(() => openCart(), 500);
     } catch (error) {
+      console.error('Add to cart error:', error); // Debug cart error
       toast({
         title: "Error",
         description: "Failed to add item to cart. Please try again.",
@@ -150,6 +155,7 @@ const ProductDetail = () => {
         });
       }
     } catch (error) {
+      console.error('Wishlist toggle error:', error); // Debug wishlist error
       toast({
         title: "Error",
         description: "Failed to update wishlist. Please try again.",
@@ -204,6 +210,7 @@ const ProductDetail = () => {
       setIsStockAlertDialogOpen(false);
       setEmail('');
     } catch (error: any) {
+      console.error('Stock alert error:', error); // Debug stock alert error
       toast({
         title: "Error",
         description: "Failed to set stock alert",
@@ -291,7 +298,7 @@ const ProductDetail = () => {
         <BackButton className="mb-6 animate-slide-in-right" aria-label="Go back" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-scale-in">
           <div className="space-y-4">
-            <div className="aspect-square overflow-hidden rounded-lg bg-muted shadow-elegant hover:shadow-glow transition-all duration-500">
+            <div className="aspect-square overflow-hidden rounded-lg bg-muted shadow-elegant hover:shadow-glow transition-all duration-500 relative">
               {isImageLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -304,7 +311,10 @@ const ProductDetail = () => {
                     alt={product.name}
                     className={`w-full h-full object-cover cursor-zoom-in hover:scale-110 transition-all duration-500 ease-out ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
                     onLoad={() => setIsImageLoading(false)}
-                    onError={() => setIsImageLoading(false)}
+                    onError={() => {
+                      console.error('Image load error:', getPrimaryImage(product)); // Debug image error
+                      setIsImageLoading(false);
+                    }}
                   />
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[90vh] p-0">
@@ -318,6 +328,7 @@ const ProductDetail = () => {
                               alt={image.alt_text || `${product.name} - Image ${index + 1}`}
                               className="max-w-full max-h-full object-contain"
                               loading="lazy"
+                              onError={() => console.error('Carousel image error:', image.image_url)} // Debug carousel image error
                             />
                           </div>
                         </CarouselItem>
@@ -348,6 +359,7 @@ const ProductDetail = () => {
                       alt={image.alt_text || `${product.name} thumbnail ${index + 1}`}
                       className="w-full h-full object-cover transition-all duration-300"
                       loading="lazy"
+                      onError={() => console.error('Thumbnail image error:', image.image_url)} // Debug thumbnail error
                     />
                   </button>
                 ))}
@@ -530,11 +542,6 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
-        {product.videos?.length > 0 && (
-          <div className="mt-8 animate-fade-in">
-            <ProductVideoPlayer videos={product.videos} productName={product.name} />
-          </div>
-        )}
       </div>
       <Cart
         isOpen={isCartOpen}

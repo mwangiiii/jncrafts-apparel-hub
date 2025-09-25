@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types/database';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useProductDetail = (productId: string, enabled: boolean = true) => {
+  const { user, isAdmin } = useAuth();
+
   return useQuery({
     queryKey: ['product', 'detail', productId],
     queryFn: async (): Promise<Product | null> => {
@@ -16,10 +19,12 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
       try {
         console.log('Fetching product detail for ID:', productId);
 
-        const { data, error } = await supabase
-          .rpc('get_product_complete', { p_product_id: productId })
-          .eq('is_active', true) // Ensure public access respects is_active
-          .abortSignal(controller.signal);
+        let query = supabase.rpc('get_product_complete', { p_product_id: productId });
+        if (!isAdmin) {
+          query = query.eq('is_active', true);
+        }
+
+        const { data, error } = await query.abortSignal(controller.signal);
 
         clearTimeout(timeoutId);
 
@@ -41,7 +46,7 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
           name: productData.name,
           price: productData.price,
           description: productData.description || null,
-          category: productData.category_name || productData.category || 'Uncategorized',
+          category: productData.category_name || 'Uncategorized',
           stock_quantity: productData.stock_quantity || 0,
           is_active: productData.is_active,
           new_arrival_date: productData.new_arrival_date || null,
@@ -77,7 +82,7 @@ export const useProductDetail = (productId: string, enabled: boolean = true) => 
                 available: size.is_active !== false,
               }))
             : [],
-          videos: Array.isArray(productData.videos) ? productData.videos : [],
+          videos: [], // No videos returned by updated RPC
         };
 
         console.log('Transformed product:', transformedProduct);
