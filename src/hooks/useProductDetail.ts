@@ -14,19 +14,15 @@ export const useProductDetail = (productId: string, enabled: boolean) => {
         .rpc('get_product_complete', { p_product_id: productId })
         .single();
 
-      if (error) {
-        console.error('[useProductDetail] Error fetching product:', error);
-        throw new Error(error.message || 'Failed to fetch product');
+      if (error || !data || !data.id) {
+        console.error('[useProductDetail] Error fetching product:', error, 'Data:', data);
+        throw new Error(error?.message || 'Product not found or invalid data');
       }
 
-      if (!data) {
-        console.error('[useProductDetail] No product data returned for ID:', productId);
-        throw new Error('Product not found');
-      }
-
-      // Validate image URLs
+      // Validate and transform data
       const validatedData: Product = {
         ...data,
+        price: typeof data.price === 'number' && !isNaN(data.price) ? data.price : null, // Ensure price is valid
         images: data.images.filter((img) => {
           const isValid = img.image_url && img.is_active && img.image_url.includes('supabase.co/storage/v1/object/public/images/thumbnails');
           if (!isValid) {
@@ -34,6 +30,7 @@ export const useProductDetail = (productId: string, enabled: boolean) => {
           }
           return isValid;
         }),
+        stock_quantity: data.stock_quantity || 0, // Default to 0 if undefined
       };
 
       console.log('[useProductDetail] Product data fetched:', JSON.stringify(validatedData, null, 2));
