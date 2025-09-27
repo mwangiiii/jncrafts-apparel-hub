@@ -235,7 +235,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
           discount_code: appliedDiscount?.code || null,
           customer_info: customerInfo,
           shipping_address: shippingAddress,
-          delivery_details: deliveryDetails as any,
+          delivery_details: deliveryDetails as DeliveryDetails,
           transaction_code: transactionCode,
         })
         .select()
@@ -413,7 +413,9 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
               <div className="bg-accent/10 border border-accent rounded-lg p-4 mb-6">
                 <div className="flex items-center gap-2 text-accent mb-2">
                   <User className="h-4 w-4" />
-                  <span className="font-medium">Login Required</span>
+                  <a href="/login" className="font-medium text-accent underline">
+                    Login Required
+                  </a>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Please log in to place an order and enjoy a personalized shopping experience.
