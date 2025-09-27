@@ -115,7 +115,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         toast({
           variant: "destructive",
           title: "Invalid Code",
-          description: "The discount code is invalid or has expired.",
+          description: "The discount code is invalid or has expired.", 
         });
         return;
       }
