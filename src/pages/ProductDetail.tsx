@@ -74,11 +74,11 @@ const ProductDetail = () => {
   useEffect(() => {
     if (product) {
       if (hasRealSizes(product) && product.sizes?.length > 0 && !selectedSize) {
-        const availableSize = product.sizes.find((s) => s.is_active && product.variants.some((v) => v.size_id === s.id && v.is_available && v.stock_quantity > 0));
+        const availableSize = product.sizes.find((s) => s.is_active && product.variants?.some((v) => v.size_id === s.id && v.is_available && v.stock_quantity > 0));
         if (availableSize) setSelectedSize(getSizeName(availableSize));
       }
       if (hasRealColors(product) && product.colors?.length > 0 && !selectedColor) {
-        const availableColor = product.colors.find((c) => c.is_active && product.variants.some((v) => v.color_id === c.id && v.is_available && v.stock_quantity > 0));
+        const availableColor = product.colors.find((c) => c.is_active && product.variants?.some((v) => v.color_id === c.id && v.is_available && v.stock_quantity > 0));
         if (availableColor) setSelectedColor(getColorName(availableColor));
       }
     }
@@ -276,7 +276,7 @@ const ProductDetail = () => {
   );
 
   const getStockStatus = () => {
-    if (product?.variants?.length === 0) {
+    if (!product?.variants?.length) {
       // No variants
       if (product.stock_quantity === 0) {
         return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
@@ -311,13 +311,13 @@ const ProductDetail = () => {
   };
 
   const getDisplayedStock = () => {
-    if (product?.variants?.length === 0) {
-      return product.stock_quantity;
+    if (!product?.variants?.length) {
+      return product.stock_quantity || 0;
     }
     if (selectedVariant) {
-      return selectedVariant.stock_quantity;
+      return selectedVariant.stock_quantity || 0;
     }
-    return product.variants.reduce((sum, v) => sum + (v.is_available && v.stock_quantity > 0 ? v.stock_quantity : 0), 0);
+    return (product.variants || []).reduce((sum, v) => sum + (v.is_available && v.stock_quantity > 0 ? v.stock_quantity : 0), 0);
   };
 
   const handleImageError = (index: number, url: string) => {
@@ -328,7 +328,7 @@ const ProductDetail = () => {
   // Determine distinct available sizes and colors based on variants
   const distinctSizes = Array.from(
     new Map(
-      product?.variants
+      (product?.variants || [])
         .filter((v) => v.is_available && v.stock_quantity > 0)
         .map((v) => {
           const size = product.sizes?.find((s) => s.id === v.size_id);
@@ -341,7 +341,7 @@ const ProductDetail = () => {
 
   const distinctColors = Array.from(
     new Map(
-      product?.variants
+      (product?.variants || [])
         .filter((v) => v.is_available && v.stock_quantity > 0)
         .map((v) => {
           const color = product.colors?.find((c) => c.id === v.color_id);
@@ -403,7 +403,7 @@ const ProductDetail = () => {
   }
 
   const stockStatus = getStockStatus();
-  const validImages = product.images
+  const validImages = (product.images || [])
     .filter((img) => !imageErrors.includes(img.image_url) && img.is_active)
     .filter((img) =>
       selectedVariant && img.variant_id
@@ -411,10 +411,10 @@ const ProductDetail = () => {
         : !img.variant_id || img.is_primary
     );
   const displayedStock = getDisplayedStock();
-  const hasVariants = product.variants?.length > 0;
+  const hasVariants = (product.variants || []).length > 0;
   const isSelectionComplete = hasVariants ? !!selectedVariant : true;
   const maxStock = isSelectionComplete ? (hasVariants ? selectedVariant!.stock_quantity : product.stock_quantity) : 0;
-  const hasAvailableVariants = hasVariants ? product.variants.some((v) => v.is_available && v.stock_quantity > 0) : true;
+  const hasAvailableVariants = hasVariants ? (product.variants || []).some((v) => v.is_available && v.stock_quantity > 0) : true;
   const canAddToCart = isSelectionComplete && maxStock > 0;
   const showNotify = hasVariants ? (isSelectionComplete ? maxStock === 0 : !hasAvailableVariants) : product.stock_quantity === 0;
 
