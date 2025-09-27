@@ -7,7 +7,6 @@ import ProductsSection from "@/components/ProductsSection";
 import DiscountsSection from "@/components/DiscountsSection";
 import DynamicAboutSection from "@/components/DynamicAboutSection";
 import EnhancedContactSection from "@/components/EnhancedContactSection";
-import AnimatedFeaturedProducts from "@/components/AnimatedFeaturedProducts";
 import Footer from "@/components/Footer";
 import Cart from "@/components/Cart";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,7 @@ const Index = () => {
         onCartClick={openCart} 
       />
       <Hero />
-      <AnimatedFeaturedProducts />
+      
       
       {/* Prominent Conversations Access */}
       {user && (
