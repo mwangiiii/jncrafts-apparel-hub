@@ -413,7 +413,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
               <div className="bg-accent/10 border border-accent rounded-lg p-4 mb-6">
                 <div className="flex items-center gap-2 text-accent mb-2">
                   <User className="h-4 w-4" />
-                  <a href="/login" className="font-medium text-accent underline">
+                  <a href="/auth" className="font-medium text-accent underline">
                     Login Required
                   </a>
                 </div>
