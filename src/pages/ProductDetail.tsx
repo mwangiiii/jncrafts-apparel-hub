@@ -1,11 +1,10 @@
-// ProductDetail.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -26,11 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 const ProductDetail = () => {
-  console.log('[ProductDetail] Component mounted at:', new Date().toISOString());
   const { id } = useParams<{ id: string }>();
-  console.log('[ProductDetail] Extracted ID from URL:', id);
-  console.log('[ProductDetail] Window location:', window.location.pathname);
-  console.log('[ProductDetail] Calling useProductDetail with ID:', id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -47,13 +42,12 @@ const ProductDetail = () => {
     closeCart,
     totalItems,
   } = useLazyCart();
-
   const { data: product, isLoading, error, isError } = useProductDetail(id || '', !!id);
-  console.log('[ProductDetail] useProductDetail response:', { product, isLoading, isError, error });
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [email, setEmail] = useState(user?.email || '');
@@ -64,27 +58,18 @@ const ProductDetail = () => {
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState<string[]>([]);
 
-  // Local price formatting function
-  const formatPrice = (price: number | undefined | null) => {
-    if (typeof price !== 'number' || isNaN(price) || price === null || price === undefined) {
-      return 'Price Unavailable';
-    }
-    return `KSh${price.toFixed(2)}`; // Hardcoded to KSh for now
+  const formatPrice = (price: number | undefined | null, additionalPrice: number = 0) => {
+    const totalPrice = (typeof price === 'number' && !isNaN(price) ? price : 0) + additionalPrice;
+    return `KSh${totalPrice.toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
   };
 
   useEffect(() => {
-    // Clear and invalidate cache to prevent stale/incorrect ID fetches
     queryClient.removeQueries({ queryKey: ['product'] });
     queryClient.invalidateQueries({ queryKey: ['product', id] });
   }, [id, queryClient]);
 
   useEffect(() => {
-    console.log('[ProductDetail] Product ID from URL:', id);
-    console.log('[ProductDetail] isLoading:', isLoading);
-    console.log('[ProductDetail] isError:', isError, 'Error:', error);
-    console.log('[ProductDetail] Product:', product);
     if (product) {
-      console.log('[ProductDetail] Product loaded:', JSON.stringify(product, null, 2));
       if (hasRealSizes(product) && product.sizes?.length > 0 && !selectedSize) {
         const availableSize = product.sizes.find((s) => s.is_active);
         if (availableSize) setSelectedSize(getSizeName(availableSize));
@@ -94,11 +79,10 @@ const ProductDetail = () => {
         if (availableColor) setSelectedColor(getColorName(availableColor));
       }
     }
-  }, [id, product, isLoading, isError, error, queryClient]);
+  }, [product]);
 
   useEffect(() => {
     if (isError && error) {
-      console.error('[ProductDetail] Product fetch error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Product not found or unavailable',
@@ -108,165 +92,186 @@ const ProductDetail = () => {
     }
   }, [isError, error, navigate, toast]);
 
-  const handleAddToCart = debounce(async () => {
-    if (!product || isAddingToCart) return;
-
-    if (hasRealSizes(product) && !selectedSize) {
-      toast({
-        title: 'Size Required',
-        description: 'Please select a size before adding to cart',
-        variant: 'destructive',
-      });
-      return;
+  useEffect(() => {
+    if (product?.variants?.length > 0 && selectedColor && selectedSize) {
+      const variant = product.variants.find(
+        (v) =>
+          v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id &&
+          v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id
+      );
+      setSelectedVariant(variant || null);
+      setQuantity(1); // Reset quantity when variant changes
     }
+  }, [selectedColor, selectedSize, product]);
 
-    if (hasRealColors(product) && !selectedColor) {
-      toast({
-        title: 'Color Required',
-        description: 'Please select a color before adding to cart',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleAddToCart = useCallback(
+    debounce(async () => {
+      if (!product || isAddingToCart) return;
 
-    if (product.stock_quantity === 0) {
-      toast({
-        title: 'Out of Stock',
-        description: 'This product is currently out of stock',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (quantity > product.stock_quantity) {
-      toast({
-        title: 'Stock Limit',
-        description: `Only ${product.stock_quantity} items available`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      setIsAddingToCart(true);
-      await addToCart(product, quantity, selectedSize || 'One Size', selectedColor || 'Default');
-      toast({
-        title: 'Added to cart!',
-        description: `${quantity} x ${product.name} has been added to your cart`,
-      });
-      openCart();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add item to cart. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsAddingToCart(false);
-    }
-  }, 300);
-
-  const handleWishlistToggle = debounce(async () => {
-    if (!product || isAddingToWishlist) return;
-
-    try {
-      setIsAddingToWishlist(true);
-      if (isInWishlist(product.id)) {
-        await removeFromWishlist(product.id);
+      if (hasRealSizes(product) && !selectedSize) {
         toast({
-          title: 'Removed from Wishlist',
-          description: `${product.name} has been removed from your wishlist`,
+          title: 'Size Required',
+          description: 'Please select a size before adding to cart',
+          variant: 'destructive',
         });
-      } else {
-        await addToWishlist(product.id);
-        toast({
-          title: 'Added to Wishlist',
-          description: `${product.name} has been added to your wishlist`,
-        });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update wishlist. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsAddingToWishlist(false);
-    }
-  }, 300);
 
-  const handleStockAlert = debounce(async () => {
-    if (!email || !product || isSettingAlert) return;
-
-    if (!user) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to set stock alerts',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      setIsSettingAlert(true);
-      const emailHash = btoa(email.toLowerCase().trim());
-
-      const { error } = await supabase
-        .from('stock_alerts')
-        .insert({
-          user_id: user.id,
-          product_id: product.id,
-          email_hash: emailHash,
+      if (hasRealColors(product) && !selectedColor) {
+        toast({
+          title: 'Color Required',
+          description: 'Please select a color before adding to cart',
+          variant: 'destructive',
         });
+        return;
+      }
 
-      if (error) {
-        if (error.code === '23505') {
+      if (!selectedVariant || selectedVariant.stock_quantity === 0) {
+        toast({
+          title: 'Out of Stock',
+          description: 'This variant is currently out of stock',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (quantity > selectedVariant.stock_quantity) {
+        toast({
+          title: 'Stock Limit',
+          description: `Only ${selectedVariant.stock_quantity} items available for this variant`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      try {
+        setIsAddingToCart(true);
+        await addToCart(product, quantity, selectedSize || 'One Size', selectedColor || 'Default', selectedVariant?.id);
+        toast({
+          title: 'Added to Cart!',
+          description: `${quantity} x ${product.name} (${selectedColor}, ${selectedSize}) added to your cart`,
+        });
+        openCart();
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to add item to cart. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsAddingToCart(false);
+      }
+    }, 300),
+    [product, selectedSize, selectedColor, selectedVariant, quantity, addToCart, toast, openCart]
+  );
+
+  const handleWishlistToggle = useCallback(
+    debounce(async () => {
+      if (!product || isAddingToWishlist) return;
+
+      try {
+        setIsAddingToWishlist(true);
+        if (isInWishlist(product.id)) {
+          await removeFromWishlist(product.id);
           toast({
-            title: 'Alert Already Set',
-            description: 'You already have an alert set for this product',
+            title: 'Removed from Wishlist',
+            description: `${product.name} removed from your wishlist`,
           });
-          return;
+        } else {
+          await addToWishlist(product.id);
+          toast({
+            title: 'Added to Wishlist',
+            description: `${product.name} added to your wishlist`,
+          });
         }
-        throw error;
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to update wishlist. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsAddingToWishlist(false);
+      }
+    }, 300),
+    [product, isInWishlist, addToWishlist, removeFromWishlist, toast]
+  );
+
+  const handleStockAlert = useCallback(
+    debounce(async () => {
+      if (!email || !product || isSettingAlert) return;
+
+      if (!user) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please sign in to set stock alerts',
+          variant: 'destructive',
+        });
+        return;
       }
 
-      toast({
-        title: 'Alert Set',
-        description: `You'll be notified when "${product.name}" is back in stock`,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to set stock alert',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSettingAlert(false);
-      setIsStockAlertDialogOpen(false);
-      setEmail('');
-    }
-  }, 300);
+      try {
+        setIsSettingAlert(true);
+        const emailHash = btoa(email.toLowerCase().trim());
+        const { error } = await supabase
+          .from('stock_alerts')
+          .insert({
+            user_id: user.id,
+            product_id: product.id,
+            email_hash: emailHash,
+            variant_id: selectedVariant?.id,
+          });
+
+        if (error) {
+          if (error.code === '23505') {
+            toast({
+              title: 'Alert Already Set',
+              description: 'You already have an alert set for this variant',
+            });
+            return;
+          }
+          throw error;
+        }
+
+        toast({
+          title: 'Alert Set',
+          description: `You'll be notified when "${product.name} (${selectedColor}, ${selectedSize})" is back in stock`,
+        });
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to set stock alert',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSettingAlert(false);
+        setIsStockAlertDialogOpen(false);
+        setEmail('');
+      }
+    }, 300),
+    [email, product, user, selectedVariant, selectedColor, selectedSize, toast]
+  );
 
   const getStockStatus = () => {
-    if (!product) return null;
-    if (product.stock_quantity === 0) {
+    if (!selectedVariant) {
+      return { status: 'out', message: 'Select a variant', variant: 'destructive' as const };
+    }
+    if (selectedVariant.stock_quantity === 0) {
       return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
-    } else if (product.stock_quantity <= 5) {
-      return { status: 'low', message: `Only ${product.stock_quantity} left in stock`, variant: 'secondary' as const };
+    } else if (selectedVariant.stock_quantity <= 5) {
+      return { status: 'low', message: `Only ${selectedVariant.stock_quantity} left`, variant: 'warning' as const };
     }
     return { status: 'in', message: 'In Stock', variant: 'default' as const };
   };
 
   const handleImageError = (index: number, url: string) => {
-    console.error(`[ProductDetail] Image load failed for index ${index}: ${url}`);
     setImageErrors((prev) => [...prev, url]);
     setIsImageLoading(false);
   };
 
   if (isLoading) {
-    console.log('[ProductDetail] Rendering loading state');
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <Header cartItems={totalItems} onCartClick={openCart} />
         <div className="container mx-auto px-4 py-8">
           <BackButton className="mb-6" />
@@ -289,14 +294,6 @@ const ProductDetail = () => {
                 <Skeleton className="h-4 rounded" />
                 <Skeleton className="h-4 rounded" />
               </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 rounded w-1/4" />
-                <div className="flex gap-2">
-                  {Array(3).fill(0).map((_, i) => (
-                    <Skeleton key={i} className="h-10 rounded w-16" />
-                  ))}
-                </div>
-              </div>
               <Skeleton className="h-12 rounded w-full" />
             </div>
           </div>
@@ -306,14 +303,13 @@ const ProductDetail = () => {
   }
 
   if (isError || !product || !product.id || !product.name) {
-    console.log('[ProductDetail] Rendering not found state', { product, isError });
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
         <Header cartItems={totalItems} onCartClick={openCart} />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           <div className="text-center space-y-4">
             <AlertTriangle className="h-16 w-16 text-muted-foreground mx-auto" />
-            <p className="text-xl text-muted-foreground">Product not found or invalid data</p>
+            <p className="text-xl text-muted-foreground">Product not found</p>
             <Button onClick={() => navigate('/')} variant="outline" size="lg" aria-label="Return to home">
               Return Home
             </Button>
@@ -324,10 +320,16 @@ const ProductDetail = () => {
   }
 
   const stockStatus = getStockStatus();
-  const validImages = product.images.filter((img) => !imageErrors.includes(img.image_url));
+  const validImages = product.images
+    .filter((img) => !imageErrors.includes(img.image_url))
+    .filter((img) =>
+      selectedVariant && img.variant_id
+        ? img.variant_id === selectedVariant.id
+        : !img.variant_id || img.is_primary
+    );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <Header cartItems={totalItems} onCartClick={openCart} />
       <div className="container mx-auto px-4 py-8 md:px-6 lg:px-8">
         <BackButton className="mb-6 text-lg" aria-label="Go back to previous page" />
@@ -354,7 +356,7 @@ const ProductDetail = () => {
                   >
                     <img
                       src={validImages[selectedImage]?.image_url || getPrimaryImage(product)}
-                      alt={validImages[selectedImage]?.alt_text || `${product.name || 'Product'} - Image ${selectedImage + 1}`}
+                      alt={validImages[selectedImage]?.alt_text || `${product.name} - Image ${selectedImage + 1}`}
                       className={cn(
                         'w-full h-full object-cover transition-transform duration-500 hover:scale-105',
                         isImageLoading || validImages.length === 0 ? 'opacity-0' : 'opacity-100'
@@ -374,7 +376,7 @@ const ProductDetail = () => {
                             <div className="flex items-center justify-center h-[80vh] p-4">
                               <img
                                 src={image.image_url}
-                                alt={image.alt_text || `${product.name || 'Product'} - Image ${index + 1}`}
+                                alt={image.alt_text || `${product.name} - Image ${index + 1}`}
                                 className="max-w-full max-h-full object-contain"
                                 loading="lazy"
                                 onError={() => handleImageError(index, image.image_url)}
@@ -430,10 +432,12 @@ const ProductDetail = () => {
           {/* Details Section */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">{product.name || 'No Name Available'}</h1>
-              <p className="text-lg text-muted-foreground uppercase tracking-wider">{product.category_name || 'No Category'}</p>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">{product.name}</h1>
+              <p className="text-lg text-muted-foreground uppercase tracking-wider">{product.category_name}</p>
               <div className="flex flex-wrap items-center gap-4">
-                <p className="text-2xl md:text-3xl font-semibold text-primary">{formatPrice(product.price)}</p>
+                <p className="text-2xl md:text-3xl font-semibold text-primary">
+                  {formatPrice(product.price, selectedVariant?.additional_price || 0)}
+                </p>
                 {stockStatus && (
                   <Badge variant={stockStatus.variant} className="text-sm px-3 py-1">
                     {stockStatus.status === 'out' && <AlertTriangle className="h-4 w-4 mr-2" aria-hidden="true" />}
@@ -441,7 +445,7 @@ const ProductDetail = () => {
                   </Badge>
                 )}
                 {product.new_arrival_date && (
-                  <Badge variant="outline" className="text-sm px-3 py-1">
+                  <Badge variant="outline" className="text-sm px-3 py-1 bg-primary/10">
                     New Arrival
                   </Badge>
                 )}
@@ -450,7 +454,7 @@ const ProductDetail = () => {
             {product.description && (
               <div className="space-y-3">
                 <h2 className="text-xl font-semibold text-foreground">Description</h2>
-                <p className="text-base text-muted-foreground leading-relaxed">{product.description || 'No Description Available'}</p>
+                <p className="text-base text-muted-foreground leading-relaxed">{product.description}</p>
               </div>
             )}
             {(product.show_jacket_size_chart || product.show_pants_size_chart) && (
@@ -458,27 +462,91 @@ const ProductDetail = () => {
                 <h2 className="text-xl font-semibold text-foreground">Size Charts</h2>
                 <div className="flex flex-wrap gap-3">
                   {product.show_jacket_size_chart && (
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open('/size-charts/jacket', '_blank')}
-                      className="flex items-center gap-2 px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
-                      aria-label="View jacket size chart"
-                    >
-                      <Ruler className="h-4 w-4" />
-                      Jacket Size Chart
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="flex items-center gap-2 px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
+                          aria-label="View jacket size chart"
+                        >
+                          <Ruler className="h-4 w-4" />
+                          Jacket Size Chart
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Jacket Size Chart</DialogTitle>
+                          <DialogDescription>Find the perfect fit for your jacket.</DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                          {/* Replace with actual size chart image or table */}
+                          <img
+                            src="/size-charts/jacket.jpg"
+                            alt="Jacket Size Chart"
+                            className="w-full h-auto object-contain"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   )}
                   {product.show_pants_size_chart && (
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open('/size-charts/pants', '_blank')}
-                      className="flex items-center gap-2 px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
-                      aria-label="View pants size chart"
-                    >
-                      <Ruler className="h-4 w-4" />
-                      Pants Size Chart
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="flex items-center gap-2 px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
+                          aria-label="View pants size chart"
+                        >
+                          <Ruler className="h-4 w-4" />
+                          Pants Size Chart
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Pants Size Chart</DialogTitle>
+                          <DialogDescription>Find the perfect fit for your pants.</DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                          {/* Replace with actual size chart image or table */}
+                          <img
+                            src="/size-charts/pants.jpg"
+                            alt="Pants Size Chart"
+                            className="w-full h-auto object-contain"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   )}
+                </div>
+              </div>
+            )}
+            {hasRealColors(product) && (
+              <div className="space-y-3">
+                <Label htmlFor="color-select" className="text-lg font-semibold text-foreground">
+                  Color
+                </Label>
+                <div id="color-select" className="flex flex-wrap gap-2">
+                  {product.colors!.map((color) => (
+                    <Button
+                      key={color.id}
+                      variant={selectedColor === getColorName(color) ? 'default' : 'outline'}
+                      onClick={() => setSelectedColor(getColorName(color))}
+                      className={cn(
+                        'px-2 py-1 h-10 w-10 rounded-full transition-all duration-200 hover:ring-2 hover:ring-primary focus:ring-2 focus:ring-primary',
+                        selectedColor === getColorName(color) ? 'ring-2 ring-primary' : '',
+                        !color.is_active ? 'opacity-50 cursor-not-allowed' : ''
+                      )}
+                      disabled={!color.is_active}
+                      aria-pressed={selectedColor === getColorName(color)}
+                      aria-label={`Select color ${getColorName(color)}${!color.is_active ? ' (unavailable)' : ''}`}
+                    >
+                      <span
+                        className="w-6 h-6 rounded-full border"
+                        style={{ backgroundColor: color.hex_code || '#000' }}
+                      />
+                      <span className="sr-only">{getColorName(color)}</span>
+                    </Button>
+                  ))}
                 </div>
               </div>
             )}
@@ -503,38 +571,6 @@ const ProductDetail = () => {
                       aria-label={`Select size ${getSizeName(size)}${!size.is_active ? ' (unavailable)' : ''}`}
                     >
                       {getSizeName(size)}
-                      {!size.is_active && <span className="ml-2 text-xs text-muted-foreground">(Unavailable)</span>}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {hasRealColors(product) && (
-              <div className="space-y-3">
-                <Label htmlFor="color-select" className="text-lg font-semibold text-foreground">
-                  Color
-                </Label>
-                <div id="color-select" className="flex flex-wrap gap-2">
-                  {product.colors!.map((color) => (
-                    <Button
-                      key={color.id}
-                      variant={selectedColor === getColorName(color) ? 'default' : 'outline'}
-                      onClick={() => setSelectedColor(getColorName(color))}
-                      className={cn(
-                        'px-4 py-2 text-sm capitalize transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary',
-                        selectedColor === getColorName(color) ? 'bg-primary text-primary-foreground' : '',
-                        !color.is_active ? 'opacity-50 cursor-not-allowed' : ''
-                      )}
-                      disabled={!color.is_active}
-                      aria-pressed={selectedColor === getColorName(color)}
-                      aria-label={`Select color ${getColorName(color)}${!color.is_active ? ' (unavailable)' : ''}`}
-                    >
-                      <span
-                        className="w-4 h-4 rounded-full mr-2 inline-block border"
-                        style={{ backgroundColor: color.hex_code }}
-                      />
-                      {getColorName(color)}
-                      {!color.is_active && <span className="ml-2 text-xs text-muted-foreground">(Unavailable)</span>}
                     </Button>
                   ))}
                 </div>
@@ -549,7 +585,7 @@ const ProductDetail = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={product.stock_quantity === 0 || isAddingToCart || quantity === 1}
+                  disabled={!selectedVariant || selectedVariant.stock_quantity === 0 || isAddingToCart || quantity === 1}
                   className="h-10 w-10 transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
                   aria-label="Decrease quantity"
                 >
@@ -559,8 +595,8 @@ const ProductDetail = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setQuantity(Math.min(product.stock_quantity, quantity + 1))}
-                  disabled={product.stock_quantity === 0 || isAddingToCart || quantity >= product.stock_quantity}
+                  onClick={() => setQuantity(Math.min(selectedVariant?.stock_quantity || 1, quantity + 1))}
+                  disabled={!selectedVariant || selectedVariant.stock_quantity === 0 || isAddingToCart || quantity >= selectedVariant?.stock_quantity}
                   className="h-10 w-10 transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
                   aria-label="Increase quantity"
                 >
@@ -568,15 +604,15 @@ const ProductDetail = () => {
                 </Button>
               </div>
             </div>
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 sticky bottom-0 bg-background/95 py-4 -mx-4 px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
               <Button
                 onClick={handleAddToCart}
                 className="w-full text-base py-6 font-medium transition-all duration-300 hover:bg-primary/90 focus:ring-2 focus:ring-primary disabled:opacity-50"
-                disabled={product.stock_quantity === 0 || isAddingToCart}
-                aria-label={product.stock_quantity === 0 ? 'Out of stock' : 'Add to cart'}
+                disabled={!selectedVariant || selectedVariant.stock_quantity === 0 || isAddingToCart}
+                aria-label={!selectedVariant || selectedVariant.stock_quantity === 0 ? 'Out of stock' : 'Add to cart'}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
-                {isAddingToCart ? 'Adding...' : product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                {isAddingToCart ? 'Adding...' : !selectedVariant || selectedVariant.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
               </Button>
               <div className="flex flex-col sm:flex-row gap-3">
                 {user && (
@@ -601,7 +637,7 @@ const ProductDetail = () => {
                       : 'Add to Wishlist'}
                   </Button>
                 )}
-                {product.stock_quantity === 0 && (
+                {(!selectedVariant || selectedVariant.stock_quantity === 0) && (
                   <Dialog open={isStockAlertDialogOpen} onOpenChange={setIsStockAlertDialogOpen}>
                     <DialogTrigger asChild>
                       <Button
@@ -617,7 +653,7 @@ const ProductDetail = () => {
                       <DialogHeader className="space-y-2">
                         <DialogTitle className="text-xl">Stock Alert</DialogTitle>
                         <DialogDescription className="text-base">
-                          We'll email you when "{product.name}" is back in stock.
+                          We'll email you when "{product.name} ({selectedColor}, {selectedSize})" is back in stock.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 pt-4">
@@ -660,13 +696,11 @@ const ProductDetail = () => {
               <h2 className="text-xl font-semibold text-foreground">Product Details</h2>
               <dl className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                 <dt className="font-medium">Category</dt>
-                <dd>{product.category_name || 'No Category'}</dd>
+                <dd>{product.category_name}</dd>
                 <dt className="font-medium">Stock</dt>
-                <dd>{product.stock_quantity || 'No Stock Info'} units</dd>
+                <dd>{selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity} units</dd>
                 <dt className="font-medium">Created</dt>
-                <dd>{new Date(product.created_at).toLocaleDateString() || 'No Date'}</dd>
-                <dt className="font-medium">Last Updated</dt>
-                <dd>{new Date(product.updated_at).toLocaleDateString() || 'No Date'}</dd>
+                <dd>{new Date(product.created_at).toLocaleDateString()}</dd>
               </dl>
             </div>
           </div>
