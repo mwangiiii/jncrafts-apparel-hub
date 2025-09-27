@@ -74,11 +74,11 @@ const ProductDetail = () => {
   useEffect(() => {
     if (product) {
       if (hasRealSizes(product) && product.sizes?.length > 0 && !selectedSize) {
-        const availableSize = product.sizes.find((s) => s.is_active && product.variants.some((v) => v.size_id === s.id && v.is_available));
+        const availableSize = product.sizes.find((s) => s.is_active && product.variants.some((v) => v.size_id === s.id && v.is_available && v.stock_quantity > 0));
         if (availableSize) setSelectedSize(getSizeName(availableSize));
       }
       if (hasRealColors(product) && product.colors?.length > 0 && !selectedColor) {
-        const availableColor = product.colors.find((c) => c.is_active && product.variants.some((v) => v.color_id === c.id && v.is_available));
+        const availableColor = product.colors.find((c) => c.is_active && product.variants.some((v) => v.color_id === c.id && v.is_available && v.stock_quantity > 0));
         if (availableColor) setSelectedColor(getColorName(availableColor));
       }
     }
@@ -317,7 +317,7 @@ const ProductDetail = () => {
     if (selectedVariant) {
       return selectedVariant.stock_quantity;
     }
-    return product.variants.reduce((sum, v) => sum + (v.is_available ? v.stock_quantity : 0), 0);
+    return product.variants.reduce((sum, v) => sum + (v.is_available && v.stock_quantity > 0 ? v.stock_quantity : 0), 0);
   };
 
   const handleImageError = (index: number, url: string) => {
@@ -327,10 +327,10 @@ const ProductDetail = () => {
 
   // Determine available sizes and colors based on variants
   const availableSizes = product?.sizes?.filter((size) =>
-    product.variants.some((v) => v.size_id === size.id && v.is_available && (!selectedColor || v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id))
+    product.variants.some((v) => v.size_id === size.id && v.is_available && v.stock_quantity > 0 && (!selectedColor || v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id))
   ) || [];
   const availableColors = product?.colors?.filter((color) =>
-    product.variants.some((v) => v.color_id === color.id && v.is_available && (!selectedSize || v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id))
+    product.variants.some((v) => v.color_id === color.id && v.is_available && v.stock_quantity > 0 && (!selectedSize || v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id))
   ) || [];
 
   if (isLoading) {
@@ -392,9 +392,12 @@ const ProductDetail = () => {
         : !img.variant_id || img.is_primary
     );
   const displayedStock = getDisplayedStock();
-  const isOutOfStock = (product.variants?.length > 0
-    ? !selectedVariant || selectedVariant.stock_quantity === 0
-    : product.stock_quantity === 0);
+  const hasVariants = product.variants?.length > 0;
+  const isSelectionComplete = hasVariants ? !!selectedVariant : true;
+  const maxStock = isSelectionComplete ? (hasVariants ? selectedVariant!.stock_quantity : product.stock_quantity) : 0;
+  const hasAvailableVariants = hasVariants ? product.variants.some((v) => v.is_available && v.stock_quantity > 0) : true;
+  const canAddToCart = isSelectionComplete && maxStock > 0;
+  const showNotify = hasVariants ? (isSelectionComplete ? maxStock === 0 : !hasAvailableVariants) : product.stock_quantity === 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
@@ -655,7 +658,7 @@ const ProductDetail = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={isOutOfStock || isAddingToCart || quantity === 1}
+                  disabled={quantity === 1 || maxStock <= 0}
                   className="h-10 w-10 transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
                   aria-label="Decrease quantity"
                 >
@@ -665,11 +668,8 @@ const ProductDetail = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => {
-                    const maxStock = product.variants?.length > 0 ? (selectedVariant?.stock_quantity || 0) : product.stock_quantity;
-                    setQuantity(Math.min(maxStock, quantity + 1));
-                  }}
-                  disabled={isOutOfStock || isAddingToCart || quantity >= (product.variants?.length > 0 ? (selectedVariant?.stock_quantity || 0) : product.stock_quantity)}
+                  onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
+                  disabled={quantity >= maxStock || maxStock <= 0}
                   className="h-10 w-10 transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
                   aria-label="Increase quantity"
                 >
@@ -681,11 +681,11 @@ const ProductDetail = () => {
               <Button
                 onClick={handleAddToCart}
                 className="w-full text-base py-6 font-medium transition-all duration-300 hover:bg-primary/90 focus:ring-2 focus:ring-primary disabled:opacity-50"
-                disabled={isOutOfStock || isAddingToCart}
-                aria-label={isOutOfStock ? 'Out of stock' : 'Add to cart'}
+                disabled={!canAddToCart || isAddingToCart}
+                aria-label={canAddToCart ? 'Add to cart' : 'Select options or out of stock'}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
-                {isAddingToCart ? 'Adding...' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                {isAddingToCart ? 'Adding...' : (canAddToCart ? 'Add to Cart' : (isSelectionComplete ? 'Out of Stock' : 'Add to Cart'))}
               </Button>
               <div className="flex flex-col sm:flex-row gap-3">
                 {user && (
@@ -710,7 +710,7 @@ const ProductDetail = () => {
                       : 'Add to Wishlist'}
                   </Button>
                 )}
-                {isOutOfStock && (
+                {showNotify && (
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
