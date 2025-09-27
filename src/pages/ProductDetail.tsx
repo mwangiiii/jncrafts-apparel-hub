@@ -601,19 +601,15 @@ const ProductDetail = () => {
                         variant={selectedColor === getColorName(color) ? 'default' : 'outline'}
                         onClick={() => setSelectedColor(getColorName(color))}
                         className={cn(
-                          'px-2 py-1 h-10 w-10 rounded-full transition-all duration-200 hover:ring-2 hover:ring-primary focus:ring-2 focus:ring-primary',
-                          selectedColor === getColorName(color) ? 'ring-2 ring-primary' : '',
+                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary',
+                          selectedColor === getColorName(color) ? 'bg-primary text-primary-foreground' : '',
                           !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
                         )}
                         disabled={!isAvailable}
                         aria-pressed={selectedColor === getColorName(color)}
                         aria-label={`Select color ${getColorName(color)}${!isAvailable ? ' (unavailable)' : ''}`}
                       >
-                        <span
-                          className="w-6 h-6 rounded-full border"
-                          style={{ backgroundColor: color.hex_code || '#000' }}
-                        />
-                        <span className="sr-only">{getColorName(color)}</span>
+                        {getColorName(color)}
                       </Button>
                     );
                   })}
