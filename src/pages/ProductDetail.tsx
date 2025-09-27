@@ -325,16 +325,69 @@ const ProductDetail = () => {
     setIsImageLoading(false);
   };
 
-  // Determine available sizes and colors based on variants
-  const availableSizes = product?.sizes?.filter((size) =>
-    product.variants.some((v) => v.size_id === size.id && v.is_available && v.stock_quantity > 0 && (!selectedColor || v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id))
-  ) || [];
-  const availableColors = product?.colors?.filter((color) =>
-    product.variants.some((v) => v.color_id === color.id && v.is_available && v.stock_quantity > 0 && (!selectedSize || v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id))
-  ) || [];
+  // Helper function to get distinct available sizes
+  const getDistinctAvailableSizes = () => {
+    if (!product?.sizes || !product?.variants) return [];
+    
+    // Get all available variants
+    const availableVariants = product.variants.filter(v => 
+      v.is_available && 
+      v.stock_quantity > 0 &&
+      (!selectedColor || v.color_id === product.colors?.find(c => getColorName(c) === selectedColor)?.id)
+    );
 
-  // Unique sizes by name
-  const uniqueAvailableSizes = Array.from(new Map(availableSizes.map(size => [getSizeName(size).toLowerCase(), size])).values());
+    // Get sizes that have available variants
+    const availableSizes = product.sizes.filter(size => 
+      size.is_active && 
+      availableVariants.some(v => v.size_id === size.id)
+    );
+
+    // Create a Map to ensure uniqueness by size name (case-insensitive)
+    const uniqueSizesMap = new Map();
+    availableSizes.forEach(size => {
+      const sizeName = getSizeName(size);
+      const key = sizeName.toLowerCase();
+      if (!uniqueSizesMap.has(key)) {
+        uniqueSizesMap.set(key, size);
+      }
+    });
+
+    return Array.from(uniqueSizesMap.values());
+  };
+
+  // Helper function to get distinct available colors
+  const getDistinctAvailableColors = () => {
+    if (!product?.colors || !product?.variants) return [];
+    
+    // Get all available variants
+    const availableVariants = product.variants.filter(v => 
+      v.is_available && 
+      v.stock_quantity > 0 &&
+      (!selectedSize || v.size_id === product.sizes?.find(s => getSizeName(s) === selectedSize)?.id)
+    );
+
+    // Get colors that have available variants
+    const availableColors = product.colors.filter(color => 
+      color.is_active && 
+      availableVariants.some(v => v.color_id === color.id)
+    );
+
+    // Create a Map to ensure uniqueness by color name (case-insensitive)
+    const uniqueColorsMap = new Map();
+    availableColors.forEach(color => {
+      const colorName = getColorName(color);
+      const key = colorName.toLowerCase();
+      if (!uniqueColorsMap.has(key)) {
+        uniqueColorsMap.set(key, color);
+      }
+    });
+
+    return Array.from(uniqueColorsMap.values());
+  };
+
+  // Get distinct available sizes and colors
+  const distinctAvailableSizes = getDistinctAvailableSizes();
+  const distinctAvailableColors = getDistinctAvailableColors();
 
   if (isLoading) {
     return (
@@ -590,13 +643,13 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
-            {hasRealColors(product) && availableColors.length > 0 && (
+            {hasRealColors(product) && distinctAvailableColors.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="color-select" className="text-lg font-semibold text-foreground">
                   Color
                 </Label>
                 <div id="color-select" className="flex flex-wrap gap-2">
-                  {availableColors.map((color) => {
+                  {distinctAvailableColors.map((color) => {
                     const colorName = getColorName(color);
                     return (
                       <Button
@@ -616,13 +669,13 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
-            {hasRealSizes(product) && uniqueAvailableSizes.length > 0 && (
+            {hasRealSizes(product) && distinctAvailableSizes.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="size-select" className="text-lg font-semibold text-foreground">
                   Size
                 </Label>
                 <div id="size-select" className="flex flex-wrap gap-2">
-                  {uniqueAvailableSizes.map((size) => {
+                  {distinctAvailableSizes.map((size) => {
                     const sizeName = getSizeName(size);
                     return (
                       <Button
