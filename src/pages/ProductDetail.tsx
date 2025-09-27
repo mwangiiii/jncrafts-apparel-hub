@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog'; // Ensure DialogTrigger is exported
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -23,9 +23,6 @@ import Header from '@/components/Header';
 import debounce from 'lodash/debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-
-// Alternative import if DialogTrigger is not exported from '@/components/ui/dialog':
-// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@radix-ui/react-dialog';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -99,17 +96,17 @@ const ProductDetail = () => {
   }, [isError, error, navigate, toast]);
 
   useEffect(() => {
-    if (product?.variants?.length > 0 && selectedColor && selectedSize) {
-      const variant = product.variants.find(
+    if (product) {
+      const colorId = selectedColor ? product.colors?.find((c) => getColorName(c) === selectedColor)?.id : null;
+      const sizeId = selectedSize ? product.sizes?.find((s) => getSizeName(s) === selectedSize)?.id : null;
+      const variant = product.variants?.find(
         (v) =>
-          v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id &&
-          v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id &&
+          v.color_id === colorId &&
+          v.size_id === sizeId &&
           v.is_available
       );
       setSelectedVariant(variant || null);
-      setQuantity(1); // Reset quantity when variant changes
-    } else {
-      setSelectedVariant(null);
+      setQuantity(1);
     }
   }, [selectedColor, selectedSize, product]);
 
@@ -135,19 +132,36 @@ const ProductDetail = () => {
         return;
       }
 
-      if (!selectedVariant || selectedVariant.stock_quantity === 0) {
-        toast({
-          title: 'Out of Stock',
-          description: 'This variant is currently out of stock',
-          variant: 'destructive',
-        });
-        return;
+      let stockQuantity = 0;
+      let variantId: string | undefined = undefined;
+
+      if (product.variants?.length > 0) {
+        if (!selectedVariant || selectedVariant.stock_quantity === 0) {
+          toast({
+            title: 'Out of Stock',
+            description: 'This variant is currently out of stock',
+            variant: 'destructive',
+          });
+          return;
+        }
+        stockQuantity = selectedVariant.stock_quantity;
+        variantId = selectedVariant.id;
+      } else {
+        if (product.stock_quantity === 0) {
+          toast({
+            title: 'Out of Stock',
+            description: 'This product is currently out of stock',
+            variant: 'destructive',
+          });
+          return;
+        }
+        stockQuantity = product.stock_quantity;
       }
 
-      if (quantity > selectedVariant.stock_quantity) {
+      if (quantity > stockQuantity) {
         toast({
           title: 'Stock Limit',
-          description: `Only ${selectedVariant.stock_quantity} items available for this variant`,
+          description: `Only ${stockQuantity} items available`,
           variant: 'destructive',
         });
         return;
@@ -155,7 +169,7 @@ const ProductDetail = () => {
 
       try {
         setIsAddingToCart(true);
-        await addToCart(product, quantity, selectedSize || 'One Size', selectedColor || 'Default', selectedVariant?.id);
+        await addToCart(product, quantity, selectedSize || 'One Size', selectedColor || 'Default', variantId);
         toast({
           title: 'Added to Cart!',
           description: `${quantity} x ${product.name} (${selectedColor || 'Default'}, ${selectedSize || 'One Size'}) added to your cart`,
@@ -262,15 +276,48 @@ const ProductDetail = () => {
   );
 
   const getStockStatus = () => {
-    if (!selectedVariant) {
-      return { status: 'out', message: 'Select a size and color', variant: 'destructive' as const };
+    if (product?.variants?.length === 0) {
+      // No variants
+      if (product.stock_quantity === 0) {
+        return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
+      } else if (product.stock_quantity <= 5) {
+        return { status: 'low', message: `Only ${product.stock_quantity} left`, variant: 'warning' as const };
+      }
+      return { status: 'in', message: 'In Stock', variant: 'default' as const };
     }
-    if (selectedVariant.stock_quantity === 0) {
-      return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
-    } else if (selectedVariant.stock_quantity <= 5) {
-      return { status: 'low', message: `Only ${selectedVariant.stock_quantity} left`, variant: 'warning' as const };
+
+    // Has variants
+    if (selectedVariant) {
+      if (selectedVariant.stock_quantity === 0) {
+        return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
+      } else if (selectedVariant.stock_quantity <= 5) {
+        return { status: 'low', message: `Only ${selectedVariant.stock_quantity} left`, variant: 'warning' as const };
+      }
+      return { status: 'in', message: 'In Stock', variant: 'default' as const };
+    } else {
+      // No variant selected
+      const parts: string[] = [];
+      if (hasRealSizes(product) && !selectedSize) parts.push('size');
+      if (hasRealColors(product) && !selectedColor) parts.push('color');
+      let message = parts.length > 0 ? `Select a ${parts.join(' and ')}` : 'Out of Stock';
+
+      const hasAvailableVariants = product.variants.some((v) => v.is_available && v.stock_quantity > 0);
+      if (hasAvailableVariants) {
+        return { status: 'select', message, variant: 'destructive' as const };
+      } else {
+        return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
+      }
     }
-    return { status: 'in', message: 'In Stock', variant: 'default' as const };
+  };
+
+  const getDisplayedStock = () => {
+    if (product?.variants?.length === 0) {
+      return product.stock_quantity;
+    }
+    if (selectedVariant) {
+      return selectedVariant.stock_quantity;
+    }
+    return product.variants.reduce((sum, v) => sum + (v.is_available ? v.stock_quantity : 0), 0);
   };
 
   const handleImageError = (index: number, url: string) => {
@@ -344,6 +391,10 @@ const ProductDetail = () => {
         ? img.variant_id === selectedVariant.id
         : !img.variant_id || img.is_primary
     );
+  const displayedStock = getDisplayedStock();
+  const isOutOfStock = (product.variants?.length > 0
+    ? !selectedVariant || selectedVariant.stock_quantity === 0
+    : product.stock_quantity === 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
@@ -455,12 +506,10 @@ const ProductDetail = () => {
                 <p className="text-2xl md:text-3xl font-semibold text-primary">
                   {formatPrice(product.price, selectedVariant?.additional_price || 0)}
                 </p>
-                {stockStatus && (
-                  <Badge variant={stockStatus.variant} className="text-sm px-3 py-1">
-                    {stockStatus.status === 'out' && <AlertTriangle className="h-4 w-4 mr-2" aria-hidden="true" />}
-                    {stockStatus.message}
-                  </Badge>
-                )}
+                <Badge variant={stockStatus.variant} className="text-sm px-3 py-1">
+                  {stockStatus.status === 'out' && <AlertTriangle className="h-4 w-4 mr-2" aria-hidden="true" />}
+                  {stockStatus.message}
+                </Badge>
                 {product.new_arrival_date && (
                   <Badge variant="outline" className="text-sm px-3 py-1 bg-primary/10">
                     New Arrival
@@ -606,7 +655,7 @@ const ProductDetail = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={!selectedVariant || selectedVariant.stock_quantity === 0 || isAddingToCart || quantity === 1}
+                  disabled={isOutOfStock || isAddingToCart || quantity === 1}
                   className="h-10 w-10 transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
                   aria-label="Decrease quantity"
                 >
@@ -616,8 +665,11 @@ const ProductDetail = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setQuantity(Math.min(selectedVariant?.stock_quantity || 1, quantity + 1))}
-                  disabled={!selectedVariant || selectedVariant.stock_quantity === 0 || isAddingToCart || quantity >= selectedVariant?.stock_quantity}
+                  onClick={() => {
+                    const maxStock = product.variants?.length > 0 ? (selectedVariant?.stock_quantity || 0) : product.stock_quantity;
+                    setQuantity(Math.min(maxStock, quantity + 1));
+                  }}
+                  disabled={isOutOfStock || isAddingToCart || quantity >= (product.variants?.length > 0 ? (selectedVariant?.stock_quantity || 0) : product.stock_quantity)}
                   className="h-10 w-10 transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary"
                   aria-label="Increase quantity"
                 >
@@ -629,11 +681,11 @@ const ProductDetail = () => {
               <Button
                 onClick={handleAddToCart}
                 className="w-full text-base py-6 font-medium transition-all duration-300 hover:bg-primary/90 focus:ring-2 focus:ring-primary disabled:opacity-50"
-                disabled={!selectedVariant || selectedVariant.stock_quantity === 0 || isAddingToCart}
-                aria-label={!selectedVariant || selectedVariant.stock_quantity === 0 ? 'Out of stock' : 'Add to cart'}
+                disabled={isOutOfStock || isAddingToCart}
+                aria-label={isOutOfStock ? 'Out of stock' : 'Add to cart'}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
-                {isAddingToCart ? 'Adding...' : !selectedVariant || selectedVariant.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                {isAddingToCart ? 'Adding...' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
               </Button>
               <div className="flex flex-col sm:flex-row gap-3">
                 {user && (
@@ -658,7 +710,7 @@ const ProductDetail = () => {
                       : 'Add to Wishlist'}
                   </Button>
                 )}
-                {(!selectedVariant || selectedVariant.stock_quantity === 0) && (
+                {isOutOfStock && (
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
@@ -719,7 +771,7 @@ const ProductDetail = () => {
                 <dt className="font-medium">Category</dt>
                 <dd>{product.category_name}</dd>
                 <dt className="font-medium">Stock</dt>
-                <dd>{selectedVariant ? selectedVariant.stock_quantity : product.stock_quantity} units</dd>
+                <dd>{displayedStock} units</dd>
                 <dt className="font-medium">Created</dt>
                 <dd>{new Date(product.created_at).toLocaleDateString()}</dd>
               </dl>
