@@ -333,6 +333,12 @@ const ProductDetail = () => {
     product.variants.some((v) => v.color_id === color.id && v.is_available && v.stock_quantity > 0 && (!selectedSize || v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id))
   ) || [];
 
+  // Unique colors by name
+  const uniqueAvailableColors = Array.from(new Map(availableColors.map(color => [getColorName(color).toLowerCase(), color])).values());
+
+  // Unique sizes by name
+  const uniqueAvailableSizes = Array.from(new Map(availableSizes.map(size => [getSizeName(size).toLowerCase(), size])).values());
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
@@ -587,58 +593,52 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
-            {hasRealColors(product) && availableColors.length > 0 && (
+            {hasRealColors(product) && uniqueAvailableColors.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="color-select" className="text-lg font-semibold text-foreground">
                   Color
                 </Label>
                 <div id="color-select" className="flex flex-wrap gap-2">
-                  {product.colors!.map((color) => {
-                    const isAvailable = availableColors.some((c) => c.id === color.id);
+                  {uniqueAvailableColors.map((color) => {
+                    const colorName = getColorName(color);
                     return (
                       <Button
                         key={color.id}
-                        variant={selectedColor === getColorName(color) ? 'default' : 'outline'}
-                        onClick={() => setSelectedColor(getColorName(color))}
+                        variant={selectedColor === colorName ? 'default' : 'outline'}
+                        onClick={() => setSelectedColor(colorName)}
                         className={cn(
-                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary',
-                          selectedColor === getColorName(color) ? 'bg-primary text-primary-foreground' : '',
-                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
+                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary'
                         )}
-                        disabled={!isAvailable}
-                        aria-pressed={selectedColor === getColorName(color)}
-                        aria-label={`Select color ${getColorName(color)}${!isAvailable ? ' (unavailable)' : ''}`}
+                        aria-pressed={selectedColor === colorName}
+                        aria-label={`Select color ${colorName}`}
                       >
-                        {getColorName(color)}
+                        {colorName}
                       </Button>
                     );
                   })}
                 </div>
               </div>
             )}
-            {hasRealSizes(product) && availableSizes.length > 0 && (
+            {hasRealSizes(product) && uniqueAvailableSizes.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="size-select" className="text-lg font-semibold text-foreground">
                   Size
                 </Label>
                 <div id="size-select" className="flex flex-wrap gap-2">
-                  {product.sizes!.map((size) => {
-                    const isAvailable = availableSizes.some((s) => s.id === size.id);
+                  {uniqueAvailableSizes.map((size) => {
+                    const sizeName = getSizeName(size);
                     return (
                       <Button
                         key={size.id}
-                        variant={selectedSize === getSizeName(size) ? 'default' : 'outline'}
-                        onClick={() => setSelectedSize(getSizeName(size))}
+                        variant={selectedSize === sizeName ? 'default' : 'outline'}
+                        onClick={() => setSelectedSize(sizeName)}
                         className={cn(
-                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary',
-                          selectedSize === getSizeName(size) ? 'bg-primary text-primary-foreground' : '',
-                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
+                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary'
                         )}
-                        disabled={!isAvailable}
-                        aria-pressed={selectedSize === getSizeName(size)}
-                        aria-label={`Select size ${getSizeName(size)}${!isAvailable ? ' (unavailable)' : ''}`}
+                        aria-pressed={selectedSize === sizeName}
+                        aria-label={`Select size ${sizeName}`}
                       >
-                        {getSizeName(size)}
+                        {sizeName}
                       </Button>
                     );
                   })}
@@ -766,10 +766,6 @@ const ProductDetail = () => {
               <dl className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                 <dt className="font-medium">Category</dt>
                 <dd>{product.category_name}</dd>
-                <dt className="font-medium">Stock</dt>
-                <dd>{displayedStock} units</dd>
-                <dt className="font-medium">Created</dt>
-                <dd>{new Date(product.created_at).toLocaleDateString()}</dd>
               </dl>
             </div>
           </div>
