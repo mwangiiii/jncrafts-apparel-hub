@@ -325,16 +325,32 @@ const ProductDetail = () => {
     setIsImageLoading(false);
   };
 
-  // Determine available sizes and colors based on variants
-  const availableSizes = product?.sizes?.filter((size) =>
-    product.variants.some((v) => v.size_id === size.id && v.is_available && v.stock_quantity > 0 && (!selectedColor || v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id))
-  ) || [];
-  const availableColors = product?.colors?.filter((color) =>
-    product.variants.some((v) => v.color_id === color.id && v.is_available && v.stock_quantity > 0 && (!selectedSize || v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id))
-  ) || [];
+  // Determine distinct available sizes and colors based on variants
+  const distinctSizes = Array.from(
+    new Map(
+      product?.variants
+        .filter((v) => v.is_available && v.stock_quantity > 0)
+        .map((v) => {
+          const size = product.sizes?.find((s) => s.id === v.size_id);
+          return [getSizeName(size!), size];
+        })
+        .filter(([name, size]) => size?.is_active)
+        .map(([name]) => [name.toLowerCase(), name])
+    ).values()
+  );
 
-  // Unique sizes by name
-  const uniqueAvailableSizes = Array.from(new Map(availableSizes.map(size => [getSizeName(size).toLowerCase(), size])).values());
+  const distinctColors = Array.from(
+    new Map(
+      product?.variants
+        .filter((v) => v.is_available && v.stock_quantity > 0)
+        .map((v) => {
+          const color = product.colors?.find((c) => c.id === v.color_id);
+          return [getColorName(color!), color];
+        })
+        .filter(([name, color]) => color?.is_active)
+        .map(([name]) => [name.toLowerCase(), name])
+    ).values()
+  );
 
   if (isLoading) {
     return (
@@ -590,55 +606,49 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
-            {hasRealColors(product) && availableColors.length > 0 && (
+            {hasRealColors(product) && distinctColors.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="color-select" className="text-lg font-semibold text-foreground">
                   Color
                 </Label>
                 <div id="color-select" className="flex flex-wrap gap-2">
-                  {availableColors.map((color) => {
-                    const colorName = getColorName(color);
-                    return (
-                      <Button
-                        key={color.id}
-                        variant={selectedColor === colorName ? 'default' : 'outline'}
-                        onClick={() => setSelectedColor(colorName)}
-                        className={cn(
-                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary'
-                        )}
-                        aria-pressed={selectedColor === colorName}
-                        aria-label={`Select color ${colorName}`}
-                      >
-                        {colorName}
-                      </Button>
-                    );
-                  })}
+                  {distinctColors.map((colorName) => (
+                    <Button
+                      key={colorName}
+                      variant={selectedColor === colorName ? 'default' : 'outline'}
+                      onClick={() => setSelectedColor(colorName)}
+                      className={cn(
+                        'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary'
+                      )}
+                      aria-pressed={selectedColor === colorName}
+                      aria-label={`Select color ${colorName}`}
+                    >
+                      {colorName}
+                    </Button>
+                  ))}
                 </div>
               </div>
             )}
-            {hasRealSizes(product) && uniqueAvailableSizes.length > 0 && (
+            {hasRealSizes(product) && distinctSizes.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="size-select" className="text-lg font-semibold text-foreground">
                   Size
                 </Label>
                 <div id="size-select" className="flex flex-wrap gap-2">
-                  {uniqueAvailableSizes.map((size) => {
-                    const sizeName = getSizeName(size);
-                    return (
-                      <Button
-                        key={size.id}
-                        variant={selectedSize === sizeName ? 'default' : 'outline'}
-                        onClick={() => setSelectedSize(sizeName)}
-                        className={cn(
-                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary'
-                        )}
-                        aria-pressed={selectedSize === sizeName}
-                        aria-label={`Select size ${sizeName}`}
-                      >
-                        {sizeName}
-                      </Button>
-                    );
-                  })}
+                  {distinctSizes.map((sizeName) => (
+                    <Button
+                      key={sizeName}
+                      variant={selectedSize === sizeName ? 'default' : 'outline'}
+                      onClick={() => setSelectedSize(sizeName)}
+                      className={cn(
+                        'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary'
+                      )}
+                      aria-pressed={selectedSize === sizeName}
+                      aria-label={`Select size ${sizeName}`}
+                    >
+                      {sizeName}
+                    </Button>
+                  ))}
                 </div>
               </div>
             )}
