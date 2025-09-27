@@ -333,9 +333,6 @@ const ProductDetail = () => {
     product.variants.some((v) => v.color_id === color.id && v.is_available && v.stock_quantity > 0 && (!selectedSize || v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id))
   ) || [];
 
-  // Unique colors by name
-  const uniqueAvailableColors = Array.from(new Map(availableColors.map(color => [getColorName(color).toLowerCase(), color])).values());
-
   // Unique sizes by name
   const uniqueAvailableSizes = Array.from(new Map(availableSizes.map(size => [getSizeName(size).toLowerCase(), size])).values());
 
@@ -593,13 +590,13 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
-            {hasRealColors(product) && uniqueAvailableColors.length > 0 && (
+            {hasRealColors(product) && availableColors.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="color-select" className="text-lg font-semibold text-foreground">
                   Color
                 </Label>
                 <div id="color-select" className="flex flex-wrap gap-2">
-                  {uniqueAvailableColors.map((color) => {
+                  {availableColors.map((color) => {
                     const colorName = getColorName(color);
                     return (
                       <Button
