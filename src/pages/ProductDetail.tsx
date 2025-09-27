@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Minus, Heart, ShoppingCart, AlertTriangle, Bell, Loader2, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog'; // Ensure DialogTrigger is exported
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -23,6 +23,9 @@ import Header from '@/components/Header';
 import debounce from 'lodash/debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+
+// Alternative import if DialogTrigger is not exported from '@/components/ui/dialog':
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@radix-ui/react-dialog';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,6 +60,9 @@ const ProductDetail = () => {
   const [isSettingAlert, setIsSettingAlert] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState<string[]>([]);
+
+  console.log('[ProductDetail] Product:', product);
+  console.log('[ProductDetail] isLoading:', isLoading, 'isError:', isError, 'error:', error);
 
   const formatPrice = (price: number | undefined | null, additionalPrice: number = 0) => {
     const totalPrice = (typeof price === 'number' && !isNaN(price) ? price : 0) + additionalPrice;
@@ -653,7 +659,7 @@ const ProductDetail = () => {
                   </Button>
                 )}
                 {(!selectedVariant || selectedVariant.stock_quantity === 0) && (
-                  <Dialog open={isStockAlertDialogOpen} onOpenChange={setIsStockAlertDialogOpen}>
+                  <Dialog>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
