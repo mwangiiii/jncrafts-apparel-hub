@@ -45,9 +45,9 @@ const ProductDetail = () => {
   const { data: product, isLoading, error, isError } = useProductDetail(id || '', !!id);
 
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState('');
-  const [selectedColor, setSelectedColor] = useState('');
-  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<Product['variants'][0] | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [email, setEmail] = useState(user?.email || '');
@@ -71,11 +71,11 @@ const ProductDetail = () => {
   useEffect(() => {
     if (product) {
       if (hasRealSizes(product) && product.sizes?.length > 0 && !selectedSize) {
-        const availableSize = product.sizes.find((s) => s.is_active);
+        const availableSize = product.sizes.find((s) => s.is_active && product.variants.some((v) => v.size_id === s.id && v.is_available));
         if (availableSize) setSelectedSize(getSizeName(availableSize));
       }
       if (hasRealColors(product) && product.colors?.length > 0 && !selectedColor) {
-        const availableColor = product.colors.find((c) => c.is_active);
+        const availableColor = product.colors.find((c) => c.is_active && product.variants.some((v) => v.color_id === c.id && v.is_available));
         if (availableColor) setSelectedColor(getColorName(availableColor));
       }
     }
@@ -97,10 +97,13 @@ const ProductDetail = () => {
       const variant = product.variants.find(
         (v) =>
           v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id &&
-          v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id
+          v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id &&
+          v.is_available
       );
       setSelectedVariant(variant || null);
       setQuantity(1); // Reset quantity when variant changes
+    } else {
+      setSelectedVariant(null);
     }
   }, [selectedColor, selectedSize, product]);
 
@@ -149,7 +152,7 @@ const ProductDetail = () => {
         await addToCart(product, quantity, selectedSize || 'One Size', selectedColor || 'Default', selectedVariant?.id);
         toast({
           title: 'Added to Cart!',
-          description: `${quantity} x ${product.name} (${selectedColor}, ${selectedSize}) added to your cart`,
+          description: `${quantity} x ${product.name} (${selectedColor || 'Default'}, ${selectedSize || 'One Size'}) added to your cart`,
         });
         openCart();
       } catch (error) {
@@ -219,7 +222,7 @@ const ProductDetail = () => {
             user_id: user.id,
             product_id: product.id,
             email_hash: emailHash,
-            variant_id: selectedVariant?.id,
+            variant_id: selectedVariant?.id || null,
           });
 
         if (error) {
@@ -235,7 +238,7 @@ const ProductDetail = () => {
 
         toast({
           title: 'Alert Set',
-          description: `You'll be notified when "${product.name} (${selectedColor}, ${selectedSize})" is back in stock`,
+          description: `You'll be notified when "${product.name} (${selectedColor || 'Default'}, ${selectedSize || 'One Size'})" is back in stock`,
         });
       } catch (error) {
         toast({
@@ -254,7 +257,7 @@ const ProductDetail = () => {
 
   const getStockStatus = () => {
     if (!selectedVariant) {
-      return { status: 'out', message: 'Select a variant', variant: 'destructive' as const };
+      return { status: 'out', message: 'Select a size and color', variant: 'destructive' as const };
     }
     if (selectedVariant.stock_quantity === 0) {
       return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
@@ -268,6 +271,14 @@ const ProductDetail = () => {
     setImageErrors((prev) => [...prev, url]);
     setIsImageLoading(false);
   };
+
+  // Determine available sizes and colors based on variants
+  const availableSizes = product?.sizes?.filter((size) =>
+    product.variants.some((v) => v.size_id === size.id && v.is_available && (!selectedColor || v.color_id === product.colors.find((c) => getColorName(c) === selectedColor)?.id))
+  ) || [];
+  const availableColors = product?.colors?.filter((color) =>
+    product.variants.some((v) => v.color_id === color.id && v.is_available && (!selectedSize || v.size_id === product.sizes.find((s) => getSizeName(s) === selectedSize)?.id))
+  ) || [];
 
   if (isLoading) {
     return (
@@ -321,7 +332,7 @@ const ProductDetail = () => {
 
   const stockStatus = getStockStatus();
   const validImages = product.images
-    .filter((img) => !imageErrors.includes(img.image_url))
+    .filter((img) => !imageErrors.includes(img.image_url) && img.is_active)
     .filter((img) =>
       selectedVariant && img.variant_id
         ? img.variant_id === selectedVariant.id
@@ -355,7 +366,7 @@ const ProductDetail = () => {
                     disabled={validImages.length === 0}
                   >
                     <img
-                      src={validImages[selectedImage]?.image_url || getPrimaryImage(product)}
+                      src={validImages[selectedImage]?.image_url || product.thumbnail_image}
                       alt={validImages[selectedImage]?.alt_text || `${product.name} - Image ${selectedImage + 1}`}
                       className={cn(
                         'w-full h-full object-cover transition-transform duration-500 hover:scale-105',
@@ -363,7 +374,7 @@ const ProductDetail = () => {
                       )}
                       loading="eager"
                       onLoad={() => setIsImageLoading(false)}
-                      onError={() => handleImageError(selectedImage, validImages[selectedImage]?.image_url || '')}
+                      onError={() => handleImageError(selectedImage, validImages[selectedImage]?.image_url || product.thumbnail_image)}
                     />
                   </button>
                 </DialogTrigger>
@@ -388,7 +399,7 @@ const ProductDetail = () => {
                         <CarouselItem>
                           <div className="flex items-center justify-center h-[80vh] p-4">
                             <img
-                              src="/placeholder-image.jpg"
+                              src={product.thumbnail_image}
                               alt="No image available"
                               className="max-w-full max-h-full object-contain"
                             />
@@ -479,7 +490,6 @@ const ProductDetail = () => {
                           <DialogDescription>Find the perfect fit for your jacket.</DialogDescription>
                         </DialogHeader>
                         <div className="py-4">
-                          {/* Replace with actual size chart image or table */}
                           <img
                             src="/size-charts/jacket.jpg"
                             alt="Jacket Size Chart"
@@ -507,7 +517,6 @@ const ProductDetail = () => {
                           <DialogDescription>Find the perfect fit for your pants.</DialogDescription>
                         </DialogHeader>
                         <div className="py-4">
-                          {/* Replace with actual size chart image or table */}
                           <img
                             src="/size-charts/pants.jpg"
                             alt="Pants Size Chart"
@@ -520,59 +529,65 @@ const ProductDetail = () => {
                 </div>
               </div>
             )}
-            {hasRealColors(product) && (
+            {hasRealColors(product) && availableColors.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="color-select" className="text-lg font-semibold text-foreground">
                   Color
                 </Label>
                 <div id="color-select" className="flex flex-wrap gap-2">
-                  {product.colors!.map((color) => (
-                    <Button
-                      key={color.id}
-                      variant={selectedColor === getColorName(color) ? 'default' : 'outline'}
-                      onClick={() => setSelectedColor(getColorName(color))}
-                      className={cn(
-                        'px-2 py-1 h-10 w-10 rounded-full transition-all duration-200 hover:ring-2 hover:ring-primary focus:ring-2 focus:ring-primary',
-                        selectedColor === getColorName(color) ? 'ring-2 ring-primary' : '',
-                        !color.is_active ? 'opacity-50 cursor-not-allowed' : ''
-                      )}
-                      disabled={!color.is_active}
-                      aria-pressed={selectedColor === getColorName(color)}
-                      aria-label={`Select color ${getColorName(color)}${!color.is_active ? ' (unavailable)' : ''}`}
-                    >
-                      <span
-                        className="w-6 h-6 rounded-full border"
-                        style={{ backgroundColor: color.hex_code || '#000' }}
-                      />
-                      <span className="sr-only">{getColorName(color)}</span>
-                    </Button>
-                  ))}
+                  {product.colors!.map((color) => {
+                    const isAvailable = availableColors.some((c) => c.id === color.id);
+                    return (
+                      <Button
+                        key={color.id}
+                        variant={selectedColor === getColorName(color) ? 'default' : 'outline'}
+                        onClick={() => setSelectedColor(getColorName(color))}
+                        className={cn(
+                          'px-2 py-1 h-10 w-10 rounded-full transition-all duration-200 hover:ring-2 hover:ring-primary focus:ring-2 focus:ring-primary',
+                          selectedColor === getColorName(color) ? 'ring-2 ring-primary' : '',
+                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
+                        )}
+                        disabled={!isAvailable}
+                        aria-pressed={selectedColor === getColorName(color)}
+                        aria-label={`Select color ${getColorName(color)}${!isAvailable ? ' (unavailable)' : ''}`}
+                      >
+                        <span
+                          className="w-6 h-6 rounded-full border"
+                          style={{ backgroundColor: color.hex_code || '#000' }}
+                        />
+                        <span className="sr-only">{getColorName(color)}</span>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}
-            {hasRealSizes(product) && (
+            {hasRealSizes(product) && availableSizes.length > 0 && (
               <div className="space-y-3">
                 <Label htmlFor="size-select" className="text-lg font-semibold text-foreground">
                   Size
                 </Label>
                 <div id="size-select" className="flex flex-wrap gap-2">
-                  {product.sizes!.map((size) => (
-                    <Button
-                      key={size.id}
-                      variant={selectedSize === getSizeName(size) ? 'default' : 'outline'}
-                      onClick={() => setSelectedSize(getSizeName(size))}
-                      className={cn(
-                        'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary',
-                        selectedSize === getSizeName(size) ? 'bg-primary text-primary-foreground' : '',
-                        !size.is_active ? 'opacity-50 cursor-not-allowed' : ''
-                      )}
-                      disabled={!size.is_active}
-                      aria-pressed={selectedSize === getSizeName(size)}
-                      aria-label={`Select size ${getSizeName(size)}${!size.is_active ? ' (unavailable)' : ''}`}
-                    >
-                      {getSizeName(size)}
-                    </Button>
-                  ))}
+                  {product.sizes!.map((size) => {
+                    const isAvailable = availableSizes.some((s) => s.id === size.id);
+                    return (
+                      <Button
+                        key={size.id}
+                        variant={selectedSize === getSizeName(size) ? 'default' : 'outline'}
+                        onClick={() => setSelectedSize(getSizeName(size))}
+                        className={cn(
+                          'px-4 py-2 text-sm transition-all duration-200 hover:bg-primary/10 focus:ring-2 focus:ring-primary',
+                          selectedSize === getSizeName(size) ? 'bg-primary text-primary-foreground' : '',
+                          !isAvailable ? 'opacity-50 cursor-not-allowed' : ''
+                        )}
+                        disabled={!isAvailable}
+                        aria-pressed={selectedSize === getSizeName(size)}
+                        aria-label={`Select size ${getSizeName(size)}${!isAvailable ? ' (unavailable)' : ''}`}
+                      >
+                        {getSizeName(size)}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -653,7 +668,7 @@ const ProductDetail = () => {
                       <DialogHeader className="space-y-2">
                         <DialogTitle className="text-xl">Stock Alert</DialogTitle>
                         <DialogDescription className="text-base">
-                          We'll email you when "{product.name} ({selectedColor}, {selectedSize})" is back in stock.
+                          We'll email you when "{product.name} ({selectedColor || 'Default'}, {selectedSize || 'One Size'})" is back in stock.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 pt-4">

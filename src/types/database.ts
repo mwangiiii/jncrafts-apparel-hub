@@ -1,4 +1,3 @@
-// types/database.ts
 export type Product = {
   id: string;
   name: string;
@@ -13,6 +12,7 @@ export type Product = {
   updated_at: string;
   show_jacket_size_chart: boolean;
   show_pants_size_chart: boolean;
+  thumbnail_image: string;
   images: Array<{
     id: string;
     image_url: string;
@@ -20,11 +20,12 @@ export type Product = {
     display_order: number;
     is_primary: boolean;
     is_active: boolean;
+    variant_id: string | null;
   }>;
   colors: Array<{
     id: string;
     name: string;
-    hex_code: string;
+    hex_code: string | null;
     is_active: boolean;
     display_order: number;
   }>;
@@ -34,5 +35,13 @@ export type Product = {
     category: string;
     is_active: boolean;
     display_order: number;
+  }>;
+  variants: Array<{
+    id: string;
+    color_id: string | null;
+    size_id: string | null;
+    stock_quantity: number;
+    additional_price: number;
+    is_available: boolean;
   }>;
 };
