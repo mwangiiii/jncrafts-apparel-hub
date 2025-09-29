@@ -8,7 +8,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingBag, Plus, Minus, Trash2, User, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import OrderConfirmationDialog from './OrderConfirmationDialog';
 import DeliveryMethodSelector from './DeliveryMethodSelector';
@@ -97,56 +96,40 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
   const applyDiscount = async () => {
     if (!discountCode.trim()) return;
-    
+
     setLoadingDiscount(true);
     try {
-      const { data, error } = await supabase
-        .from('discounts')
-        .select('id, code, name, discount_type, discount_value, min_order_amount, max_uses, current_uses')
-        .eq('code', discountCode.toUpperCase())
-        .eq('is_active', true)
-        .gte('end_date', new Date().toISOString())
-        .lte('start_date', new Date().toISOString())
-        .maybeSingle();
+      // Replace Supabase logic with a call to the new backend API
+      const response = await fetch('/api/discounts/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: discountCode.toUpperCase(), total }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to apply discount');
+      }
 
-      if (!data) {
+      const data = await response.json();
+
+      if (!data.success) {
         toast({
           variant: "destructive",
           title: "Invalid Code",
-          description: "The discount code is invalid or has expired.", 
-        });
-        return;
-      }
-
-      if (data.min_order_amount && total < data.min_order_amount) {
-        toast({
-          variant: "destructive",
-          title: "Minimum Order Required",
-          description: `This discount requires a minimum order of ${formatPrice(data.min_order_amount)}.`,
-        });
-        return;
-      }
-
-      if (data.max_uses && data.current_uses >= data.max_uses) {
-        toast({
-          variant: "destructive",
-          title: "Code Expired",
-          description: "This discount code has reached its usage limit.",
+          description: data.message || "The discount code is invalid or has expired.",
         });
         return;
       }
 
       setAppliedDiscount({
         code: data.code,
-        amount: data.discount_value,
-        type: data.discount_type as 'percentage' | 'fixed',
+        amount: data.amount,
+        type: data.type,
       });
 
       toast({
         title: "Discount Applied!",
-        description: `${data.name} - ${data.discount_type === 'percentage' ? `${data.discount_value}%` : `${formatPrice(data.discount_value)}`} off`,
+        description: `${data.name} - ${data.type === 'percentage' ? `${data.amount}%` : `${formatPrice(data.amount)}`} off`,
       });
     } catch (error) {
       console.error('Error applying discount:', error);
@@ -208,154 +191,32 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const handlePaymentConfirm = async (transactionCode: string) => {
     setIsPlacingOrder(true);
     try {
-      // Generate order number client-side to avoid RPC issues
-      const timestamp = Date.now();
-      const orderNumber = `JNC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${timestamp.toString().slice(-10)}`;
+      const response = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          transactionCode,
+          customerInfo,
+          shippingAddress,
+          deliveryDetails,
+          items,
+          total: finalTotal,
+          discount: appliedDiscount,
+        }),
+      });
 
-      // Get the "pending" status ID
-      const { data: pendingStatus, error: statusError } = await supabase
-        .from('order_status')
-        .select('id')
-        .eq('name', 'pending')
-        .single();
-
-      if (statusError || !pendingStatus) {
-        throw new Error('Failed to fetch pending status');
+      if (!response.ok) {
+        throw new Error('Failed to place order');
       }
 
-      // Create order with transaction code
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user!.id,
-          order_number: orderNumber,
-          status_id: pendingStatus.id,
-          total_amount: finalTotal,
-          discount_amount: discountAmount,
-          discount_code: appliedDiscount?.code || null,
-          customer_info: customerInfo,
-          shipping_address: shippingAddress,
-          delivery_details: deliveryDetails as DeliveryDetails,
-          transaction_code: transactionCode,
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_name: item.product_name,
-        product_image: item.product_image,
-        price: item.price,
-        quantity: item.quantity,
-        size: item.size_name,
-        color: item.color_name,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Update discount usage if applicable
-      if (appliedDiscount) {
-        const { data: currentDiscount } = await supabase
-          .from('discounts')
-          .select('current_uses')
-          .eq('code', appliedDiscount.code)
-          .single();
-        
-        if (currentDiscount) {
-          await supabase
-            .from('discounts')
-            .update({ current_uses: (currentDiscount.current_uses || 0) + 1 })
-            .eq('code', appliedDiscount.code);
-        }
-      }
-
-      // Send order confirmation email
-      try {
-        await supabase.functions.invoke('send-order-status-update', {
-          body: {
-            customerEmail: customerInfo.email,
-            adminEmail: "craftsjn@gmail.com",
-            orderNumber: orderNumber,
-            customerName: customerInfo.fullName,
-            orderStatus: 'pending',
-            items: items.map(item => ({
-              product_name: item.product_name,
-              quantity: item.quantity,
-              size: item.size_name,
-              color: item.color_name,
-              price: item.price
-            })),
-            totalAmount: finalTotal,
-            discountAmount: discountAmount,
-            shippingAddress: shippingAddress,
-            currency: {
-              code: selectedCurrency.code,
-              symbol: selectedCurrency.symbol
-            }
-          }
-        });
-      } catch (emailError) {
-        console.error('Error sending order confirmation email:', emailError);
-      }
-
-      // Send admin notification for new order
-      try {
-        console.log('Order placed successfully, emails sent via order status update function');
-      } catch (emailError) {
-        console.error('Error in email notifications:', emailError);
-      }
-
-        // Send WhatsApp notification for international orders
-        if (deliveryDetails?.method === 'international_delivery') {
-          try {
-            const whatsappNotification = await supabase.functions.invoke('send-whatsapp-notification', {
-              body: {
-                type: 'international_order',
-                orderDetails: {
-                  orderNumber: orderNumber,
-                  customerName: customerInfo.fullName,
-                  customerEmail: customerInfo.email,
-                  items: items.map(item => ({
-                    product_name: item.product_name,
-                    quantity: item.quantity,
-                    size: item.size_name,
-                    color: item.color_name,
-                    price: item.price
-                  })),
-                  totalAmount: finalTotal,
-                  shippingAddress: {
-                    address: shippingAddress.address,
-                    city: shippingAddress.city,
-                    postalCode: shippingAddress.postalCode
-                  },
-                  deliveryMethod: deliveryDetails.method
-                }
-              }
-            });
-
-            if (whatsappNotification.data?.whatsappUrl) {
-              // Open WhatsApp with pre-filled message
-              window.open(whatsappNotification.data.whatsappUrl, '_blank');
-            }
-          } catch (whatsappError) {
-            console.error('WhatsApp notification error:', whatsappError);
-            // Don't fail the order if WhatsApp fails
-          }
-        }
+      const data = await response.json();
 
       toast({
         title: "Order Placed Successfully!",
-        description: `Your order ${orderNumber} has been placed with M-Pesa transaction code ${transactionCode}.`,
+        description: `Your order ${data.orderNumber} has been placed successfully.`,
       });
 
-      // Reset everything
       onClearCart();
       setCustomerInfo({ fullName: "", email: user?.email || "", phone: "" });
       setShippingAddress({ address: "", city: "", postalCode: "", lat: undefined, lon: undefined, isCurrentLocation: false });
@@ -367,27 +228,10 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       onClose();
     } catch (error) {
       console.error('Error placing order:', error);
-      
-      let errorMessage = "There was an error placing your order. Please try again.";
-      
-      if (error instanceof Error) {
-        // Provide more specific error messages based on the error
-        if (error.message.includes('network') || error.message.includes('fetch')) {
-          errorMessage = "Network error. Please check your connection and try again.";
-        } else if (error.message.includes('auth') || error.message.includes('unauthorized')) {
-          errorMessage = "Authentication error. Please log in again and try.";
-        } else if (error.message.includes('validation') || error.message.includes('invalid')) {
-          errorMessage = "Invalid order data. Please check your information and try again.";
-        } else if (error.message.includes('duplicate') || error.message.includes('unique')) {
-          errorMessage = "Order already exists. Please check your orders or try with different items.";
-        }
-      }
-      
       toast({
         variant: "destructive",
         title: "Order Failed",
-        description: errorMessage,
-        duration: 5000,
+        description: "There was an error placing your order. Please try again.",
       });
     } finally {
       setIsPlacingOrder(false);
@@ -503,7 +347,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                       <p className="text-sm text-green-700">
                         ✓ {appliedDiscount.code} discount applied! 
                         {appliedDiscount.type === 'percentage' 
-                          ? ` ${appliedDiscount.amount}% off`
+                          ? ` ${appliedDiscount.amount}%`
                           : ` ${formatPrice(appliedDiscount.amount)} off`
                         }
                       </p>
