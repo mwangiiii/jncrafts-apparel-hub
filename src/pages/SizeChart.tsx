@@ -75,16 +75,14 @@ const SizeChart = () => {
           <Card className="border-primary/20 bg-primary/5 shadow-card">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 
-                </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground mb-2">Measurement Tips</h3>
                   <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
                     <li>Measure yourself wearing light clothing</li>
                     <li>Use a soft measuring tape for accuracy</li>
                     <li>If between sizes, we recommend sizing up</li>
-                    <li>All measurements are in centimeters</li>
+                    <li>All measurements are in Inches</li>
                   </ul>
                 </div>
               </div>
