@@ -201,41 +201,58 @@ const MpesaPaymentDialog = ({
     }
   };
 
-  const handlePaystackPayment = async () => {
-    setIsProcessing(true);
-    try {
-      const response = await fetch('/api/paystack/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: totalAmount,
-          email: customerInfo.email,
-          orderNumber,
-        }),
-      });
+  // Only showing the changed handlePaystackPayment function
+// Replace your existing handlePaystackPayment function with this:
 
-      const data = await response.json();
+const handlePaystackPayment = async () => {
+  // Validate email
+  if (!customerInfo.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
+    toast({
+      variant: "destructive",
+      title: "Invalid Email",
+      description: "Please enter a valid email address for Paystack payment.",
+    });
+    return;
+  }
 
-      if (response.ok && data.authorizationUrl) {
-        window.location.href = data.authorizationUrl; // Redirect to Paystack payment page
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Payment Initialization Failed',
-          description: data.message || 'Could not initialize Paystack payment.',
-        });
-      }
-    } catch (error) {
-      console.error('Paystack payment error:', error);
+  setIsProcessing(true);
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-initialize`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        amount: totalAmount,
+        email: customerInfo.email,
+        orderNumber,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success && data.authorizationUrl) {
+      // Redirect to Paystack payment page
+      window.location.href = data.authorizationUrl;
+    } else {
       toast({
         variant: 'destructive',
-        title: 'Network Error',
-        description: 'Could not connect to the payment server. Please try again.',
+        title: 'Payment Initialization Failed',
+        description: data.message || data.error || 'Could not initialize Paystack payment.',
       });
-    } finally {
-      setIsProcessing(false);
     }
-  };
+  } catch (error) {
+    console.error('Paystack payment error:', error);
+    toast({
+      variant: 'destructive',
+      title: 'Network Error',
+      description: 'Could not connect to the payment server. Please try again.',
+    });
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const resetDialog = () => {
     setStep('payment');
@@ -271,61 +288,83 @@ const MpesaPaymentDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'payment' && (
-          <div className="space-y-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <h3 className="text-base font-semibold text-green-800 mb-2">
-                M-Pesa STK Push Payment
-              </h3>
-              <div className="space-y-2">
-                <div className="bg-white p-3 rounded border">
-                  <Label className="text-sm text-gray-600" htmlFor="mpesaNumber">Phone Number:</Label>
-                  <Input
-                    id="mpesaNumber"
-                    type="tel"
-                    value={mpesaNumber}
-                    onChange={e => setMpesaNumber(e.target.value)}
-                    placeholder="0712345678 or 254712345678"
-                    className="font-mono text-center tracking-wide mt-1"
-                    maxLength={12}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter the phone number that will receive the STK Push
-                  </p>
-                </div>
-                
-                <div className="bg-white p-3 rounded border">
-                  <Label className="text-sm text-gray-600">Amount:</Label>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-xl font-bold text-green-700">
-                      {formatPrice(totalAmount)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(totalAmount.toString())}
-                      className="h-8 px-2"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
+        // Add this to your payment step JSX (replace the existing step === 'payment' section)
 
-            <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded">
-              <strong>How STK Push works:</strong>
-              <ol className="list-decimal list-inside mt-2 space-y-1">
-                <li>Enter your M-Pesa phone number above</li>
-                <li>Click "Send STK Push"</li>
-                <li>You'll receive a payment prompt on your phone</li>
-                <li>Enter your M-Pesa PIN to complete payment</li>
-                <li>We'll automatically verify the transaction</li>
-              </ol>
-            </div>
+{step === 'payment' && (
+  <div className="space-y-4">
+    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+      <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+      <h3 className="text-base font-semibold text-green-800 mb-2">
+        Choose Payment Method
+      </h3>
+      <div className="space-y-2">
+        {/* Email field for Paystack */}
+        <div className="bg-white p-3 rounded border">
+          <Label className="text-sm text-gray-600" htmlFor="email">Email Address:</Label>
+          <Input
+            id="email"
+            type="email"
+            value={customerInfo.email}
+            onChange={e => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+            placeholder="your.email@example.com"
+            className="text-center tracking-wide mt-1"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Required for payment receipts
+          </p>
+        </div>
+
+        {/* Phone number field for M-Pesa */}
+        <div className="bg-white p-3 rounded border">
+          <Label className="text-sm text-gray-600" htmlFor="mpesaNumber">M-Pesa Phone Number:</Label>
+          <Input
+            id="mpesaNumber"
+            type="tel"
+            value={mpesaNumber}
+            onChange={e => setMpesaNumber(e.target.value)}
+            placeholder="0712345678 or 254712345678"
+            className="font-mono text-center tracking-wide mt-1"
+            maxLength={12}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            For M-Pesa STK Push payment
+          </p>
+        </div>
+        
+        <div className="bg-white p-3 rounded border">
+          <Label className="text-sm text-gray-600">Amount:</Label>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xl font-bold text-green-700">
+              {formatPrice(totalAmount)}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => copyToClipboard(totalAmount.toString())}
+              className="h-8 px-2"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
           </div>
-        )}
+        </div>
+      </div>
+    </div>
+
+    <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded">
+      <strong>Payment Options:</strong>
+      <div className="mt-2 space-y-2">
+        <div>
+          <strong className="text-green-700">M-Pesa STK Push:</strong>
+          <p className="text-gray-600 mt-1">Enter your phone number and receive a payment prompt</p>
+        </div>
+        <div>
+          <strong className="text-blue-700">Paystack:</strong>
+          <p className="text-gray-600 mt-1">Pay with card, bank transfer, or mobile money</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         {step === 'verification' && (
           <div className="space-y-4">
@@ -414,30 +453,29 @@ const MpesaPaymentDialog = ({
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
-            Cancel
-          </Button>
-          
-          {step === 'payment' && (
-            <Button 
-              onClick={handleMakePayment} 
-              disabled={isProcessing || !mpesaNumber}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isProcessing ? 'Sending STK Push...' : 'Make M-Pesa Payment'}
-            </Button>
-          )}
-          
-          {step === 'payment' && (
-            <Button
-              onClick={handlePaystackPayment}
-              disabled={isProcessing}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isProcessing ? 'Initializing Paystack...' : 'Pay with Paystack'}
-            </Button>
-          )}
-          
+  <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
+    Cancel
+  </Button>
+  
+  {step === 'payment' && (
+    <>
+      <Button 
+        onClick={handleMakePayment} 
+        disabled={isProcessing || !mpesaNumber || !customerInfo.email}
+        className="bg-green-600 hover:bg-green-700"
+      >
+        {isProcessing ? 'Sending STK Push...' : 'Pay with M-Pesa'}
+      </Button>
+      
+      <Button
+        onClick={handlePaystackPayment}
+        disabled={isProcessing || !customerInfo.email}
+        className="bg-blue-600 hover:bg-blue-700"
+      >
+        {isProcessing ? 'Initializing...' : 'Pay with Paystack'}
+      </Button>
+    </>
+  )}
           {step === 'verification' && (
             <Button 
               variant="outline"
