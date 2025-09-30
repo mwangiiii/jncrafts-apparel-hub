@@ -27,7 +27,7 @@ const SizeChart = () => {
         {/* Header Section */}
         <div className="text-center mb-12 animate-fade-in">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Ruler className="w-8 h-8 text-primary" />
+            {/* <Ruler className="w-8 h-8 text-primary" /> */}
           </div>
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
             Size Chart
@@ -76,7 +76,7 @@ const SizeChart = () => {
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-bold text-lg">💡</span>
+                
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-foreground mb-2">Measurement Tips</h3>
