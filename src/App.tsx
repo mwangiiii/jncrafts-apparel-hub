@@ -16,6 +16,7 @@ import Wishlist from "./pages/Wishlist";
 import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 import SizeChart from "./pages/SizeChart";
+import PaystackRedirect from "./pages/PaystackRedirect";
 
 const App = () => (
   <TooltipProvider>
@@ -36,6 +37,7 @@ const App = () => (
       <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/sizechart" element={<SizeChart />} />
+      <Route path="/paystack-redirect" element={<PaystackRedirect />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
