@@ -41,6 +41,7 @@ const MpesaPaymentDialog = ({
   const { toast } = useToast();
 
   const [mpesaNumber, setMpesaNumber] = useState('');
+  const [customerInfo, setCustomerInfo] = useState<{ email: string }>({ email: '' });
 
   // Supabase configuration
   const SUPABASE_URL = 'https://ppljsayhwtlogficifar.supabase.co';
@@ -194,6 +195,42 @@ const MpesaPaymentDialog = ({
         variant: "destructive", 
         title: "Network error", 
         description: "Could not reach payment server. Please check your connection." 
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaystackPayment = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/paystack/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalAmount,
+          email: customerInfo.email,
+          orderNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.authorizationUrl) {
+        window.location.href = data.authorizationUrl; // Redirect to Paystack payment page
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Payment Initialization Failed',
+          description: data.message || 'Could not initialize Paystack payment.',
+        });
+      }
+    } catch (error) {
+      console.error('Paystack payment error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Network Error',
+        description: 'Could not connect to the payment server. Please try again.',
       });
     } finally {
       setIsProcessing(false);
@@ -387,7 +424,17 @@ const MpesaPaymentDialog = ({
               disabled={isProcessing || !mpesaNumber}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isProcessing ? 'Sending STK Push...' : 'Make Payment'}
+              {isProcessing ? 'Sending STK Push...' : 'Make M-Pesa Payment'}
+            </Button>
+          )}
+          
+          {step === 'payment' && (
+            <Button
+              onClick={handlePaystackPayment}
+              disabled={isProcessing}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isProcessing ? 'Initializing Paystack...' : 'Pay with Paystack'}
             </Button>
           )}
           
