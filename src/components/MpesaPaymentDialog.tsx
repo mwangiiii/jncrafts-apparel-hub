@@ -59,38 +59,47 @@ const MpesaPaymentDialog = ({
   };
 
   // Check payment status in database
-  const checkPaymentStatus = async (checkoutRequestId: string): Promise<PaymentStatus> => {
-    try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/payment_records?checkout_request_id=eq.${checkoutRequestId}`, {
+  // Replace your existing checkPaymentStatus function with this:
+
+const checkPaymentStatus = async (checkoutRequestId: string): Promise<PaymentStatus> => {
+  try {
+    // Check by checkout_request_id (works for both M-Pesa CheckoutRequestID and Paystack orderNumber)
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/payment_records?checkout_request_id=eq.${checkoutRequestId}&order=created_at.desc&limit=1`,
+      {
         headers: {
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'apikey': SUPABASE_ANON_KEY,
           'Content-Type': 'application/json',
         },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
       }
+    );
 
-      const records = await response.json();
-      
-      if (records && records.length > 0) {
-        const record = records[0];
-        return {
-          status: record.status === 'success' ? 'success' : 'failed',
-          transactionId: record.transaction_id,
-          receiptNumber: record.receipt_number,
-          resultDesc: record.result_desc,
-        };
-      }
-      
-      return { status: 'pending' };
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-      return { status: 'pending' };
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+
+    const records = await response.json();
+    
+    if (records && records.length > 0) {
+      const record = records[0];
+      console.log('Payment record found:', record);
+      
+      return {
+        status: record.status === 'success' ? 'success' : 'failed',
+        transactionId: record.transaction_id,
+        receiptNumber: record.receipt_number,
+        resultDesc: record.result_desc,
+      };
+    }
+    
+    console.log('No payment record found yet for:', checkoutRequestId);
+    return { status: 'pending' };
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    return { status: 'pending' };
+  }
+};
 
   // Start payment verification polling
   useEffect(() => {
@@ -204,6 +213,8 @@ const MpesaPaymentDialog = ({
   // Only showing the changed handlePaystackPayment function
 // Replace your existing handlePaystackPayment function with this:
 
+// Replace your handlePaystackPayment function with this updated version:
+
 const handlePaystackPayment = async () => {
   // Validate email
   if (!customerInfo.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
@@ -233,14 +244,37 @@ const handlePaystackPayment = async () => {
     const data = await response.json();
 
     if (response.ok && data.success && data.authorizationUrl) {
-      // Redirect to Paystack payment page
-      window.location.href = data.authorizationUrl;
+      // Store the reference (orderNumber) to check later
+      setCheckoutRequestId(orderNumber); // Use orderNumber as the checkout request ID
+      
+      // Open Paystack in a new window
+      const paystackWindow = window.open(
+        data.authorizationUrl, 
+        'Paystack Payment',
+        'width=600,height=700'
+      );
+      
+      // Start verification immediately
+      setStep('verification');
+      setVerificationAttempts(0);
+      
+      toast({
+        title: "Redirecting to Paystack",
+        description: "Complete your payment in the popup window",
+      });
+
+      // Optional: Check if popup was blocked
+      if (!paystackWindow) {
+        // Fallback to full redirect if popup blocked
+        window.location.href = data.authorizationUrl;
+      }
     } else {
       toast({
         variant: 'destructive',
         title: 'Payment Initialization Failed',
         description: data.message || data.error || 'Could not initialize Paystack payment.',
       });
+      setIsProcessing(false);
     }
   } catch (error) {
     console.error('Paystack payment error:', error);
@@ -249,9 +283,9 @@ const handlePaystackPayment = async () => {
       title: 'Network Error',
       description: 'Could not connect to the payment server. Please try again.',
     });
-  } finally {
     setIsProcessing(false);
   }
+  // Don't set isProcessing to false here - let the verification process handle it
 };
 
   const resetDialog = () => {
