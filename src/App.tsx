@@ -15,6 +15,7 @@ import UserMessages from "./pages/UserMessages";
 import Wishlist from "./pages/Wishlist";
 import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
+import SizeChart from "./pages/SizeChart";
 
 const App = () => (
   <TooltipProvider>
@@ -34,6 +35,7 @@ const App = () => (
       <Route path="/messages/:conversationId" element={<UserMessages />} />
       <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/product/:id" element={<ProductDetail />} />
+      <Route path="/sizechart" element={<SizeChart />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
