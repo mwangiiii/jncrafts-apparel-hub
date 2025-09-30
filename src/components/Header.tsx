@@ -55,6 +55,12 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
             >
               Contact
             </Link>
+            <Link
+              to="/#sizechart"
+              className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base"
+            >
+              Size Chart
+            </Link>
             {isAdmin && (
               <Link to="/admin" className="text-foreground hover:text-brand-beige transition-colors duration-300 text-sm xl:text-base">
                 Admin
@@ -188,6 +194,13 @@ const Header = ({ cartItems, onCartClick }: HeaderProps) => {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Contact
+              </Link>
+              <Link
+                to="/#sizechart"
+                className="block px-3 py-3 rounded-lg text-foreground hover:text-brand-beige hover:bg-muted transition-colors duration-300"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Size Chart
               </Link>
               {isAdmin && (
                 <Link 
