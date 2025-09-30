@@ -288,8 +288,8 @@ const handlePaystackPayment = async () => {
           </DialogDescription>
         </DialogHeader>
 
-        // Add this to your payment step JSX (replace the existing step === 'payment' section)
-
+        <Separator className="my-4" />  
+        
 {step === 'payment' && (
   <div className="space-y-4">
     <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
