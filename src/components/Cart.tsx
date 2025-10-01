@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Add useNavigate import
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ import MpesaPaymentDialog from './MpesaPaymentDialog';
 import { CartThumbnail } from './CartThumbnail';
 
 import { CartItem } from "@/types/database";
-
 import { DeliveryMethod } from '@/components/DeliveryMethodSelector';
 
 interface DeliveryDetails {
@@ -43,6 +43,7 @@ interface CartProps {
 }
 
 const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onClearCart, isLoading = false }: CartProps) => {
+  const navigate = useNavigate(); // Initialize useNavigate
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
     email: "",
@@ -258,10 +259,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                 <div className="flex items-center gap-2 text-accent mb-2">
                   <User className="h-4 w-4" />
                   <Button
-                    onClick={() => {
-                      // Trigger sign-in logic
-                      handleSignIn();
-                    }}
+                    onClick={() => navigate('/auth')} // Navigate to /auth
                     className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition"
                   >
                     Login Required
@@ -296,50 +294,50 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                         productName={item.product_name}
                       />
                     </a>
-                  <div className="flex-1">
-                    <a 
-                      href={`/product/${item.product_id}`}
-                      className="hover:underline block"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.location.href = `/product/${item.product_id}`;
-                      }}
-                    >
-                      <h4 className="font-medium text-primary hover:text-primary/80">{item.product_name}</h4>
-                    </a>
-                     <p className="text-sm text-muted-foreground">
-                       {item.size_name} • {item.color_name}
-                     </p>
-                    <p className="font-semibold">{formatPrice(item.price)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <a 
+                        href={`/product/${item.product_id}`}
+                        className="hover:underline block"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.location.href = `/product/${item.product_id}`;
+                        }}
+                      >
+                        <h4 className="font-medium text-primary hover:text-primary/80">{item.product_name}</h4>
+                      </a>
+                      <p className="text-sm text-muted-foreground">
+                        {item.size_name} • {item.color_name}
+                      </p>
+                      <p className="font-semibold">{formatPrice(item.price)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-8 text-center">{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                      onClick={() => onRemoveItem(item.id)}
+                      className="text-destructive hover:text-destructive"
                     >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-8 text-center">{item.quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemoveItem(item.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
                 ))}
               </div>
             )}
@@ -428,27 +426,27 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     <Separator />
                     
                     <div className="space-y-2">
-                       <div className="flex items-center justify-between">
-                         <span className="text-base">Subtotal:</span>
-                         <span className="text-base">{formatPrice(total)}</span>
-                       </div>
-                       {appliedDiscount && discountAmount > 0 && (
-                         <div className="flex items-center justify-between text-green-600">
-                           <span className="text-base">Discount ({appliedDiscount.code}):</span>
-                           <span className="text-base">-{formatPrice(discountAmount)}</span>
-                         </div>
-                       )}
-                       {deliveryDetails && (
-                         <div className="flex items-center justify-between">
-                           <span className="text-base">Delivery ({deliveryDetails.method.replace('_', ' ')}):</span>
-                           <span className="text-base">{formatPrice(deliveryCost)}</span>
-                         </div>
-                       )}
-                       <Separator />
-                       <div className="flex items-center justify-between">
-                         <span className="text-lg font-bold">Total:</span>
-                         <span className="text-lg font-bold">{formatPrice(finalTotal)}</span>
-                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-base">Subtotal:</span>
+                        <span className="text-base">{formatPrice(total)}</span>
+                      </div>
+                      {appliedDiscount && discountAmount > 0 && (
+                        <div className="flex items-center justify-between text-green-600">
+                          <span className="text-base">Discount ({appliedDiscount.code}):</span>
+                          <span className="text-base">-{formatPrice(discountAmount)}</span>
+                        </div>
+                      )}
+                      {deliveryDetails && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-base">Delivery ({deliveryDetails.method.replace('_', ' ')}):</span>
+                          <span className="text-base">{formatPrice(deliveryCost)}</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold">Total:</span>
+                        <span className="text-lg font-bold">{formatPrice(finalTotal)}</span>
+                      </div>
                     </div>
                     
                     <Button 
