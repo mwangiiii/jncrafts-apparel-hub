@@ -43,7 +43,7 @@ const App = () => (
         <Route path="*" element={<NotFound />} />
       </Routes>
     </TooltipProvider>
- 
+  
 );
 
 export default App;
