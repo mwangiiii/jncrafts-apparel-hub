@@ -58,152 +58,152 @@ const MpesaPaymentDialog = ({
     });
   };
 
-  const checkPaymentStatus = async (checkoutRequestId: string): Promise<PaymentStatus> => {
-    try {
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/payment_records?checkout_request_id=eq.${checkoutRequestId}&order=created_at.desc&limit=1`,
-        {
-          headers: {
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'apikey': SUPABASE_ANON_KEY,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+  // const checkPaymentStatus = async (checkoutRequestId: string): Promise<PaymentStatus> => {
+  //   try {
+  //     const response = await fetch(
+  //       `${SUPABASE_URL}/rest/v1/payment_records?checkout_request_id=eq.${checkoutRequestId}&order=created_at.desc&limit=1`,
+  //       {
+  //         headers: {
+  //           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  //           'apikey': SUPABASE_ANON_KEY,
+  //           'Content-Type': 'application/json',
+  //         },
+  //       }
+  //     );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! status: ${response.status}`);
+  //     }
 
-      const records = await response.json();
+  //     const records = await response.json();
       
-      if (records && records.length > 0) {
-        const record = records[0];
-        console.log('Payment record found:', record);
+  //     if (records && records.length > 0) {
+  //       const record = records[0];
+  //       console.log('Payment record found:', record);
         
-        return {
-          status: record.status === 'success' ? 'success' : 'failed',
-          transactionId: record.transaction_id,
-          receiptNumber: record.receipt_number,
-          resultDesc: record.result_desc,
-        };
-      }
+  //       return {
+  //         status: record.status === 'success' ? 'success' : 'failed',
+  //         transactionId: record.transaction_id,
+  //         receiptNumber: record.receipt_number,
+  //         resultDesc: record.result_desc,
+  //       };
+  //     }
       
-      console.log('No payment record found yet for:', checkoutRequestId);
-      return { status: 'pending' };
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-      return { status: 'pending' };
-    }
-  };
+  //     console.log('No payment record found yet for:', checkoutRequestId);
+  //     return { status: 'pending' };
+  //   } catch (error) {
+  //     console.error('Error checking payment status:', error);
+  //     return { status: 'pending' };
+  //   }
+  // };
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+  // useEffect(() => {
+  //   let intervalId: NodeJS.Timeout;
 
-    if (step === 'verification' && checkoutRequestId && verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
-      intervalId = setInterval(async () => {
-        const status = await checkPaymentStatus(checkoutRequestId);
-        setPaymentStatus(status);
-        setVerificationAttempts(prev => prev + 1);
+  //   if (step === 'verification' && checkoutRequestId && verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
+  //     intervalId = setInterval(async () => {
+  //       const status = await checkPaymentStatus(checkoutRequestId);
+  //       setPaymentStatus(status);
+  //       setVerificationAttempts(prev => prev + 1);
 
-        if (status.status === 'success') {
-          setStep('success');
-          toast({
-            title: "Payment Successful!",
-            description: `Transaction ID: ${status.receiptNumber || status.transactionId}`,
-          });
-          setTimeout(() => {
-            onPaymentConfirm(status.receiptNumber || status.transactionId || 'VERIFIED');
-          }, 2000);
-        } else if (status.status === 'failed') {
-          setStep('failed');
-          setIsProcessing(false);
-          toast({
-            variant: "destructive",
-            title: "Payment Failed",
-            description: status.resultDesc || "Transaction was not completed successfully.",
-          });
-        }
-      }, VERIFICATION_INTERVAL);
-    }
+  //       if (status.status === 'success') {
+  //         setStep('success');
+  //         toast({
+  //           title: "Payment Successful!",
+  //           description: `Transaction ID: ${status.receiptNumber || status.transactionId}`,
+  //         });
+  //         setTimeout(() => {
+  //           onPaymentConfirm(status.receiptNumber || status.transactionId || 'VERIFIED');
+  //         }, 2000);
+  //       } else if (status.status === 'failed') {
+  //         setStep('failed');
+  //         setIsProcessing(false);
+  //         toast({
+  //           variant: "destructive",
+  //           title: "Payment Failed",
+  //           description: status.resultDesc || "Transaction was not completed successfully.",
+  //         });
+  //       }
+  //     }, VERIFICATION_INTERVAL);
+  //   }
 
-    if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS && step === 'verification') {
-      setPaymentStatus({ status: 'timeout' });
-      setStep('failed');
-      setIsProcessing(false);
-      toast({
-        variant: "destructive",
-        title: "Payment Verification Timeout",
-        description: "Could not verify payment. Please contact support if money was deducted.",
-      });
-    }
+  //   if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS && step === 'verification') {
+  //     setPaymentStatus({ status: 'timeout' });
+  //     setStep('failed');
+  //     setIsProcessing(false);
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Payment Verification Timeout",
+  //       description: "Could not verify payment. Please contact support if money was deducted.",
+  //     });
+  //   }
 
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [step, checkoutRequestId, verificationAttempts, onPaymentConfirm, toast]);
+  //   return () => {
+  //     if (intervalId) clearInterval(intervalId);
+  //   };
+  // }, [step, checkoutRequestId, verificationAttempts, onPaymentConfirm, toast]);
 
-  const handleMakePayment = async () => {
-    if (!mpesaNumber || !/^(07\d{8}|254\d{9})$/.test(mpesaNumber)) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Phone Number",
-        description: "Please enter a valid M-Pesa phone number (e.g., 0712345678 or 254712345678).",
-      });
-      return;
-    }
+  // const handleMakePayment = async () => {
+  //   if (!mpesaNumber || !/^(07\d{8}|254\d{9})$/.test(mpesaNumber)) {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Invalid Phone Number",
+  //       description: "Please enter a valid M-Pesa phone number (e.g., 0712345678 or 254712345678).",
+  //     });
+  //     return;
+  //   }
 
-    setIsProcessing(true);
+  //   setIsProcessing(true);
     
-    try {
-      const requestPayload = {
-        phoneNumber: mpesaNumber,
-        amount: totalAmount,
-        accountReference: orderNumber,
-        transactionDesc: `Payment for Order #${orderNumber}`
-      };
+  //   try {
+  //     const requestPayload = {
+  //       phoneNumber: mpesaNumber,
+  //       amount: totalAmount,
+  //       accountReference: orderNumber,
+  //       transactionDesc: `Payment for Order #${orderNumber}`
+  //     };
 
-      console.log('Sending STK Push request:', requestPayload);
+  //     console.log('Sending STK Push request:', requestPayload);
 
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/mpesa-stkpush`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify(requestPayload),
-      });
+  //     const res = await fetch(`${SUPABASE_URL}/functions/v1/mpesa-stkpush`, {
+  //       method: 'POST',
+  //       headers: { 
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+  //       },
+  //       body: JSON.stringify(requestPayload),
+  //     });
       
-      const data = await res.json();
-      console.log('STK Push response:', data);
+  //     const data = await res.json();
+  //     console.log('STK Push response:', data);
       
-      if (res.ok && data.success && data.data?.CheckoutRequestID) {
-        setCheckoutRequestId(data.data.CheckoutRequestID);
-        setVerificationAttempts(0);
-        setStep('verification');
-        toast({ 
-          title: "STK Push sent!", 
-          description: "Check your phone and enter your M-Pesa PIN to complete payment." 
-        });
-      } else {
-        const errorMessage = data.error || data.message || "Payment initiation failed. Please try again.";
-        toast({ 
-          variant: "destructive", 
-          title: "Payment failed", 
-          description: errorMessage
-        });
-      }
-    } catch (err) {
-      console.error('Payment error:', err);
-      toast({ 
-        variant: "destructive", 
-        title: "Network error", 
-        description: "Could not reach payment server. Please check your connection." 
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  //     if (res.ok && data.success && data.data?.CheckoutRequestID) {
+  //       setCheckoutRequestId(data.data.CheckoutRequestID);
+  //       setVerificationAttempts(0);
+  //       setStep('verification');
+  //       toast({ 
+  //         title: "STK Push sent!", 
+  //         description: "Check your phone and enter your M-Pesa PIN to complete payment." 
+  //       });
+  //     } else {
+  //       const errorMessage = data.error || data.message || "Payment initiation failed. Please try again.";
+  //       toast({ 
+  //         variant: "destructive", 
+  //         title: "Payment failed", 
+  //         description: errorMessage
+  //       });
+  //     }
+  //   } catch (err) {
+  //     console.error('Payment error:', err);
+  //     toast({ 
+  //       variant: "destructive", 
+  //       title: "Network error", 
+  //       description: "Could not reach payment server. Please check your connection." 
+  //     });
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
 
   const handlePaystackPayment = async () => {
     // Validate inputs
