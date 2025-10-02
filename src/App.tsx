@@ -19,7 +19,7 @@ import SizeChart from "./pages/SizeChart";
 import PaymentSuccessPage from "./pages/PaystackRedirect";
 
 const App = () => (
-  <BrowserRouter>
+  
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -43,7 +43,7 @@ const App = () => (
         <Route path="*" element={<NotFound />} />
       </Routes>
     </TooltipProvider>
-  </BrowserRouter>
+ 
 );
 
 export default App;
