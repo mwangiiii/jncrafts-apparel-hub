@@ -7,6 +7,7 @@ import { CurrencyProvider } from './contexts/CurrencyContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from './components/ui/sonner'
 import CriticalResourcePreloader from './components/CriticalResourcePreloader.tsx'
+import { Analytics } from "@vercel/analytics/next"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ createRoot(document.getElementById("root")!).render(
           <CriticalResourcePreloader />
           <App />
           <Toaster />
+          <Analytics />
         </CurrencyProvider>
       </AuthProvider>
     </BrowserRouter>
