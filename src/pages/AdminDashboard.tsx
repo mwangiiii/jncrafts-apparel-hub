@@ -14,13 +14,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast, useToast } from "@/components/ui/use-toast";
-import { ShoppingCart, Users, DollarSign, Package, Eye } from 'lucide-react';
+import { Skeleton } from "@/components/ui/skeleton";
+import { ShoppingCart, Users, DollarSign, Package, Eye, RefreshCw, ChevronRight } from 'lucide-react';
 import { format } from "date-fns";
 import { OptimizedProductsSection } from '@/components/admin/OptimizedProductsSection';
 import NewArrivalsManager from '@/components/admin/NewArrivalsManager';
 import SpecialOffersManager from '@/components/admin/SpecialOffersManager';
 import FeaturedProductsManager from '@/components/admin/FeaturedProductsManager';
 import type { Json } from '@/integrations/supabase/types';
+import { cn } from "@/lib/utils"; // Assuming Shadcn utils for classNames
+
+// Updated interfaces to align with revamped DB schema
+interface OrderItem {
+  id: string;
+  product_id: string;
+  variant_id: string;
+  price: number;
+  quantity: number;
+  image_url: string | null;
+  created_at: string;
+}
+
+interface OrderStatus {
+  id: string;
+  name: string;
+  display_name: string;
+}
 
 interface Order {
   id: string;
@@ -30,12 +49,8 @@ interface Order {
   created_at: string;
   customer_info: Json;
   discount_amount: number;
-  order_items: any[];
-  order_status?: {
-    id: string;
-    name: string;
-    display_name: string;
-  };
+  order_items: OrderItem[];
+  order_status: OrderStatus | null;
 }
 
 interface Stats {
@@ -45,11 +60,17 @@ interface Stats {
   totalCustomers: number;
 }
 
-interface OrderStatus {
-  id: string;
-  name: string;
-  display_name: string;
-}
+// Status badge variants mapping for better UX
+const getStatusVariant = (statusName: string | undefined): "default" | "secondary" | "outline" | "destructive" => {
+  switch (statusName) {
+    case 'delivered': return 'default';
+    case 'shipped': return 'secondary';
+    case 'processing': return 'outline';
+    case 'pending':
+    case 'cancelled': return 'destructive';
+    default: return 'outline';
+  }
+};
 
 const AdminDashboard = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -64,14 +85,23 @@ const AdminDashboard = () => {
   });
   const [loadingData, setLoadingData] = useState(true);
   const [statusOptions, setStatusOptions] = useState<OrderStatus[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user && isAdmin) {
-      fetchOrders();
-      fetchStats();
-      fetchStatusOptions();
+      loadData();
     }
   }, [user, isAdmin]);
+
+  const loadData = async () => {
+    setLoadingData(true);
+    await Promise.all([
+      fetchOrders(),
+      fetchStats(),
+      fetchStatusOptions()
+    ]);
+    setLoadingData(false);
+  };
 
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
@@ -93,27 +123,41 @@ const AdminDashboard = () => {
             display_name
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10); // Limit for dashboard; full list in separate view
 
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
         throw ordersError;
       }
 
-      // Fetch order items for each order
+      // Fetch order items for each order (optimized: batch if possible, but sequential for simplicity)
       const ordersWithItems = await Promise.all(
         (ordersData || []).map(async (order) => {
           const { data: itemsData, error: itemsError } = await supabase
             .from('order_items')
-            .select('*')
+            .select(`
+              *,
+              products!inner (
+                name,
+                thumbnail_index
+              ),
+              product_variants!inner (
+                additional_price
+              )
+            `)
             .eq('order_id', order.id);
 
           if (itemsError) {
             console.error('Error fetching order items:', itemsError);
-            return { ...order, order_items: [] };
+            return { ...order, order_items: [] as OrderItem[] };
           }
 
-          return { ...order, order_items: itemsData || [] };
+          // Type assertion for items with joined data
+          return { 
+            ...order, 
+            order_items: itemsData || [] 
+          };
         })
       );
 
@@ -125,8 +169,6 @@ const AdminDashboard = () => {
         description: "Failed to fetch orders data",
         variant: "destructive",
       });
-    } finally {
-      setLoadingData(false);
     }
   };
 
@@ -137,10 +179,10 @@ const AdminDashboard = () => {
         .from('orders')
         .select('total_amount, status_id');
 
-      // Total customers
-      const { data: customersData } = await supabase
+      // Total customers (from profiles or auth.users count)
+      const { count: customersCount } = await supabase
         .from('profiles')
-        .select('id');
+        .select('*', { count: 'exact', head: true });
 
       if (ordersData) {
         const totalOrders = ordersData.length;
@@ -160,7 +202,7 @@ const AdminDashboard = () => {
           totalOrders,
           totalRevenue,
           pendingOrders,
-          totalCustomers: customersData?.length || 0
+          totalCustomers: customersCount || 0
         });
       }
     } catch (error) {
@@ -206,14 +248,15 @@ const AdminDashboard = () => {
         throw error;
       }
 
-      // Send email notification
+      // Send email notification (aligns with revamped schema)
       const order = orders.find(o => o.id === orderId);
       if (order) {
         const orderData = {
           order_number: order.order_number,
           status: statusData.name,
           customer_email: (order.customer_info as any)?.email,
-          total_amount: order.total_amount
+          total_amount: order.total_amount,
+          discount_amount: order.discount_amount // Include discount from schema
         };
 
         try {
@@ -236,7 +279,7 @@ const AdminDashboard = () => {
 
       toast({
         title: "Order Updated",
-        description: `Order status changed to ${statusData.display_name}. Customer has been notified via email.`
+        description: `Order status changed to ${statusData.display_name}. Customer notified via email.`,
       });
 
       fetchStats(); // Refresh stats
@@ -250,6 +293,13 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+    toast({ title: "Refreshed", description: "Dashboard data updated." });
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
@@ -258,40 +308,118 @@ const AdminDashboard = () => {
     }).format(amount);
   };
 
-  // Stats cards
+  // Stats cards with icons and colors for visual hierarchy
   const statsCards = [
     {
       title: "Total Orders",
       value: stats.totalOrders.toString(),
+      change: "+12%", // Placeholder; fetch real if needed
       icon: ShoppingCart,
-      color: "text-blue-600"
+      color: "text-blue-600 bg-blue-50",
+      href: "/admin/orders"
     },
     {
       title: "Total Revenue",
       value: formatCurrency(stats.totalRevenue),
+      change: "+8%",
       icon: DollarSign,
-      color: "text-green-600"
+      color: "text-green-600 bg-green-50",
+      href: "/admin/reports/revenue"
     },
     {
       title: "Pending Orders",
       value: stats.pendingOrders.toString(),
+      change: "-2%",
       icon: Package,
-      color: "text-orange-600"
+      color: "text-orange-600 bg-orange-50",
+      href: "/admin/orders?status=pending"
     },
     {
       title: "Total Customers",
       value: stats.totalCustomers.toString(),
+      change: "+15%",
       icon: Users,
-      color: "text-purple-600"
+      color: "text-purple-600 bg-purple-50",
+      href: "/admin/customers"
     }
   ];
 
+  // Loading skeleton for stats
+  const StatsSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <Skeleton key={i} className="h-24 w-full" />
+      ))}
+    </div>
+  );
+
+  // Order card component for better reusability
+  const OrderCard = ({ order }: { order: Order }) => (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-lg">#{order.order_number}</span>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            asChild
+          >
+            <a href={`/admin/orders/${order.id}`} target="_blank" rel="noopener noreferrer" aria-label="View order details">
+              <Eye className="h-4 w-4" />
+            </a>
+          </Button>
+        </div>
+        
+        <div className="space-y-2 text-sm">
+          <p className="text-muted-foreground">
+            {format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}
+          </p>
+          <p className="font-semibold text-base">{formatCurrency(Number(order.total_amount))}</p>
+          
+          <div className="flex items-center justify-between gap-2">
+            <Badge 
+              variant={getStatusVariant(order.order_status?.name)}
+              className="text-xs"
+            >
+              {order.order_status?.display_name || 'Unknown'}
+            </Badge>
+            
+            <Select 
+              value={order.status_id} 
+              onValueChange={(newStatusId) => updateOrderStatus(order.id, newStatusId)}
+            >
+              <SelectTrigger className="w-28 h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((status) => (
+                  <SelectItem key={status.id} value={status.id}>
+                    {status.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>Customer: {(order.customer_info as any)?.fullName || 'N/A'}</p>
+            <p>Items: {order.order_items.length}</p>
+            {order.discount_amount > 0 && (
+              <p>Discount: {formatCurrency(Number(order.discount_amount))}</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-4xl w-full space-y-8">
+          <Skeleton className="h-12 w-64" />
+          <StatsSkeleton />
+          <Skeleton className="h-96 w-full" />
         </div>
       </div>
     );
@@ -299,145 +427,102 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6 space-y-8">
-        {/* Header */}
+      <div className="container mx-auto p-6 space-y-8 max-w-7xl">
+        {/* Header with refresh */}
         <div className="flex items-center justify-between">
-          <div>
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your store, orders, and products</p>
+            <p className="text-muted-foreground">Manage your store, orders, and products efficiently</p>
           </div>
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label="Refresh dashboard"
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
+            Refresh
+          </Button>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Responsive grid with hover effects */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((stat, index) => (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
+            <Card key={index} className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
+              <a href={stat.href} className="block p-6 space-y-3">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                    {stat.title}
+                  </CardTitle>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1">
+                    <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                    <p className="text-xs text-muted-foreground">Change: <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>{stat.change}</span></p>
+                  </div>
+                </CardContent>
+              </a>
             </Card>
           ))}
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="orders" className="space-y-4">
-          <TabsList className="grid grid-cols-5 w-full">
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="new-arrivals">New Arrivals</TabsTrigger>
-            <TabsTrigger value="featured">Featured</TabsTrigger>
-            <TabsTrigger value="offers">Special Offers</TabsTrigger>
+        {/* Main Content Tabs - Improved spacing and focus */}
+        <Tabs defaultValue="orders" className="space-y-6">
+          <TabsList className="grid grid-cols-5 w-full h-12">
+            <TabsTrigger value="orders" className="data-[state=active]:shadow-md">Orders</TabsTrigger>
+            <TabsTrigger value="products" className="data-[state=active]:shadow-md">Products</TabsTrigger>
+            <TabsTrigger value="new-arrivals" className="data-[state=active]:shadow-md">New Arrivals</TabsTrigger>
+            <TabsTrigger value="featured" className="data-[state=active]:shadow-md">Featured</TabsTrigger>
+            <TabsTrigger value="offers" className="data-[state=active]:shadow-md">Special Offers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5" />
-                  Recent Orders
-                </CardTitle>
-                <CardDescription>
-                  Manage and track customer orders
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5" />
+                    Recent Orders
+                  </CardTitle>
+                  <CardDescription>Track and manage recent customer orders</CardDescription>
+                </div>
+                <Button asChild variant="outline">
+                  <a href="/admin/orders" className="flex items-center gap-1">
+                    View All <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
               </CardHeader>
               <CardContent>
                 {orders.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No orders found</p>
+                  <div className="text-center py-12">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No recent orders found</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {orders.slice(0, 8).map((order) => (
-                        <div key={order.id} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm">#{order.order_number}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => window.open(`/admin/orders/${order.id}`, '_blank')}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}
-                            </p>
-                            <p className="font-semibold">{formatCurrency(Number(order.total_amount))}</p>
-                            
-                            <div className="flex items-center justify-between">
-                              <Badge variant={
-                                order.order_status?.name === 'delivered' ? 'default' :
-                                order.order_status?.name === 'shipped' ? 'secondary' :
-                                order.order_status?.name === 'processing' ? 'outline' :
-                                'destructive'
-                              }>
-                                {order.order_status?.display_name || 'Unknown'}
-                              </Badge>
-                              
-                              <Select 
-                                value={order.status_id} 
-                                onValueChange={(newStatusId) => updateOrderStatus(order.id, newStatusId)}
-                              >
-                                <SelectTrigger className="w-32 h-7 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {statusOptions.map((status) => (
-                                    <SelectItem key={status.id} value={status.id}>
-                                      {status.display_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            <p className="text-xs text-muted-foreground">
-                              Customer: {(order.customer_info as any)?.fullName || 'Unknown'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Items: {order.order_items?.length || 0}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {orders.length > 8 && (
-                      <div className="text-center">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => window.open('/admin/orders', '_blank')}
-                        >
-                          View All Orders
-                        </Button>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {orders.map((order) => (
+                      <OrderCard key={order.id} order={order} />
+                    ))}
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="products">
+          <TabsContent value="products" className="space-y-6">
             <OptimizedProductsSection onOpenProductDialog={() => {}} onEditProduct={() => {}} />
           </TabsContent>
 
-          <TabsContent value="new-arrivals">
+          <TabsContent value="new-arrivals" className="space-y-6">
             <NewArrivalsManager />
           </TabsContent>
 
-          <TabsContent value="featured">
+          <TabsContent value="featured" className="space-y-6">
             <FeaturedProductsManager />
           </TabsContent>
 
-          <TabsContent value="offers">
+          <TabsContent value="offers" className="space-y-6">
             <SpecialOffersManager />
           </TabsContent>
         </Tabs>
