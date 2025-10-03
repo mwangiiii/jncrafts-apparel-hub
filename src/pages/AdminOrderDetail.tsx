@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
@@ -48,12 +49,13 @@ import { cn } from '@/lib/utils';
 interface OrderItem {
   id: string;
   product_id: string;
+  product_name: string;
   variant_id: string;
+  color_name: string;
+  size_name: string;
   price: number;
   quantity: number;
   image_url: string | null;
-  product: { id: string; name: string };
-  variant: { color: { name: string }; size: { name: string } };
 }
 
 interface OrderStatus {
@@ -70,14 +72,17 @@ interface Order {
   total_amount: number;
   discount_amount: number;
   discount_id: string | null;
-  customer_info: any;
   shipping_address: any;
-  delivery_details: any;
+  customer_info: any;
   created_at: string;
+  updated_at: string;
+  delivery_details: any;
   transaction_code?: string | null;
+  status_name: string;
+  status_display_name: string;
+  discount_name?: string;
+  discount_code?: string;
   order_items: OrderItem[];
-  order_status: OrderStatus | null;
-  discount?: { name: string; code: string };
 }
 
 const AdminOrderDetail = () => {
@@ -102,61 +107,37 @@ const AdminOrderDetail = () => {
     try {
       setLoading(true);
       const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .select(`
-          id, order_number, status_id, total_amount, discount_amount, discount_id, 
-          customer_info, shipping_address, delivery_details, created_at, transaction_code,
-          order_status:status_id (
-            id, name, display_name
-          ),
-          discount:discount_id (
-            id, name, code
-          )
-        `)
-        .eq('id', orderId)
-        .single();
+        .rpc('get_order_details', { order_id_param: orderId });
 
-      if (orderError || !orderData) {
+      if (orderError || !orderData || orderData.length === 0) {
         console.error('Error fetching order:', orderError);
         throw orderError || new Error('Order not found');
       }
 
-      // Fetch order items with JOINs for product/variant details
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('order_items')
-        .select(`
-          id, price, quantity, image_url,
-          products!inner (
-            id, name
-          ),
-          product_variants!inner (
-            id,
-            colors!inner(name),
-            sizes!inner(name)
-          )
-        `)
-        .eq('order_id', orderId);
+      const rawOrder = orderData[0]; // Single row from RPC
+      const orderItems: OrderItem[] = rawOrder.order_items || [];
 
-      if (itemsError) {
-        console.error('Error fetching order items:', itemsError);
-        throw itemsError;
-      }
+      const mappedOrder: Order = {
+        id: rawOrder.id,
+        order_number: rawOrder.order_number,
+        status_id: rawOrder.status_id,
+        total_amount: Number(rawOrder.total_amount),
+        discount_amount: Number(rawOrder.discount_amount),
+        discount_id: rawOrder.discount_id,
+        shipping_address: rawOrder.shipping_address,
+        customer_info: rawOrder.customer_info,
+        created_at: rawOrder.created_at,
+        updated_at: rawOrder.updated_at,
+        delivery_details: rawOrder.delivery_details,
+        transaction_code: rawOrder.transaction_code,
+        status_name: rawOrder.status_name,
+        status_display_name: rawOrder.status_display_name,
+        discount_name: rawOrder.discount_name,
+        discount_code: rawOrder.discount_code,
+        order_items: orderItems
+      };
 
-      const orderItems: OrderItem[] = (itemsData || []).map(item => ({
-        id: item.id,
-        product_id: item.products.id,
-        variant_id: item.product_variants.id,
-        price: item.price,
-        quantity: item.quantity,
-        image_url: item.image_url,
-        product: item.products,
-        variant: {
-          color: { name: item.product_variants.colors?.name || 'N/A' },
-          size: { name: item.product_variants.sizes?.name || 'N/A' }
-        }
-      }));
-
-      setOrder({ ...orderData, order_items: orderItems });
+      setOrder(mappedOrder);
     } catch (error: any) {
       console.error('Failed to fetch order:', error);
       toast({
@@ -217,15 +198,15 @@ const AdminOrderDetail = () => {
             customerName: order.customer_info.fullName,
             orderStatus: newStatus?.name || 'unknown',
             items: order.order_items.map((item) => ({
-              product_name: item.product.name,
+              product_name: item.product_name,
               quantity: item.quantity,
-              size: item.variant.size.name,
-              color: item.variant.color.name,
+              size: item.size_name,
+              color: item.color_name,
               price: item.price
             })),
             totalAmount: order.total_amount,
             discountAmount: order.discount_amount,
-            discountName: order.discount?.name,
+            discountName: order.discount_name,
             shippingAddress: order.shipping_address,
             currency: { code: 'KES', symbol: 'KSh' }
           }
@@ -279,8 +260,8 @@ const AdminOrderDetail = () => {
       const invoiceData: InvoiceData = { 
         order: { 
           ...order, 
-          status: order.order_status?.name || 'unknown',
-          discount: order.discount // From schema
+          status: order.status_name || 'unknown',
+          discount: { name: order.discount_name, code: order.discount_code }
         }, 
         companyInfo 
       };
@@ -311,8 +292,8 @@ const AdminOrderDetail = () => {
       const invoiceData: InvoiceData = { 
         order: { 
           ...order, 
-          status: order.order_status?.name || 'unknown',
-          discount: order.discount
+          status: order.status_name || 'unknown',
+          discount: { name: order.discount_name, code: order.discount_code }
         }, 
         companyInfo 
       };
@@ -343,8 +324,8 @@ const AdminOrderDetail = () => {
       const invoiceData: InvoiceData = { 
         order: { 
           ...order, 
-          status: order.order_status?.name || 'unknown',
-          discount: order.discount
+          status: order.status_name || 'unknown',
+          discount: { name: order.discount_name, code: order.discount_code }
         }, 
         companyInfo 
       };
@@ -428,10 +409,10 @@ const AdminOrderDetail = () => {
             <Badge 
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-full",
-                getStatusColor(order.order_status?.name)
+                getStatusColor(order.status_name)
               )}
             >
-              {order.order_status?.display_name?.toUpperCase() || 'UNKNOWN'}
+              {order.status_display_name?.toUpperCase() || 'UNKNOWN'}
             </Badge>
           </div>
         </div>
@@ -478,8 +459,8 @@ const AdminOrderDetail = () => {
                     </h4>
                     <div className="text-sm space-y-1 pl-6">
                       {order.shipping_address?.street && <div>{order.shipping_address.street}</div>}
-                      {order.shipping_address?.city && <div>{order.shipping_address.city}, {order.shipping_address.state}</div>}
-                      {order.shipping_address?.zipCode && <div>{order.shipping_address.zipCode}</div>}
+                      {order.shipping_address?.city && <div>{order.shipping_address.city}, {order.shipping_address.country}</div>}
+                      {order.shipping_address?.zip && <div>{order.shipping_address.zip}</div>}
                     </div>
                   </div>
                 </div>
@@ -502,7 +483,7 @@ const AdminOrderDetail = () => {
                         {item.image_url ? (
                           <img 
                             src={item.image_url} 
-                            alt={item.product.name}
+                            alt={item.product_name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -510,10 +491,10 @@ const AdminOrderDetail = () => {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{item.product.name}</div>
+                        <div className="font-medium text-sm truncate">{item.product_name}</div>
                         <div className="text-xs text-muted-foreground">
-                          Size: <Badge variant="outline" className="text-xs px-2 py-0.5 ml-1">{item.variant.size.name}</Badge> • 
-                          Color: <Badge variant="secondary" className="text-xs px-2 py-0.5 ml-1">{item.variant.color.name}</Badge>
+                          Size: <Badge variant="outline" className="text-xs px-2 py-0.5 ml-1">{item.size_name}</Badge> • 
+                          Color: <Badge variant="secondary" className="text-xs px-2 py-0.5 ml-1">{item.color_name}</Badge>
                         </div>
                       </div>
                       <div className="text-center flex-shrink-0">
@@ -541,24 +522,28 @@ const AdminOrderDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Method:</span>
-                    <div className="text-muted-foreground mt-1">{order.delivery_details.method || 'Standard'}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Cost:</span>
-                    <div className="text-muted-foreground mt-1">KES {order.delivery_details.cost?.toLocaleString() || '0'}</div>
-                  </div>
-                  {order.delivery_details.distance && (
-                    <div className="md:col-span-2">
-                      <span className="font-medium">Distance:</span>
-                      <div className="text-muted-foreground mt-1">{order.delivery_details.distance} km</div>
+                  {order.delivery_details.tracking_number && (
+                    <div>
+                      <span className="font-medium">Tracking:</span>
+                      <div className="text-muted-foreground mt-1">{order.delivery_details.tracking_number}</div>
                     </div>
                   )}
-                  {order.delivery_details.courier && (
+                  {order.delivery_details.carrier && (
                     <div>
-                      <span className="font-medium">Courier:</span>
-                      <div className="text-muted-foreground mt-1">{order.delivery_details.courier}</div>
+                      <span className="font-medium">Carrier:</span>
+                      <div className="text-muted-foreground mt-1">{order.delivery_details.carrier}</div>
+                    </div>
+                  )}
+                  {order.delivery_details.delivery_date && (
+                    <div>
+                      <span className="font-medium">Delivered:</span>
+                      <div className="text-muted-foreground mt-1">{order.delivery_details.delivery_date}</div>
+                    </div>
+                  )}
+                  {order.delivery_details.signature && (
+                    <div className="md:col-span-2">
+                      <span className="font-medium">Signature:</span>
+                      <div className="text-muted-foreground mt-1">{order.delivery_details.signature}</div>
                     </div>
                   )}
                 </CardContent>
@@ -575,10 +560,10 @@ const AdminOrderDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {order.discount_id && order.discount && (
+                  {order.discount_id && order.discount_name && (
                     <div>
                       <span className="font-medium">Discount Applied:</span>
-                      <Badge variant="secondary" className="ml-2 text-xs">{order.discount.name} ({order.discount.code})</Badge>
+                      <Badge variant="secondary" className="ml-2 text-xs">{order.discount_name} ({order.discount_code})</Badge>
                       <div className="text-sm text-muted-foreground mt-1">- KES {order.discount_amount.toLocaleString()}</div>
                     </div>
                   )}
@@ -617,8 +602,8 @@ const AdminOrderDetail = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Payment:</span>
-                    <Badge variant={order.order_status?.name === 'delivered' ? 'default' : 'secondary'}>
-                      {order.order_status?.name === 'delivered' ? 'Paid' : 'Pending'}
+                    <Badge variant={order.status_name === 'delivered' ? 'default' : 'secondary'}>
+                      {order.status_name === 'delivered' ? 'Paid' : 'Pending'}
                     </Badge>
                   </div>
                 </div>
@@ -659,7 +644,7 @@ const AdminOrderDetail = () => {
                     disabled={updatingStatus}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={order.order_status?.display_name} />
+                      <SelectValue placeholder={order.status_display_name} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableStatuses.map((status) => (
