@@ -114,26 +114,26 @@ const AdminDashboard = () => {
   const fetchOrders = async () => {
     try {
       const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_status:status_id (
-            id,
-            name,
-            display_name
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(10); // Limit for dashboard; full list in separate view
+        .rpc('get_recent_orders', { limit_count: 10 });
 
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
         throw ordersError;
       }
 
+      // Map flat RPC response to include nested order_status
+      const mappedOrders = (ordersData || []).map((order: any) => ({
+        ...order,
+        order_status: {
+          id: order.status_id,
+          name: order.status_name,
+          display_name: order.status_display_name
+        }
+      }));
+
       // Fetch order items for each order (optimized: batch if possible, but sequential for simplicity)
       const ordersWithItems = await Promise.all(
-        (ordersData || []).map(async (order) => {
+        mappedOrders.map(async (order) => {
           const { data: itemsData, error: itemsError } = await supabase
             .from('order_items')
             .select(`
