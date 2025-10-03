@@ -96,9 +96,9 @@ const AdminDashboard = () => {
   const loadData = async () => {
     setLoadingData(true);
     await Promise.all([
+      fetchStatusOptions(),
       fetchOrders(),
       fetchStats(),
-      fetchStatusOptions()
     ]);
     setLoadingData(false);
   };
@@ -245,6 +245,8 @@ const AdminDashboard = () => {
 
   const updateOrderStatus = async (orderId: string, newStatusId: string) => {
     try {
+      console.log('Attempting to update order', orderId, 'to status_id', newStatusId);
+
       // Validate newStatusId is provided
       if (!newStatusId) {
         throw new Error('No status selected');
@@ -258,8 +260,11 @@ const AdminDashboard = () => {
         .single();
 
       if (statusError || !statusData) {
-        throw new Error('Invalid status');
+        console.error('Status fetch error:', statusError);
+        throw new Error(`Invalid status: ${statusError?.message || 'Status not found'}`);
       }
+
+      console.log('Status found:', statusData);
 
       // Update the order
       const { error } = await supabase
@@ -268,8 +273,16 @@ const AdminDashboard = () => {
         .eq('id', orderId);
 
       if (error) {
+        console.error('Update error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
+
+      console.log('Order updated successfully');
 
       // Send email notification (aligns with revamped schema)
       const order = orders.find(o => o.id === orderId);
@@ -307,10 +320,11 @@ const AdminDashboard = () => {
 
       fetchStats(); // Refresh stats
     } catch (error) {
-      console.error('Error updating order status:', error);
+      console.error('Full error in updateOrderStatus:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update order status';
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update order status",
+        description: errorMessage,
         variant: "destructive",
       });
     }
