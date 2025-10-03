@@ -442,9 +442,10 @@ const AdminProducts = () => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex >= 0 && newIndex < newImages.length) {
       [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
-      // Update display_order
-      newImages[index].display_order = direction === 'up' ? newImages[newIndex].display_order : newImages[newIndex].display_order;
-      newImages[newIndex].display_order = direction === 'down' ? newImages[index].display_order : newImages[index].display_order;
+      // Update display_order to match new positions
+      newImages.forEach((img, i) => {
+        img.display_order = i;
+      });
       setImages(newImages);
     }
   };
@@ -903,7 +904,7 @@ const AdminProducts = () => {
               </DialogContent>
             </Dialog>
           </div>
-
+        </div>
         {error ? (
           <AdminProductsErrorBoundary error={error} onRetry={refetch} isRetrying={isLoading} />
         ) : isLoading ? (
