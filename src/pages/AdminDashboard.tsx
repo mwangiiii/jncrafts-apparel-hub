@@ -172,32 +172,45 @@ const AdminDashboard = () => {
     }
   };
 
- const fetchStats = async () => {
-  try {
-    // Total orders and revenue (unchanged, but add limit for perf if needed)
-    const { data: ordersData, error: ordersError } = await supabase
-      .from('orders')
-      .select('total_amount, status_id')
-      .limit(1000); // Cap if dataset is large
+  const fetchStats = async () => {
+    try {
+      // Total customers first (always fetch)
+      const { count: customersCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
 
-    if (ordersError) {
-      console.error('Error fetching orders for stats:', ordersError);
-      return;
-    }
+      // Total orders and revenue
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('total_amount, status_id')
+        .limit(1000); // Cap if dataset is large
 
-    // Total customers (unchanged)
-    const { count: customersCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
+      if (ordersError) {
+        console.error('Error fetching orders for stats:', ordersError);
+        setStats({
+          totalOrders: 0,
+          totalRevenue: 0,
+          pendingOrders: 0,
+          totalCustomers: customersCount || 0
+        });
+        return;
+      }
 
-    if (ordersData && ordersData.length > 0) {
+      // Get pending status id
+      const { data: pendingStatusData, error: pendingStatusError } = await supabase
+        .from('order_status')
+        .select('id')
+        .eq('name', 'pending')
+        .single();
+
+      if (pendingStatusError && pendingStatusError.code !== 'PGRST116') {
+        console.error('Error fetching pending status:', pendingStatusError);
+      }
+
+      const pendingStatusId = pendingStatusData?.id || null;
+      
       const totalOrders = ordersData.length;
       const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-      
-      // Reuse statusOptions (already fetched in loadData) to avoid extra query
-      // Filter client-side for 'pending' ID
-      const pendingStatus = statusOptions.find(status => status.name === 'pending');
-      const pendingStatusId = pendingStatus?.id || null;
       
       const pendingOrders = pendingStatusId 
         ? ordersData.filter(order => order.status_id === pendingStatusId).length 
@@ -209,20 +222,11 @@ const AdminDashboard = () => {
         pendingOrders,
         totalCustomers: customersCount || 0
       });
-    } else {
-      // Fallback if no orders
-      setStats({
-        totalOrders: 0,
-        totalRevenue: 0,
-        pendingOrders: 0,
-        totalCustomers: customersCount || 0
-      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      // Optionally toast here if critical
     }
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    // Optionally toast here if critical
-  }
-};
+  };
 
   const fetchStatusOptions = async () => {
     try {
@@ -241,6 +245,11 @@ const AdminDashboard = () => {
 
   const updateOrderStatus = async (orderId: string, newStatusId: string) => {
     try {
+      // Validate newStatusId is provided
+      if (!newStatusId) {
+        throw new Error('No status selected');
+      }
+
       // Get the status details for the new status
       const { data: statusData, error: statusError } = await supabase
         .from('order_status')
@@ -301,7 +310,7 @@ const AdminDashboard = () => {
       console.error('Error updating order status:', error);
       toast({
         title: "Error",
-        description: "Failed to update order status",
+        description: error instanceof Error ? error.message : "Failed to update order status",
         variant: "destructive",
       });
     }
