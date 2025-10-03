@@ -39,6 +39,7 @@ const App = () => (
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/sizechart" element={<SizeChart />} />
         <Route path="/paystack-redirect" element={<PaymentSuccessPage />} />
+        <Route path="admin/orders/:id" element={<OrderDetails />}
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
