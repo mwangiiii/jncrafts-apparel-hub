@@ -188,15 +188,22 @@ const AdminDashboard = () => {
         const totalOrders = ordersData.length;
         const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total_amount), 0);
         
-        // Get pending status ID
-        const { data: pendingStatus } = await supabase
+        // Get pending status ID with error handling
+        const { data: pendingStatusData, error: pendingError } = await supabase
           .from('order_status')
           .select('id')
           .eq('name', 'pending')
           .single();
         
-        const pendingOrders = pendingStatus ? 
-          ordersData.filter(order => order.status_id === pendingStatus.id).length : 0;
+        let pendingStatusId: string | null = null;
+        if (pendingError) {
+          console.warn('Pending status not found or query failed:', pendingError);
+        } else if (pendingStatusData) {
+          pendingStatusId = pendingStatusData.id;
+        }
+        
+        const pendingOrders = pendingStatusId ? 
+          ordersData.filter(order => order.status_id === pendingStatusId).length : 0;
 
         setStats({
           totalOrders,
