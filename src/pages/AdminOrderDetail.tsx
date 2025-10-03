@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast'; // Aligned with dashboard import
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   ArrowLeft, 
@@ -86,7 +86,7 @@ interface Order {
 }
 
 const AdminOrderDetail = () => {
-  const { orderId } = useParams<{ orderId: string }>();
+  const { id } = useParams<{ id: string }>(); // Changed to 'id' to match dashboard link: /admin/orders/${order.id}
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
@@ -97,17 +97,17 @@ const AdminOrderDetail = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (orderId && isAdmin) {
+    if (id && isAdmin) {
       fetchOrder();
       fetchStatusOptions();
     }
-  }, [orderId, isAdmin]);
+  }, [id, isAdmin]);
 
   const fetchOrder = async () => {
     try {
       setLoading(true);
       const { data: orderData, error: orderError } = await supabase
-        .rpc('get_order_details', { order_id_param: orderId });
+        .rpc('get_order_details', { order_id_param: id }); // Use 'id' param
 
       if (orderError || !orderData || orderData.length === 0) {
         console.error('Error fetching order:', orderError);
@@ -115,7 +115,8 @@ const AdminOrderDetail = () => {
       }
 
       const rawOrder = orderData[0]; // Single row from RPC
-      const orderItems: OrderItem[] = rawOrder.order_items || [];
+      // Handle order_items as array of objects (from jsonb_agg in RPC)
+      const orderItems: OrderItem[] = Array.isArray(rawOrder.order_items) ? rawOrder.order_items : [];
 
       const mappedOrder: Order = {
         id: rawOrder.id,
@@ -145,7 +146,7 @@ const AdminOrderDetail = () => {
         description: error.message || "Failed to fetch order details",
         variant: "destructive",
       });
-      navigate('/admin');
+      navigate('/admin/dashboard'); // Redirect to dashboard if not found
     } finally {
       setLoading(false);
     }
@@ -188,29 +189,32 @@ const AdminOrderDetail = () => {
         .eq('id', newStatusId)
         .single();
 
-      // Send notification email (updated for schema)
+      // Send notification email (updated for schema) - added null checks
       try {
-        await supabase.functions.invoke('send-order-status-update', {
-          body: {
-            customerEmail: order.customer_info.email,
-            adminEmail: "craftsjn@gmail.com",
-            orderNumber: order.order_number,
-            customerName: order.customer_info.fullName,
-            orderStatus: newStatus?.name || 'unknown',
-            items: order.order_items.map((item) => ({
-              product_name: item.product_name,
-              quantity: item.quantity,
-              size: item.size_name,
-              color: item.color_name,
-              price: item.price
-            })),
-            totalAmount: order.total_amount,
-            discountAmount: order.discount_amount,
-            discountName: order.discount_name,
-            shippingAddress: order.shipping_address,
-            currency: { code: 'KES', symbol: 'KSh' }
-          }
-        });
+        const customerEmail = order.customer_info?.email;
+        if (customerEmail) {
+          await supabase.functions.invoke('send-order-status-update', {
+            body: {
+              customerEmail,
+              adminEmail: "craftsjn@gmail.com",
+              orderNumber: order.order_number,
+              customerName: order.customer_info?.fullName || 'Customer',
+              orderStatus: newStatus?.name || 'unknown',
+              items: order.order_items.map((item) => ({
+                product_name: item.product_name,
+                quantity: item.quantity,
+                size: item.size_name,
+                color: item.color_name,
+                price: item.price
+              })),
+              totalAmount: order.total_amount,
+              discountAmount: order.discount_amount,
+              discountName: order.discount_name,
+              shippingAddress: order.shipping_address,
+              currency: { code: 'KES', symbol: 'KSh' }
+            }
+          });
+        }
       } catch (emailError) {
         console.error('Error sending status update email:', emailError);
         toast({
@@ -249,6 +253,14 @@ const AdminOrderDetail = () => {
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   const handlePrintInvoice = async () => {
@@ -372,7 +384,7 @@ const AdminOrderDetail = () => {
       <div className="min-h-screen bg-background p-6 flex items-center justify-center">
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-bold text-destructive">Order Not Found</h1>
-          <Button onClick={() => navigate('/admin')} variant="outline">
+          <Button onClick={() => navigate('/admin/dashboard')} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
@@ -389,7 +401,7 @@ const AdminOrderDetail = () => {
           <Breadcrumb className="lg:w-auto">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/admin">Dashboard</BreadcrumbLink>
+                <BreadcrumbLink href="/admin/dashboard">Dashboard</BreadcrumbLink> {/* Aligned with dashboard */}
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -400,11 +412,11 @@ const AdminOrderDetail = () => {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/admin/dashboard')}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Orders
+              Back to Dashboard
             </Button>
             <Badge 
               className={cn(
@@ -499,11 +511,11 @@ const AdminOrderDetail = () => {
                       </div>
                       <div className="text-center flex-shrink-0">
                         <div className="font-medium text-sm">x{item.quantity}</div>
-                        <div className="text-xs text-muted-foreground">KES {item.price.toLocaleString()} ea.</div>
+                        <div className="text-xs text-muted-foreground">{formatCurrency(item.price)} ea.</div> {/* Use formatCurrency */}
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className="font-bold text-sm">
-                          KES {(item.price * item.quantity).toLocaleString()}
+                          {formatCurrency(item.price * item.quantity)} {/* Use formatCurrency */}
                         </div>
                       </div>
                     </div>
@@ -564,7 +576,7 @@ const AdminOrderDetail = () => {
                     <div>
                       <span className="font-medium">Discount Applied:</span>
                       <Badge variant="secondary" className="ml-2 text-xs">{order.discount_name} ({order.discount_code})</Badge>
-                      <div className="text-sm text-muted-foreground mt-1">- KES {order.discount_amount.toLocaleString()}</div>
+                      <div className="text-sm text-muted-foreground mt-1">{formatCurrency(-order.discount_amount)}</div> {/* Use formatCurrency with negative */}
                     </div>
                   )}
                   {order.customer_info?.notes && (
@@ -598,7 +610,7 @@ const AdminOrderDetail = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Date:</span>
-                    <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                    <span>{new Date(order.created_at).toLocaleDateString('en-KE')}</span> {/* Consistent locale */}
                   </div>
                   <div className="flex justify-between">
                     <span>Payment:</span>
@@ -611,17 +623,17 @@ const AdminOrderDetail = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>KES {((order.total_amount + order.discount_amount)).toLocaleString()}</span>
+                    <span>{formatCurrency(order.total_amount + order.discount_amount)}</span> {/* Use formatCurrency */}
                   </div>
                   {order.discount_amount > 0 && (
                     <div className="flex justify-between text-emerald-600">
                       <span>Discount:</span>
-                      <span>- KES {order.discount_amount.toLocaleString()}</span>
+                      <span>{formatCurrency(-order.discount_amount)}</span> {/* Use formatCurrency */}
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total:</span>
-                    <span>KES {order.total_amount.toLocaleString()}</span>
+                    <span>{formatCurrency(order.total_amount)}</span> {/* Use formatCurrency */}
                   </div>
                 </div>
               </CardContent>
