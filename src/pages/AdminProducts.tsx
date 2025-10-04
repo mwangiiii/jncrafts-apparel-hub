@@ -288,18 +288,39 @@ const AdminProducts = () => {
   };
 
   const toggleProductStatus = async (product: any) => {
+    if (!data?.pages) return;
+
+    const originalStatus = product.is_active;
+    const newStatus = !originalStatus;
+
+    // Optimistic update
+    data.pages = data.pages.map((page: any) => ({
+      ...page,
+      products: page.products.map((p: any) =>
+        p.id === product.id ? { ...p, is_active: newStatus } : p
+      ),
+    }));
+
     try {
       const { error } = await supabase
         .from('products')
-        .update({ is_active: !product.is_active })
+        .update({ is_active: newStatus })
         .eq('id', product.id);
       if (error) throw error;
+
       refreshProducts();
       toast({
         title: "Success",
-        description: `Product "${product.name}" ${product.is_active ? 'hidden' : 'activated'}`,
+        description: `Product "${product.name}" ${originalStatus ? 'hidden' : 'activated'}`,
       });
     } catch (error: any) {
+      // Revert optimistic update
+      data.pages = data.pages.map((page: any) => ({
+        ...page,
+        products: page.products.map((p: any) =>
+          p.id === product.id ? { ...p, is_active: originalStatus } : p
+        ),
+      }));
       console.error('Error toggling product status:', error);
       toast({
         title: "Error",
@@ -312,6 +333,12 @@ const AdminProducts = () => {
   const deleteProduct = useCallback(
     debounce(async (productId: string, productName: string) => {
       setDeletingProductId(productId);
+      if (!data?.pages) {
+        setDeletingProductId(null);
+        setDeleteDialogOpen(false);
+        return;
+      }
+
       try {
         // Verify admin role
         const { data: { user } } = await supabase.auth.getUser();
@@ -320,28 +347,45 @@ const AdminProducts = () => {
           throw new Error('Unauthorized: Admin access required');
         }
 
+        // Find page index and original product details
+        const pageIndex = data.pages.findIndex((page: any) => page.products.some((p: any) => p.id === productId));
+        if (pageIndex === -1) {
+          throw new Error('Product not found in current data');
+        }
+        const originalProductIndex = data.pages[pageIndex].products.findIndex((p: any) => p.id === productId);
+        const originalProduct = { ...data.pages[pageIndex].products[originalProductIndex] };
+
         // Optimistic update: Remove product from UI
-        const originalProducts = products;
-        data!.pages = data!.pages.map(page => ({
-          ...page,
-          products: page.products.filter(p => p.id !== productId),
-        }));
+        data.pages[pageIndex] = {
+          ...data.pages[pageIndex],
+          products: data.pages[pageIndex].products.filter((p: any) => p.id !== productId),
+        };
+
+        // Get images before delete
+        const { data: images } = await supabase
+          .from('product_images')
+          .select('image_url')
+          .eq('product_id', productId);
 
         // Delete product (cascades to product_images and product_variants due to ON DELETE CASCADE)
         const { error } = await supabase.from('products').delete().eq('id', productId);
         if (error) throw error;
 
-        // Clean up storage (optional, as CASCADE may handle images)
-        const { data: images } = await supabase
-          .from('product_images')
-          .select('image_url')
-          .eq('product_id', productId);
+        // Clean up storage
         if (images?.length) {
           const fileNames = images
-            .map(img => img.image_url.split('/').pop())
-            .filter((name): name is string => !!name && !name.includes('default.jpg'));
+            .map((img: any) => {
+              const name = img.image_url.split('/').pop();
+              return name && !name.includes('default.jpg') ? name : null;
+            })
+            .filter((name): name is string => !!name);
           if (fileNames.length) {
-            await supabase.storage.from('images').remove(fileNames.map(name => `thumbnails/${name}`));
+            const { error: storageError } = await supabase.storage
+              .from('images')
+              .remove(fileNames.map((name: string) => `thumbnails/${name}`));
+            if (storageError) {
+              console.error('Storage cleanup error:', storageError);
+            }
           }
         }
 
@@ -352,11 +396,20 @@ const AdminProducts = () => {
         });
       } catch (error: any) {
         console.error('Error deleting product:', error);
-        // Revert optimistic update
-        data!.pages = data!.pages.map(page => ({
-          ...page,
-          products: originalProducts.filter(p => page.products.some(pp => pp.id === p.id)),
-        }));
+        // Revert optimistic update: insert product back at original position
+        if (data.pages && 'pages' in data) {
+          const pageIndex = data.pages.findIndex((page: any) => page.products.some((p: any) => p.id === productId));
+          if (pageIndex !== -1) {
+            const originalProduct = { ...products.find((p: any) => p.id === productId) }; // fallback to flat products if needed
+            if (originalProduct) {
+              data.pages[pageIndex].products = [
+                ...data.pages[pageIndex].products.slice(0, originalProductIndex || 0),
+                originalProduct,
+                ...data.pages[pageIndex].products.slice(originalProductIndex || 0),
+              ];
+            }
+          }
+        }
         toast({
           title: "Error",
           description: error.message || `Failed to delete product "${productName}"`,
@@ -367,7 +420,7 @@ const AdminProducts = () => {
         setDeleteDialogOpen(false);
       }
     }, 300),
-    [data, products, toast, refreshProducts]
+    [data, products, refreshProducts, toast]
   );
 
   const addSize = (size: string) => {
