@@ -20,7 +20,7 @@ import PaymentSuccessPage from "./pages/PaystackRedirect";
 import React from "react";
 
 const App = () => (
-  <BrowserRouter>
+ 
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -44,7 +44,7 @@ const App = () => (
         <Route path="*" element={<NotFound />} />
       </Routes>
     </TooltipProvider>
-  </BrowserRouter>
+  
 );
 
 export default App;
