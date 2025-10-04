@@ -14,7 +14,9 @@ Sentry.init({
   dsn: "https://73b86cdab80d72cbefca8a7c3acec298@o4510130198085632.ingest.de.sentry.io/4510130337546320",
   // Setting this option to true will send default PII data to Sentry.
   // For example, automatic IP address collection on events
-  sendDefaultPii: true
+  sendDefaultPii: true,
+  debug: true, // Enable debug mode
+  environment: "production", // Set the correct environment
 });
 
 const queryClient = new QueryClient({
