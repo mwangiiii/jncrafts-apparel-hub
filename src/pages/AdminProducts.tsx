@@ -152,23 +152,36 @@ const AdminProducts = () => {
     }
   }, [user, isAdmin, refetch]);
 
-  // Auto-generate variants based on selected colors/sizes
+  // Sync variants with selected colors and sizes without resetting existing data
   useEffect(() => {
-    const newVariants: Variant[] = [];
-    selectedColors.forEach(colorId => {
-      selectedSizes.forEach(sizeId => {
-        newVariants.push({
-          color_id: colorId,
-          size_id: sizeId,
-          stock_quantity: 0,
-          additional_price: 0,
-          color: colors.find(c => c.id === colorId),
-          size: sizes.find(s => s.id === sizeId),
+    setVariants(prevVariants => {
+      // Filter out variants not in current selections
+      const updatedVariants = prevVariants.filter(v =>
+        (v.color_id === null || selectedColors.includes(v.color_id)) &&
+        (v.size_id === null || selectedSizes.includes(v.size_id))
+      );
+
+      // Add missing combinations with default values
+      const existingCombos = new Set(updatedVariants.map(v => `${v.color_id || 'null'}-${v.size_id || 'null'}`));
+
+      selectedColors.forEach(colorId => {
+        selectedSizes.forEach(sizeId => {
+          const key = `${colorId}-${sizeId}`;
+          if (!existingCombos.has(key)) {
+            updatedVariants.push({
+              color_id: colorId,
+              size_id: sizeId,
+              stock_quantity: 0,
+              additional_price: 0,
+              color: colors.find(c => c.id === colorId),
+              size: sizes.find(s => s.id === sizeId),
+            });
+          }
         });
       });
+
+      return updatedVariants;
     });
-    // For color-only or size-only, but since schema requires both for variants, adjust as needed
-    setVariants(newVariants);
   }, [selectedColors, selectedSizes, colors, sizes]);
 
   const handleLoadMore = useCallback(() => {
@@ -715,7 +728,6 @@ const AdminProducts = () => {
                                   setSelectedColors(prev => [...prev, color.id]);
                                 } else {
                                   setSelectedColors(prev => prev.filter(id => id !== color.id));
-                                  setVariants(prev => prev.filter(v => v.color_id !== color.id));
                                 }
                               }}
                               aria-label={`Select color ${color.name}`}
@@ -747,7 +759,6 @@ const AdminProducts = () => {
                                   setSelectedSizes(prev => [...prev, size.id]);
                                 } else {
                                   setSelectedSizes(prev => prev.filter(id => id !== size.id));
-                                  setVariants(prev => prev.filter(v => v.size_id !== size.id));
                                 }
                               }}
                               aria-label={`Select size ${size.name}`}
