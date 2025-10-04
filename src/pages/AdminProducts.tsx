@@ -339,7 +339,19 @@ const AdminProducts = () => {
         return;
       }
 
+      let pageIndex = -1;
+      let originalPageProducts: any[] = [];
+
       try {
+        // Find the page containing the product
+        pageIndex = data.pages.findIndex((page: any) => page.products.some((p: any) => p.id === productId));
+        if (pageIndex === -1) {
+          throw new Error('Product not found in current data');
+        }
+
+        // Store original products for this page for revert
+        originalPageProducts = [...data.pages[pageIndex].products];
+
         // Verify admin role
         const { data: { user } } = await supabase.auth.getUser();
         const isAdminUser = user?.app_metadata?.role === 'admin';
@@ -347,25 +359,14 @@ const AdminProducts = () => {
           throw new Error('Unauthorized: Admin access required');
         }
 
-        // Find page index and original product details
-        const pageIndex = data.pages.findIndex((page: any) => page.products.some((p: any) => p.id === productId));
-        if (pageIndex === -1) {
-          throw new Error('Product not found in current data');
-        }
-        const originalProductIndex = data.pages[pageIndex].products.findIndex((p: any) => p.id === productId);
-        const originalProduct = { ...data.pages[pageIndex].products[originalProductIndex] };
-
-        // Optimistic update: Remove product from UI
-        data.pages[pageIndex] = {
-          ...data.pages[pageIndex],
-          products: data.pages[pageIndex].products.filter((p: any) => p.id !== productId),
-        };
-
-        // Get images before delete
+        // Get images before delete for storage cleanup
         const { data: images } = await supabase
           .from('product_images')
           .select('image_url')
           .eq('product_id', productId);
+
+        // Optimistic update: Remove product from UI
+        data.pages[pageIndex].products = originalPageProducts.filter((p: any) => p.id !== productId);
 
         // Delete product (cascades to product_images and product_variants due to ON DELETE CASCADE)
         const { error } = await supabase.from('products').delete().eq('id', productId);
@@ -396,19 +397,9 @@ const AdminProducts = () => {
         });
       } catch (error: any) {
         console.error('Error deleting product:', error);
-        // Revert optimistic update: insert product back at original position
-        if (data.pages && 'pages' in data) {
-          const pageIndex = data.pages.findIndex((page: any) => page.products.some((p: any) => p.id === productId));
-          if (pageIndex !== -1) {
-            const originalProduct = { ...products.find((p: any) => p.id === productId) }; // fallback to flat products if needed
-            if (originalProduct) {
-              data.pages[pageIndex].products = [
-                ...data.pages[pageIndex].products.slice(0, originalProductIndex || 0),
-                originalProduct,
-                ...data.pages[pageIndex].products.slice(originalProductIndex || 0),
-              ];
-            }
-          }
+        // Revert optimistic update: restore original products array for the page
+        if (pageIndex !== -1 && data.pages && data.pages[pageIndex]) {
+          data.pages[pageIndex].products = originalPageProducts;
         }
         toast({
           title: "Error",
@@ -420,7 +411,7 @@ const AdminProducts = () => {
         setDeleteDialogOpen(false);
       }
     }, 300),
-    [data, products, refreshProducts, toast]
+    [data, refreshProducts, toast]
   );
 
   const addSize = (size: string) => {
