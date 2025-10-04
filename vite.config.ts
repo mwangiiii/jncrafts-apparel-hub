@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => ({
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 500, // Reduce chunk size warning limit to encourage smaller chunks
     minify: 'terser',
     terserOptions: {
       compress: {
