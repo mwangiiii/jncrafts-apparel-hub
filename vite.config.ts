@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { visualizer } from 'rollup-plugin-visualizer';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 // Vite environment configuration with performance optimizations
 export default defineConfig(({ mode }) => ({
@@ -14,6 +15,15 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === 'development' && componentTagger(),
+    sentryVitePlugin({
+      org: 'strathmore-university-ouy', // Replace with your Sentry organization slug
+      project: 'jncrafts', // Replace with your Sentry project slug
+      authToken: process.env.SENTRY_AUTH_TOKEN, // Set this in your environment variables
+      sourcemaps: {
+        assets: './dist/**/*', // Path to the build output directory
+        ignore: ['node_modules', 'vite.config.ts'],
+      },
+    }),
   ].filter(Boolean),
   resolve: {
     alias: {
