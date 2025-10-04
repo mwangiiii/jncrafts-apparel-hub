@@ -45,11 +45,11 @@ export default defineConfig(({ mode }) => ({
           }
         },
         plugins: [
-          visualizer({
+          mode === 'development' && visualizer({
             filename: 'bundle-analysis.html',
             open: true, // Automatically open the analysis in the browser
           }),
-        ],
+        ].filter(Boolean),
       },
     },
     chunkSizeWarningLimit: 500, // Reduce chunk size warning limit to encourage smaller chunks
