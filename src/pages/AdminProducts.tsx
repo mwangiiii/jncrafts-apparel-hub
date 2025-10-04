@@ -93,7 +93,6 @@ const AdminProducts = () => {
       const { data, error } = await supabase
         .from('categories')
         .select('id, name')
-        .eq('is_active', true)
         .order('name', { ascending: true });
       if (error) throw error;
       setCategories(data || []);
@@ -112,7 +111,6 @@ const AdminProducts = () => {
       const { data, error } = await supabase
         .from('colors')
         .select('id, name, hex_code')
-        .eq('is_active', true)
         .order('display_order');
       if (error) throw error;
       setColors(data || []);
@@ -131,7 +129,6 @@ const AdminProducts = () => {
       const { data, error } = await supabase
         .from('sizes')
         .select('id, name')
-        .eq('is_active', true)
         .order('display_order');
       if (error) throw error;
       setSizes(data || []);
