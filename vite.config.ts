@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // Vite environment configuration with performance optimizations
 export default defineConfig(({ mode }) => ({
@@ -43,6 +44,12 @@ export default defineConfig(({ mode }) => ({
             return 'vendor';
           }
         },
+        plugins: [
+          visualizer({
+            filename: 'bundle-analysis.html',
+            open: true, // Automatically open the analysis in the browser
+          }),
+        ],
       },
     },
     chunkSizeWarningLimit: 500, // Reduce chunk size warning limit to encourage smaller chunks
