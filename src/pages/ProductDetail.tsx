@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, CartItem } from '@/types/database';
+import { Product } from '@/types/database';
 import { getPrimaryImage, hasRealSizes, hasRealColors, getSizeName, getColorName } from '@/components/ProductDisplayHelper';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -23,7 +23,6 @@ import Header from '@/components/Header';
 import debounce from 'lodash/debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { v4 as uuidv4 } from 'uuid';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -58,19 +57,9 @@ const ProductDetail = () => {
   const [isSettingAlert, setIsSettingAlert] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState<string[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // Initialize sessionId for guest users
-  useEffect(() => {
-    if (!user) {
-      let storedSessionId = localStorage.getItem('cart_session_id');
-      if (!storedSessionId) {
-        storedSessionId = uuidv4();
-        localStorage.setItem('cart_session_id', storedSessionId);
-      }
-      setSessionId(storedSessionId);
-    }
-  }, [user]);
+  console.log('[ProductDetail] Product:', product);
+  console.log('[ProductDetail] isLoading:', isLoading, 'isError:', isError, 'error:', error);
 
   const formatPrice = (price: number | undefined | null, additionalPrice: number = 0) => {
     const totalPrice = (typeof price === 'number' && !isNaN(price) ? price : 0) + additionalPrice;
@@ -123,19 +112,12 @@ const ProductDetail = () => {
 
   const handleAddToCart = useCallback(
     debounce(async () => {
-      if (!product || isAddingToCart) {
-        toast({
-          title: 'Error',
-          description: 'Product data is not available. Please try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      if (!product || isAddingToCart) return;
 
       if (hasRealSizes(product) && !selectedSize) {
         toast({
           title: 'Size Required',
-          description: 'Please select a size before adding to cart.',
+          description: 'Please select a size before adding to cart',
           variant: 'destructive',
         });
         return;
@@ -144,7 +126,7 @@ const ProductDetail = () => {
       if (hasRealColors(product) && !selectedColor) {
         toast({
           title: 'Color Required',
-          description: 'Please select a color before adding to cart.',
+          description: 'Please select a color before adding to cart',
           variant: 'destructive',
         });
         return;
@@ -152,32 +134,23 @@ const ProductDetail = () => {
 
       let stockQuantity = 0;
       let variantId: string | undefined = undefined;
-      let price = product.price;
-      let colorId: string | undefined = undefined;
-      let sizeId: string | undefined = undefined;
-      let thumbnailImageId: string | undefined = getPrimaryImage(product)?.id;
 
       if (product.variants?.length > 0) {
-        if (!selectedVariant || selectedVariant.stock_quantity <= 0) {
+        if (!selectedVariant || selectedVariant.stock_quantity === 0) {
           toast({
             title: 'Out of Stock',
-            description: 'This variant is currently out of stock.',
+            description: 'This variant is currently out of stock',
             variant: 'destructive',
           });
           return;
         }
         stockQuantity = selectedVariant.stock_quantity;
         variantId = selectedVariant.id;
-        price = (product.price || 0) + (selectedVariant.additional_price || 0);
-        colorId = selectedVariant.color_id;
-        sizeId = selectedVariant.size_id;
-        const variantImage = product.images.find((img) => img.variant_id === variantId && img.is_active);
-        thumbnailImageId = variantImage?.id || thumbnailImageId;
       } else {
-        if (product.stock_quantity <= 0) {
+        if (product.stock_quantity === 0) {
           toast({
             title: 'Out of Stock',
-            description: 'This product is currently out of stock.',
+            description: 'This product is currently out of stock',
             variant: 'destructive',
           });
           return;
@@ -185,10 +158,10 @@ const ProductDetail = () => {
         stockQuantity = product.stock_quantity;
       }
 
-      if (quantity <= 0 || quantity > stockQuantity) {
+      if (quantity > stockQuantity) {
         toast({
-          title: 'Invalid Quantity',
-          description: `Please select a quantity between 1 and ${stockQuantity}.`,
+          title: 'Stock Limit',
+          description: `Only ${stockQuantity} items available`,
           variant: 'destructive',
         });
         return;
@@ -196,92 +169,23 @@ const ProductDetail = () => {
 
       try {
         setIsAddingToCart(true);
-
-        // Check for existing cart item
-        const { data: existingItems, error: fetchError } = await supabase
-          .from('cart_items')
-          .select('id, quantity')
-          .eq('product_id', product.id)
-          .eq('color_id', colorId || null)
-          .eq('size_id', sizeId || null)
-          .eq(user ? 'user_id' : 'session_id', user ? user.id : sessionId)
-          .single();
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          throw new Error('Failed to check cart items: ' + fetchError.message);
-        }
-
-        let newQuantity = quantity;
-        if (existingItems) {
-          newQuantity = existingItems.quantity + quantity;
-          if (newQuantity > stockQuantity) {
-            toast({
-              title: 'Stock Limit Exceeded',
-              description: `Cannot add ${quantity} more items. Only ${stockQuantity - existingItems.quantity} available.`,
-              variant: 'destructive',
-            });
-            return;
-          }
-          // Update existing item
-          const { error: updateError } = await supabase
-            .from('cart_items')
-            .update({ quantity: newQuantity, updated_at: new Date().toISOString() })
-            .eq('id', existingItems.id);
-
-          if (updateError) {
-            throw new Error('Failed to update cart item: ' + updateError.message);
-          }
-        } else {
-          // Insert new cart item
-          const cartItem: Partial<CartItem> = {
-            product_id: product.id,
-            quantity,
-            price,
-            color_id: colorId || null,
-            size_id: sizeId || null,
-            thumbnail_image_id: thumbnailImageId || null,
-            user_id: user ? user.id : null,
-            session_id: user ? null : sessionId,
-            product_name: product.name,
-            product_image: thumbnailImageId ? getPrimaryImage(product)?.image_url : product.thumbnail_image,
-            size_name: selectedSize || 'One Size',
-            color_name: selectedColor || 'Default',
-          };
-
-          const { error: insertError } = await supabase
-            .from('cart_items')
-            .insert(cartItem);
-
-          if (insertError) {
-            throw new Error('Failed to add item to cart: ' + insertError.message);
-          }
-        }
-
-        // Invalidate cart queries to refresh
-        await queryClient.invalidateQueries({ queryKey: ['cart', user?.id || sessionId] });
-
-        // Update local cart state
         await addToCart(product, quantity, selectedSize || 'One Size', selectedColor || 'Default', variantId);
-
         toast({
           title: 'Added to Cart!',
-          description: `${quantity} x ${product.name} (${selectedColor || 'Default'}, ${selectedSize || 'One Size'}) added to your cart.`,
+          description: `${quantity} x ${product.name} (${selectedColor || 'Default'}, ${selectedSize || 'One Size'}) added to your cart`,
         });
-
-        setQuantity(1); // Reset quantity
         openCart();
-      } catch (error: any) {
-        console.error('[handleAddToCart] Error:', error);
+      } catch (error) {
         toast({
           title: 'Error',
-          description: error.message || 'Failed to add item to cart. Please try again.',
+          description: 'Failed to add item to cart. Please try again.',
           variant: 'destructive',
         });
       } finally {
         setIsAddingToCart(false);
       }
     }, 300),
-    [product, selectedSize, selectedColor, selectedVariant, quantity, user, sessionId, addToCart, toast, openCart, queryClient]
+    [product, selectedSize, selectedColor, selectedVariant, quantity, addToCart, toast, openCart]
   );
 
   const handleWishlistToggle = useCallback(
@@ -373,6 +277,7 @@ const ProductDetail = () => {
 
   const getStockStatus = () => {
     if (product?.variants?.length === 0) {
+      // No variants
       if (product.stock_quantity === 0) {
         return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
       } else if (product.stock_quantity <= 5) {
@@ -381,6 +286,7 @@ const ProductDetail = () => {
       return { status: 'in', message: 'In Stock', variant: 'default' as const };
     }
 
+    // Has variants
     if (selectedVariant) {
       if (selectedVariant.stock_quantity === 0) {
         return { status: 'out', message: 'Out of Stock', variant: 'destructive' as const };
@@ -389,6 +295,7 @@ const ProductDetail = () => {
       }
       return { status: 'in', message: 'In Stock', variant: 'default' as const };
     } else {
+      // No variant selected
       const parts: string[] = [];
       if (hasRealSizes(product) && !selectedSize) parts.push('size');
       if (hasRealColors(product) && !selectedColor) parts.push('color');
@@ -418,20 +325,24 @@ const ProductDetail = () => {
     setIsImageLoading(false);
   };
 
+  // Helper function to get distinct available sizes
   const getDistinctAvailableSizes = () => {
     if (!product?.sizes || !product?.variants) return [];
     
+    // Get all available variants
     const availableVariants = product.variants.filter(v => 
       v.is_available && 
       v.stock_quantity > 0 &&
       (!selectedColor || v.color_id === product.colors?.find(c => getColorName(c) === selectedColor)?.id)
     );
 
+    // Get sizes that have available variants
     const availableSizes = product.sizes.filter(size => 
       size.is_active && 
       availableVariants.some(v => v.size_id === size.id)
     );
 
+    // Create a Map to ensure uniqueness by size name (case-insensitive)
     const uniqueSizesMap = new Map();
     availableSizes.forEach(size => {
       const sizeName = getSizeName(size);
@@ -444,20 +355,24 @@ const ProductDetail = () => {
     return Array.from(uniqueSizesMap.values());
   };
 
+  // Helper function to get distinct available colors
   const getDistinctAvailableColors = () => {
     if (!product?.colors || !product?.variants) return [];
     
+    // Get all available variants
     const availableVariants = product.variants.filter(v => 
       v.is_available && 
       v.stock_quantity > 0 &&
       (!selectedSize || v.size_id === product.sizes?.find(s => getSizeName(s) === selectedSize)?.id)
     );
 
+    // Get colors that have available variants
     const availableColors = product.colors.filter(color => 
       color.is_active && 
       availableVariants.some(v => v.color_id === color.id)
     );
 
+    // Create a Map to ensure uniqueness by color name (case-insensitive)
     const uniqueColorsMap = new Map();
     availableColors.forEach(color => {
       const colorName = getColorName(color);
@@ -470,6 +385,7 @@ const ProductDetail = () => {
     return Array.from(uniqueColorsMap.values());
   };
 
+  // Get distinct available sizes and colors
   const distinctAvailableSizes = getDistinctAvailableSizes();
   const distinctAvailableColors = getDistinctAvailableColors();
 
@@ -545,6 +461,7 @@ const ProductDetail = () => {
       <div className="container mx-auto px-4 py-8 md:px-6 lg:px-8">
         <BackButton className="mb-6 text-lg" aria-label="Go back to previous page" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
+          {/* Image Section */}
           <div className="lg:sticky lg:top-20 lg:self-start space-y-6">
             <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted shadow-lg transition-shadow duration-300 hover:shadow-xl">
               {isImageLoading && (
@@ -639,6 +556,7 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
+          {/* Details Section */}
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">{product.name}</h1>
@@ -813,7 +731,7 @@ const ProductDetail = () => {
                 aria-label={canAddToCart ? 'Add to cart' : 'Select options or out of stock'}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" aria-hidden="true" />
-                {isAddingToCart ? 'Adding...' : (canAddToCart ? 'Add to Cart' : (isSelectionComplete ? 'Out of Stock' : 'Select Options'))}
+                {isAddingToCart ? 'Adding...' : (canAddToCart ? 'Add to Cart' : (isSelectionComplete ? 'Out of Stock' : 'Add to Cart'))}
               </Button>
               <div className="flex flex-col sm:flex-row gap-3">
                 {user && (
