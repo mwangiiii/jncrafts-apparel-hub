@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, Clock, Copy, Phone, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Copy, Phone, AlertCircle, Loader2 } from 'lucide-react';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,7 +26,7 @@ interface PaymentDialogProps {
   userId: string;
   customerInfo: { fullName: string; phone?: string };
   shippingAddress: { address: string; city: string; postalCode: string };
-  orderItems: OrderItem[] | null | undefined; // Updated to handle null/undefined
+  orderItems: OrderItem[] | null | undefined;
   discountAmount?: number;
 }
 
@@ -84,7 +84,7 @@ const PaymentDialog = ({
             'apikey': SUPABASE_ANON_KEY,
             'Content-Type': 'application/json',
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -92,11 +92,11 @@ const PaymentDialog = ({
       }
 
       const records = await response.json();
-      
+
       if (records && records.length > 0) {
         const record = records[0];
         console.log('Payment record found:', record);
-        
+
         return {
           status: record.status === 'success' ? 'success' : 'failed',
           transactionId: record.transaction_id,
@@ -104,7 +104,7 @@ const PaymentDialog = ({
           resultDesc: record.result_desc,
         };
       }
-      
+
       console.log('No payment record found yet for:', checkoutRequestId);
       return { status: 'pending' };
     } catch (error) {
@@ -120,7 +120,7 @@ const PaymentDialog = ({
       intervalId = setInterval(async () => {
         const status = await checkPaymentStatus(checkoutRequestId);
         setPaymentStatus(status);
-        setVerificationAttempts(prev => prev + 1);
+        setVerificationAttempts((prev) => prev + 1);
 
         if (status.status === 'success') {
           setStep('success');
@@ -184,93 +184,13 @@ const PaymentDialog = ({
     return () => window.removeEventListener('message', handleMessage);
   }, [checkoutRequestId, onPaymentConfirm, toast]);
 
-  const createOrGetOrder = async (originalOrderNumber: string, email: string) => {
-    // Check if order already exists
-    const { data: existingOrder, error: existingError } = await supabase
-      .from('orders')
-      .select('id')
-      .eq('order_number', originalOrderNumber)
-      .single();
-
-    if (existingError && existingError.code !== 'PGRST116') { // PGRST116 is no rows
-      throw new Error(`Error checking existing order: ${existingError.message}`);
-    }
-
-    let orderId = existingOrder?.id;
-
-    if (!orderId) {
-      // Get pending status
-      const { data: pendingStatus, error: statusError } = await supabase
-        .from('order_status')
-        .select('id')
-        .eq('name', 'pending')
-        .single();
-
-      if (statusError || !pendingStatus) {
-        throw new Error('Pending order status not found. Please ensure order_status table has a "pending" entry.');
-      }
-
-      // Prepare customer_info
-      const fullCustomerInfo = {
-        fullName: propCustomerInfo.fullName,
-        phone: propCustomerInfo.phone,
-        email,
-      };
-
-      // Insert order
-      const { data: newOrder, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: userId,
-          order_number: originalOrderNumber,
-          status_id: pendingStatus.id,
-          total_amount: totalAmount,
-          discount_amount: discountAmount,
-          shipping_address: shippingAddress,
-          customer_info: fullCustomerInfo,
-          delivery_details: {}, // Can be extended later
-        })
-        .select('id')
-        .single();
-
-      if (orderError || !newOrder) {
-        throw new Error(`Failed to create order: ${orderError?.message}`);
-      }
-
-      orderId = newOrder.id;
-
-      // Insert order_items
-      if (orderItems && Array.isArray(orderItems) && orderItems.length > 0) {
-        const itemsToInsert = orderItems.map((item) => ({
-          order_id: orderId,
-          product_id: item.productId,
-          variant_id: item.variantId,
-          price: item.price,
-          quantity: item.quantity,
-          image_url: item.imageUrl,
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(itemsToInsert);
-
-        if (itemsError) {
-          console.error('Failed to insert order items:', itemsError);
-          // Still proceed, as items can be added later if needed
-        }
-      }
-    }
-
-    return orderId;
-  };
-
   const handlePaystackPayment = async () => {
     // Validate inputs
     if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       toast({
         variant: "destructive",
         title: "Invalid Email",
-        description: "Please enter a valid email address for Paystack payment.",
+        description: "Please enter a valid email address for payment.",
       });
       return;
     }
@@ -296,8 +216,8 @@ const PaymentDialog = ({
     if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
       toast({
         variant: "destructive",
-        title: "No Items",
-        description: "Order must have at least one item.",
+        title: "No Items in Order",
+        description: "Please add at least one item to your order before proceeding.",
       });
       return;
     }
@@ -305,21 +225,17 @@ const PaymentDialog = ({
     setIsProcessing(true);
 
     try {
-      // Compute separate refs: original for DB order link, paymentRef for Paystack/checkout
       const originalOrderNumber = orderNumber.trim();
       const paymentReference = `${originalOrderNumber}-${Date.now()}`;
 
-      console.log('Creating/Getting order and sending Paystack request:', {
+      console.log('Sending Paystack request:', {
         amount: totalAmount,
         email: customerEmail,
         originalOrderNumber,
         paymentReference,
       });
 
-      // Create or get order and insert items if needed
-      const orderId = await createOrGetOrder(originalOrderNumber, customerEmail);
-
-      // Now initialize Paystack
+      // Initialize Paystack payment
       const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-initialize`, {
         method: 'POST',
         headers: {
@@ -330,8 +246,16 @@ const PaymentDialog = ({
           amount: totalAmount,
           email: customerEmail,
           paymentReference,
-          orderId,
           originalOrderNumber,
+          customerInfo: {
+            userId,
+            fullName: propCustomerInfo.fullName,
+            phone: propCustomerInfo.phone,
+            email: customerEmail,
+          },
+          shippingAddress,
+          orderItems,
+          discountAmount,
         }),
       });
 
@@ -339,12 +263,11 @@ const PaymentDialog = ({
       console.log('Paystack response:', data);
 
       if (response.ok && data.success && data.authorizationUrl) {
-        setCheckoutRequestId(data.reference); // Use the returned reference
+        setCheckoutRequestId(data.reference);
         setVerificationAttempts(0);
         setStep('verification');
         setIsProcessing(false);
 
-        // Open Paystack in a new window
         const paystackWindow = window.open(
           data.authorizationUrl,
           'Paystack Payment',
@@ -356,7 +279,6 @@ const PaymentDialog = ({
           description: "Complete your payment in the popup window.",
         });
 
-        // Fallback to full redirect if popup is blocked
         if (!paystackWindow) {
           window.location.href = data.authorizationUrl;
         }
@@ -364,7 +286,7 @@ const PaymentDialog = ({
         toast({
           variant: 'destructive',
           title: 'Payment Initialization Failed',
-          description: data.message || data.error || 'Could not initialize Paystack payment.',
+          description: data.message || data.error || 'Could not initialize payment.',
         });
         setIsProcessing(false);
       }
@@ -420,18 +342,20 @@ const PaymentDialog = ({
             <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
               <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <h3 className="text-base font-semibold text-green-800 mb-2">
-                Choose Payment Method
+                Pay with Paystack
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="bg-white p-3 rounded border">
-                  <Label className="text-sm text-gray-600" htmlFor="email">Email Address:</Label>
+                  <Label className="text-sm text-gray-600" htmlFor="email">
+                    Email Address
+                  </Label>
                   <Input
                     id="email"
                     type="email"
                     value={customerEmail}
-                    onChange={e => setCustomerEmail(e.target.value)}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
                     placeholder="your.email@example.com"
-                    className="text-center tracking-wide mt-1"
+                    className="mt-1"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Required for payment receipts
@@ -439,7 +363,7 @@ const PaymentDialog = ({
                 </div>
 
                 <div className="bg-white p-3 rounded border">
-                  <Label className="text-sm text-gray-600">Amount:</Label>
+                  <Label className="text-sm text-gray-600">Amount</Label>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-xl font-bold text-green-700">
                       {formatPrice(totalAmount)}
@@ -463,20 +387,10 @@ const PaymentDialog = ({
           <div className="space-y-4">
             <div className="text-center">
               <Loader2 className="h-8 w-8 text-blue-600 mx-auto mb-2 animate-spin" />
-              <h3 className="text-base font-semibold mb-1">Confirming your Payment</h3>
+              <h3 className="text-base font-semibold mb-1">Confirming Payment</h3>
               <p className="text-xs text-muted-foreground">
-                Please complete the payment in the Paystack window. Waiting for confirmation...
+                Please complete the payment in the Paystack window.
               </p>
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="text-sm">
-                <p className="font-medium text-blue-800 mb-2">💳 Complete payment:</p>
-                <ol className="text-blue-700 text-xs space-y-1 list-decimal list-inside">
-                  <li>Complete payment in the Paystack popup window</li>
-                  <li>Wait for transaction confirmation</li>
-                </ol>
-              </div>
             </div>
           </div>
         )}
@@ -485,15 +399,17 @@ const PaymentDialog = ({
           <div className="space-y-4">
             <div className="text-center">
               <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <h3 className="text-base font-semibold mb-1 text-green-800">Payment Successful!</h3>
+              <h3 className="text-base font-semibold mb-1 text-green-800">
+                Payment Successful!
+              </h3>
               <p className="text-xs text-muted-foreground">
-                Your payment has been verified and processed successfully.
+                Your payment has been verified.
               </p>
             </div>
 
             {paymentStatus.receiptNumber && (
               <div className="bg-green-50 p-3 rounded border border-green-200">
-                <Label className="text-xs text-green-700">Transaction Receipt:</Label>
+                <Label className="text-xs text-green-700">Transaction Receipt</Label>
                 <div className="flex items-center justify-between mt-1">
                   <span className="font-mono text-sm font-bold text-green-800">
                     {paymentStatus.receiptNumber}
@@ -509,10 +425,6 @@ const PaymentDialog = ({
                 </div>
               </div>
             )}
-
-            <p className="text-xs text-center text-green-700 bg-green-50 p-2 rounded">
-              ✅ Payment verified. Your order will be processed shortly.
-            </p>
           </div>
         )}
 
@@ -520,9 +432,11 @@ const PaymentDialog = ({
           <div className="space-y-4">
             <div className="text-center">
               <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-              <h3 className="text-base font-semibold mb-1 text-red-800">Payment Failed</h3>
+              <h3 className="text-base font-semibold mb-1 text-red-800">
+                Payment Failed
+              </h3>
               <p className="text-xs text-muted-foreground">
-                {paymentStatus.resultDesc || "The payment could not be completed or verified."}
+                {paymentStatus.resultDesc || 'The payment could not be completed.'}
               </p>
             </div>
 
@@ -530,9 +444,8 @@ const PaymentDialog = ({
               <strong>What happened:</strong>
               <p className="mt-1">
                 {paymentStatus.status === 'timeout'
-                  ? "Payment verification timed out. If money was deducted, please contact support with your transaction details."
-                  : "The payment was either cancelled, failed, or insufficient funds were available."
-                }
+                  ? 'Payment verification timed out. If money was deducted, please contact support.'
+                  : 'The payment was cancelled or failed.'}
               </p>
             </div>
           </div>
