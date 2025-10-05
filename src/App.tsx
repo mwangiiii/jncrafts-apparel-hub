@@ -19,6 +19,7 @@ import SizeChart from "./pages/SizeChart";
 import PaymentSuccessPage from "./pages/PaystackRedirect";
 import React from "react";
 
+
 const App = () => (
  
     <TooltipProvider>
@@ -39,8 +40,9 @@ const App = () => (
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/sizechart" element={<SizeChart />} />
-        <Route path="/paystack-redirect" element={<PaymentSuccessPage />} />
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
         <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
+        
         <Route path="*" element={<NotFound />} />
       </Routes>
     </TooltipProvider>
