@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import OrderConfirmationDialog from './OrderConfirmationDialog';
 import DeliveryMethodSelector from './DeliveryMethodSelector';
 import AddressAutocomplete from './AddressAutocomplete';
-import MpesaPaymentDialog from './MpesaPaymentDialog';
+import PaymentDialog from './PaymentDialog';
 import { CartThumbnail } from './CartThumbnail';
 import { Checkbox } from "@/components/ui/checkbox"; // Add Checkbox import
 
@@ -66,10 +66,10 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   } | null>(null);
   const [loadingDiscount, setLoadingDiscount] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [showMpesaPayment, setShowMpesaPayment] = useState(false);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [deliveryDetails, setDeliveryDetails] = useState<DeliveryDetails | null>(null);
   const [deliveryReviewed, setDeliveryReviewed] = useState(false); // Add state for delivery review checkbox
+  const [orderNumber, setOrderNumber] = useState('');
   const { user } = useAuth();
   const { formatPrice, selectedCurrency } = useCurrency();
   const { toast } = useToast();
@@ -194,59 +194,27 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   };
 
   const confirmOrder = () => {
+    setOrderNumber(`ORD-${Date.now()}`);
     setShowConfirmation(false);
-    setShowMpesaPayment(true);
+    setShowPayment(true);
   };
 
-  const handlePaymentConfirm = async (transactionCode: string) => {
-    setIsPlacingOrder(true);
-    try {
-      const response = await fetch('/api/orders/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          transactionCode,
-          customerInfo,
-          shippingAddress,
-          deliveryDetails,
-          items,
-          total: finalTotal,
-          discount: appliedDiscount,
-        }),
-      });
+  const handlePaymentConfirm = (transactionCode: string) => {
+    toast({
+      title: "Order Placed Successfully!",
+      description: `Your order ${orderNumber} has been placed successfully.`,
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to place order');
-      }
-
-      const data = await response.json();
-
-      toast({
-        title: "Order Placed Successfully!",
-        description: `Your order ${data.orderNumber} has been placed successfully.`,
-      });
-
-      onClearCart();
-      setCustomerInfo({ fullName: "", email: user?.email || "", phone: "" });
-      setShippingAddress({ address: "", city: "", postalCode: "", lat: undefined, lon: undefined, isCurrentLocation: false });
-      setDiscountCode("");
-      setAppliedDiscount(null);
-      setDeliveryDetails(null);
-      setDeliveryReviewed(false); // Reset delivery review checkbox
-      setShowConfirmation(false);
-      setShowMpesaPayment(false);
-      onClose();
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast({
-        variant: "destructive",
-        title: "Order Failed",
-        description: "There was an error placing your order. Please try again.",
-      });
-    } finally {
-      setIsPlacingOrder(false);
-    }
+    onClearCart();
+    setCustomerInfo({ fullName: "", email: user?.email || "", phone: "" });
+    setShippingAddress({ address: "", city: "", postalCode: "", lat: undefined, lon: undefined, isCurrentLocation: false });
+    setDiscountCode("");
+    setAppliedDiscount(null);
+    setDeliveryDetails(null);
+    setDeliveryReviewed(false); // Reset delivery review checkbox
+    setShowConfirmation(false);
+    setShowPayment(false);
+    onClose();
   };
 
   return (
@@ -487,15 +455,25 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         total={total}
         deliveryCost={deliveryCost}
         finalTotal={finalTotal}
-        isLoading={isPlacingOrder}
       />
       
-      <MpesaPaymentDialog
-        isOpen={showMpesaPayment}
-        onClose={() => setShowMpesaPayment(false)}
+      <PaymentDialog
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
         onPaymentConfirm={handlePaymentConfirm}
         totalAmount={finalTotal}
-        orderNumber="pending"
+        orderNumber={orderNumber}
+        userId={user?.id || ''}
+        customerInfo={{ fullName: customerInfo.fullName, phone: customerInfo.phone }}
+        shippingAddress={{ address: shippingAddress.address, city: shippingAddress.city, postalCode: shippingAddress.postalCode }}
+        orderItems={items.map(item => ({
+          productId: item.product_id,
+          variantId: item.variant_id || '', // Assuming CartItem has variant_id; adjust if necessary
+          price: item.price,
+          quantity: item.quantity,
+          imageUrl: item.product_image
+        }))}
+        discountAmount={discountAmount}
       />
     </div>
   );

@@ -214,6 +214,7 @@ const PaymentDialog = ({
     }
 
     if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
+      console.error('Order items validation failed:', { orderItems });
       toast({
         variant: "destructive",
         title: "No Items in Order",
@@ -225,14 +226,14 @@ const PaymentDialog = ({
     setIsProcessing(true);
 
     try {
-      const originalOrderNumber = orderNumber.trim();
-      const paymentReference = `${originalOrderNumber}-${Date.now()}`;
+      const paymentReference = `${orderNumber}-${Date.now()}`;
 
       console.log('Sending Paystack request:', {
         amount: totalAmount,
         email: customerEmail,
-        originalOrderNumber,
+        orderNumber,
         paymentReference,
+        orderItems,
       });
 
       // Initialize Paystack payment
@@ -246,7 +247,7 @@ const PaymentDialog = ({
           amount: totalAmount,
           email: customerEmail,
           paymentReference,
-          originalOrderNumber,
+          originalOrderNumber: orderNumber,
           customerInfo: {
             userId,
             fullName: propCustomerInfo.fullName,
