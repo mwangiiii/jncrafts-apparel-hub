@@ -547,7 +547,7 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="products" className="space-y-6">
+          {/* <TabsContent value="products" className="space-y-6">
             <OptimizedProductsSection onOpenProductDialog={() => {}} onEditProduct={() => {}} />
           </TabsContent>
 
@@ -561,7 +561,7 @@ const AdminDashboard = () => {
 
           <TabsContent value="offers" className="space-y-6">
             <SpecialOffersManager />
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
     </div>
