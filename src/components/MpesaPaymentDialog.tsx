@@ -26,7 +26,7 @@ interface PaymentDialogProps {
   userId: string;
   customerInfo: { fullName: string; phone?: string };
   shippingAddress: { address: string; city: string; postalCode: string };
-  orderItems: OrderItem[];
+  orderItems: OrderItem[] | null | undefined; // Updated to handle null/undefined
   discountAmount?: number;
 }
 
@@ -240,7 +240,7 @@ const PaymentDialog = ({
       orderId = newOrder.id;
 
       // Insert order_items
-      if (orderItems.length > 0) {
+      if (orderItems && Array.isArray(orderItems) && orderItems.length > 0) {
         const itemsToInsert = orderItems.map((item) => ({
           order_id: orderId,
           product_id: item.productId,
@@ -293,7 +293,7 @@ const PaymentDialog = ({
       return;
     }
 
-    if (orderItems.length === 0) {
+    if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
       toast({
         variant: "destructive",
         title: "No Items",
@@ -384,7 +384,7 @@ const PaymentDialog = ({
     setCheckoutRequestId('');
     setPaymentStatus({ status: 'pending' });
     setVerificationAttempts(0);
-    setCustomerEmail(''); // Default to empty string
+    setCustomerEmail('');
   };
 
   const handleClose = () => {
@@ -549,7 +549,7 @@ const PaymentDialog = ({
               disabled={isProcessing || !customerEmail || totalAmount <= 0}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isProcessing ? 'Initializing...' : 'Pay with Paystack'}
+              {isProcessing ? 'Initializing...' : 'Pay Now'}
             </Button>
           )}
 
