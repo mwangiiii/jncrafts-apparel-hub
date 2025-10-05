@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,12 +9,25 @@ import { CheckCircle, Clock, Copy, Phone, AlertCircle, Loader2 } from 'lucide-re
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useToast } from '@/hooks/use-toast';
 
+interface OrderItem {
+  productId: string;
+  variantId: string;
+  price: number;
+  quantity: number;
+  imageUrl?: string;
+}
+
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onPaymentConfirm: (transactionCode: string) => void;
   totalAmount: number;
   orderNumber: string;
+  userId: string;
+  customerInfo: { fullName: string; phone?: string };
+  shippingAddress: { address: string; city: string; postalCode: string };
+  orderItems: OrderItem[];
+  discountAmount?: number;
 }
 
 interface PaymentStatus {
@@ -23,25 +37,31 @@ interface PaymentStatus {
   resultDesc?: string;
 }
 
+const SUPABASE_URL = 'https://ppljsayhwtlogficifar.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbGpzYXlod3Rsb2dmaWNpZmFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDkxMTUsImV4cCI6MjA2OTE4NTExNX0.4p82dukMJBFl1-EU9XOLmiHvBGfEQSFDVDOu9yilhUU';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const PaymentDialog = ({
   isOpen,
   onClose,
   onPaymentConfirm,
   totalAmount,
   orderNumber,
+  userId,
+  customerInfo: propCustomerInfo,
+  shippingAddress,
+  orderItems,
+  discountAmount = 0,
 }: PaymentDialogProps) => {
   const [step, setStep] = useState<'payment' | 'verification' | 'success' | 'failed'>('payment');
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutRequestId, setCheckoutRequestId] = useState<string>('');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ status: 'pending' });
   const [verificationAttempts, setVerificationAttempts] = useState(0);
-  const [customerInfo, setCustomerInfo] = useState<{ email: string }>({ email: '' });
+  const [customerEmail, setCustomerEmail] = useState<string>('');
   const { formatPrice } = useCurrency();
   const { toast } = useToast();
-
-  // Supabase configuration
-  const SUPABASE_URL = 'https://ppljsayhwtlogficifar.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbGpzYXlod3Rsb2dmaWNpZmFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDkxMTUsImV4cCI6MjA2OTE4NTExNX0.4p82dukMJBFl1-EU9XOLmiHvBGfEQSFDVDOu9yilhUU';
 
   const MAX_VERIFICATION_ATTEMPTS = 12; // Check for 1 minute (12 * 5 seconds)
   const VERIFICATION_INTERVAL = 5000; // Check every 5 seconds for Paystack
@@ -140,7 +160,6 @@ const PaymentDialog = ({
     };
   }, [step, checkoutRequestId, verificationAttempts, onPaymentConfirm, toast]);
 
-  // Add this useEffect in PaymentDialog component
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'payment_status' && event.data.reference === checkoutRequestId) {
@@ -165,9 +184,89 @@ const PaymentDialog = ({
     return () => window.removeEventListener('message', handleMessage);
   }, [checkoutRequestId, onPaymentConfirm, toast]);
 
+  const createOrGetOrder = async (originalOrderNumber: string, email: string) => {
+    // Check if order already exists
+    const { data: existingOrder, error: existingError } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('order_number', originalOrderNumber)
+      .single();
+
+    if (existingError && existingError.code !== 'PGRST116') { // PGRST116 is no rows
+      throw new Error(`Error checking existing order: ${existingError.message}`);
+    }
+
+    let orderId = existingOrder?.id;
+
+    if (!orderId) {
+      // Get pending status
+      const { data: pendingStatus, error: statusError } = await supabase
+        .from('order_status')
+        .select('id')
+        .eq('name', 'pending')
+        .single();
+
+      if (statusError || !pendingStatus) {
+        throw new Error('Pending order status not found. Please ensure order_status table has a "pending" entry.');
+      }
+
+      // Prepare customer_info
+      const fullCustomerInfo = {
+        fullName: propCustomerInfo.fullName,
+        phone: propCustomerInfo.phone,
+        email,
+      };
+
+      // Insert order
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: userId,
+          order_number: originalOrderNumber,
+          status_id: pendingStatus.id,
+          total_amount: totalAmount,
+          discount_amount: discountAmount,
+          shipping_address: shippingAddress,
+          customer_info: fullCustomerInfo,
+          delivery_details: {}, // Can be extended later
+        })
+        .select('id')
+        .single();
+
+      if (orderError || !newOrder) {
+        throw new Error(`Failed to create order: ${orderError?.message}`);
+      }
+
+      orderId = newOrder.id;
+
+      // Insert order_items
+      if (orderItems.length > 0) {
+        const itemsToInsert = orderItems.map((item) => ({
+          order_id: orderId,
+          product_id: item.productId,
+          variant_id: item.variantId,
+          price: item.price,
+          quantity: item.quantity,
+          image_url: item.imageUrl,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) {
+          console.error('Failed to insert order items:', itemsError);
+          // Still proceed, as items can be added later if needed
+        }
+      }
+    }
+
+    return orderId;
+  };
+
   const handlePaystackPayment = async () => {
     // Validate inputs
-    if (!customerInfo.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
+    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       toast({
         variant: "destructive",
         title: "Invalid Email",
@@ -194,6 +293,15 @@ const PaymentDialog = ({
       return;
     }
 
+    if (orderItems.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Items",
+        description: "Order must have at least one item.",
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -201,14 +309,18 @@ const PaymentDialog = ({
       const originalOrderNumber = orderNumber.trim();
       const paymentReference = `${originalOrderNumber}-${Date.now()}`;
 
-      console.log('Sending Paystack request:', {
+      console.log('Creating/Getting order and sending Paystack request:', {
         amount: totalAmount,
-        email: customerInfo.email,
+        email: customerEmail,
         originalOrderNumber,
         paymentReference,
       });
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-initialize`, {
+      // Create or get order and insert items if needed
+      const orderId = await createOrGetOrder(originalOrderNumber, customerEmail);
+
+      // Now initialize Paystack
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-init`, {  // Note: Deploy as paystack-init or update
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -216,9 +328,10 @@ const PaymentDialog = ({
         },
         body: JSON.stringify({
           amount: totalAmount,
-          email: customerInfo.email,
-          originalOrderNumber,
+          email: customerEmail,
           paymentReference,
+          orderId,  // Pass orderId directly
+          originalOrderNumber,  // For metadata
         }),
       });
 
@@ -226,7 +339,7 @@ const PaymentDialog = ({
       console.log('Paystack response:', data);
 
       if (response.ok && data.success && data.authorizationUrl) {
-        setCheckoutRequestId(paymentReference); // Use paymentReference for verification polling
+        setCheckoutRequestId(data.reference); // Use the returned reference
         setVerificationAttempts(0);
         setStep('verification');
         setIsProcessing(false);
@@ -258,20 +371,26 @@ const PaymentDialog = ({
     } catch (error) {
       console.error('Paystack payment error:', error);
       toast({
-        variant: 'destructive',
-        title: 'Network Error',
-        description: 'Could not connect to the payment server. Please try again.',
+        variant: "destructive",
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not connect to the payment server. Please try again.',
       });
       setIsProcessing(false);
     }
   };
+
+  useEffect(() => {
+    if (propCustomerInfo.email) {
+      setCustomerEmail(propCustomerInfo.email);
+    }
+  }, [propCustomerInfo.email]);
 
   const resetDialog = () => {
     setStep('payment');
     setCheckoutRequestId('');
     setPaymentStatus({ status: 'pending' });
     setVerificationAttempts(0);
-    setCustomerInfo({ email: '' });
+    setCustomerEmail(propCustomerInfo.email || '');
   };
 
   const handleClose = () => {
@@ -315,8 +434,8 @@ const PaymentDialog = ({
                   <Input
                     id="email"
                     type="email"
-                    value={customerInfo.email}
-                    onChange={e => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                    value={customerEmail}
+                    onChange={e => setCustomerEmail(e.target.value)}
                     placeholder="your.email@example.com"
                     className="text-center tracking-wide mt-1"
                   />
@@ -433,7 +552,7 @@ const PaymentDialog = ({
           {step === 'payment' && (
             <Button
               onClick={handlePaystackPayment}
-              disabled={isProcessing || !customerInfo.email || totalAmount <= 0}
+              disabled={isProcessing || !customerEmail || totalAmount <= 0}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isProcessing ? 'Initializing...' : 'Pay with Paystack'}
