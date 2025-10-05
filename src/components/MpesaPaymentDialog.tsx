@@ -320,7 +320,7 @@ const PaymentDialog = ({
       const orderId = await createOrGetOrder(originalOrderNumber, customerEmail);
 
       // Now initialize Paystack
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-init`, {  // Note: Deploy as paystack-init or update
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-initialize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -330,8 +330,8 @@ const PaymentDialog = ({
           amount: totalAmount,
           email: customerEmail,
           paymentReference,
-          orderId,  // Pass orderId directly
-          originalOrderNumber,  // For metadata
+          orderId,
+          originalOrderNumber,
         }),
       });
 
@@ -379,18 +379,12 @@ const PaymentDialog = ({
     }
   };
 
-  useEffect(() => {
-    if (propCustomerInfo.email) {
-      setCustomerEmail(propCustomerInfo.email);
-    }
-  }, [propCustomerInfo.email]);
-
   const resetDialog = () => {
     setStep('payment');
     setCheckoutRequestId('');
     setPaymentStatus({ status: 'pending' });
     setVerificationAttempts(0);
-    setCustomerEmail(propCustomerInfo.email || '');
+    setCustomerEmail(''); // Default to empty string
   };
 
   const handleClose = () => {
