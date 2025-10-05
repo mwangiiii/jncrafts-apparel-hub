@@ -186,7 +186,127 @@ const updateOrderStatus = async (newStatusId: string) => {
       throw new Error('Failed to fetch status details');
     }
 
-    // Use Edge Function to update (bypasses RLS issues)
+    console.log('Attempting status update:', { orderId: order.id, newStatusId, statusName: newStatus?.name });
+
+    // Try direct update first (works if RLS is properly configured)
+    const { error: directUpdateError } = await supabase
+      .from('orders')
+      .update({
+        status_id: newStatusId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', order.id);
+
+    // If direct update fails, try via Edge Function
+    if (directUpdateError) {
+      console.log('Direct update failed, trying Edge Function:', directUpdateError.message);
+
+      const { data: functionResult, error: functionError } = await supabase.functions.invoke('update-order-status', {
+        body: {
+          orderId: order.id,
+          statusId: newStatusId,
+          statusName: newStatus.name,
+          statusDisplayName: newStatus.display_name,
+          customerEmail: order.customer_info?.email,
+          orderNumber: order.order_number,
+          customerName: order.customer_info?.fullName,
+          orderItems: order.order_items.map((item) => ({
+            product_name: item.product_name,
+            quantity: item.quantity,
+            size: item.size_name,
+            color: item.color_name,
+            price: item.price
+          })),
+          totalAmount: order.total_amount,
+          discountAmount: order.discount_amount,
+          discountName: order.discount_name,
+          shippingAddress: order.shipping_address
+        }
+      });
+
+      if (functionError) {
+        console.error('Edge Function also failed:', functionError);
+        throw new Error(functionError.message || 'Failed to update via Edge Function');
+      }
+
+      console.log('Edge Function result:', functionResult);
+    } else {
+      console.log('Direct update succeeded');
+      
+      // Send email notification separately if direct update worked
+      if (order.customer_info?.email) {
+        supabase.functions.invoke('send-order-status-update', {
+          body: {
+            customerEmail: order.customer_info.email,
+            adminEmail: 'craftsjn@gmail.com',
+            orderNumber: order.order_number,
+            customerName: order.customer_info?.fullName || 'Customer',
+            orderStatus: newStatus.name,
+            items: order.order_items.map((item) => ({
+              product_name: item.product_name,
+              quantity: item.quantity,
+              size: item.size_name,
+              color: item.color_name,
+              price: item.price
+            })),
+            totalAmount: order.total_amount,
+            discountAmount: order.discount_amount,
+            discountName: order.discount_name,
+            shippingAddress: order.shipping_address,
+            currency: { code: 'KES', symbol: 'KSh' }
+          }
+        }).catch((emailError) => {
+          console.error('Email notification failed (non-critical):', emailError);
+        });
+      }
+    }
+
+    // Refresh order data
+    await fetchOrder();
+    
+    toast({
+      title: "Order Updated",
+      description: `Status changed to ${newStatus?.display_name}`,
+    });
+  } catch (error: any) {
+    console.error('Error updating order:', error);
+    toast({
+      variant: "destructive",
+      title: "Update Failed",
+      description: error.message || "Failed to update order status"
+    });
+  } finally {
+    setUpdatingStatus(false);
+  }
+};
+
+// Alternative approach if the above still fails - check for RLS policies
+const updateOrderStatusWithRLS = async (newStatusId: string) => {
+  if (!order || !user?.id) return;
+  
+  setUpdatingStatus(true);
+  try {
+    // Verify admin has permission
+    const { data: adminCheck } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!adminCheck) {
+      throw new Error('Unauthorized: Admin access required');
+    }
+
+    // Get new status details
+    const { data: newStatus, error: statusError } = await supabase
+      .from('order_status')
+      .select('name, display_name')
+      .eq('id', newStatusId)
+      .single();
+
+    if (statusError) throw statusError;
+
+    // Try using service role via Edge Function if direct update fails
     const { data: updateResult, error: updateError } = await supabase.functions.invoke('update-order-status', {
       body: {
         orderId: order.id,
@@ -205,22 +325,17 @@ const updateOrderStatus = async (newStatusId: string) => {
         })),
         totalAmount: order.total_amount,
         discountAmount: order.discount_amount,
-        discountName: order.discount_name,
         shippingAddress: order.shipping_address
       }
     });
 
-    if (updateError) {
-      console.error('Error updating order via Edge Function:', updateError);
-      throw updateError;
-    }
+    if (updateError) throw updateError;
 
-    // Refresh order data
     await fetchOrder();
     
     toast({
       title: "Order Updated",
-      description: `Status changed to ${newStatus?.display_name}. Customer notified.`,
+      description: `Status changed to ${newStatus?.display_name}`,
     });
   } catch (error: any) {
     console.error('Error updating order:', error);
