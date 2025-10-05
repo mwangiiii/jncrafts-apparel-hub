@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import OrderConfirmationDialog from './OrderConfirmationDialog';
 import DeliveryMethodSelector from './DeliveryMethodSelector';
 import AddressAutocomplete from './AddressAutocomplete';
-import PaymentDialog from './PaymentDialog';
+import PaymentDialog from './MpesaPaymentDialog';
 import { CartThumbnail } from './CartThumbnail';
 import { Checkbox } from "@/components/ui/checkbox"; // Add Checkbox import
 
