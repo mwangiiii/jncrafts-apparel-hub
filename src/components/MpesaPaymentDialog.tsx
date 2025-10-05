@@ -17,6 +17,19 @@ interface OrderItem {
   imageUrl?: string;
 }
 
+interface DeliveryDetails {
+  method: string;
+  cost: number;
+  location: string;
+  distanceFromCBD: number;
+  courierDetails?: {
+    name: string;
+    phone: string;
+    company?: string;
+    pickupWindow?: string;
+  };
+}
+
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,7 +41,7 @@ interface PaymentDialogProps {
   shippingAddress: { address: string; city: string; postalCode: string };
   orderItems: OrderItem[] | null | undefined;
   discountAmount?: number;
-  deliveryDetails?: DeliveryDetails | null;  // ADD THIS LINE
+  deliveryDetails?: DeliveryDetails | null;
 }
 
 interface PaymentStatus {
@@ -54,7 +67,7 @@ const PaymentDialog = ({
   shippingAddress,
   orderItems,
   discountAmount = 0,
-  deliveryDetails = null,  // ADD THIS LINE
+  deliveryDetails = null,
 }: PaymentDialogProps) => {
   const [step, setStep] = useState<'payment' | 'verification' | 'success' | 'failed'>('payment');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -65,8 +78,8 @@ const PaymentDialog = ({
   const { formatPrice } = useCurrency();
   const { toast } = useToast();
 
-  const MAX_VERIFICATION_ATTEMPTS = 12; // Check for 1 minute (12 * 5 seconds)
-  const VERIFICATION_INTERVAL = 5000; // Check every 5 seconds for Paystack
+  const MAX_VERIFICATION_ATTEMPTS = 12;
+  const VERIFICATION_INTERVAL = 5000;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -176,8 +189,6 @@ const PaymentDialog = ({
           setTimeout(() => {
             onPaymentConfirm(event.data.reference);
           }, 2000);
-        } else if (event.data.status === 'pending') {
-          // Continue polling
         }
       }
     };
@@ -225,6 +236,16 @@ const PaymentDialog = ({
       return;
     }
 
+    if (!deliveryDetails) {
+      console.error('Delivery details missing');
+      toast({
+        variant: "destructive",
+        title: "Delivery Details Missing",
+        description: "Please select a delivery method before proceeding.",
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -236,6 +257,7 @@ const PaymentDialog = ({
         orderNumber,
         paymentReference,
         orderItems,
+        deliveryDetails,
       });
 
       // Initialize Paystack payment
@@ -259,7 +281,7 @@ const PaymentDialog = ({
           shippingAddress,
           orderItems,
           discountAmount,
-          deliveryDetails,  // ADD THIS LINE
+          deliveryDetails,
         }),
       });
 
@@ -382,6 +404,18 @@ const PaymentDialog = ({
                     </Button>
                   </div>
                 </div>
+
+                {deliveryDetails && (
+                  <div className="bg-white p-3 rounded border">
+                    <Label className="text-sm text-gray-600">Delivery Method</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {deliveryDetails.method.replace('_', ' ').toUpperCase()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {deliveryDetails.location} • {formatPrice(deliveryDetails.cost)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -463,7 +497,7 @@ const PaymentDialog = ({
           {step === 'payment' && (
             <Button
               onClick={handlePaystackPayment}
-              disabled={isProcessing || !customerEmail || totalAmount <= 0}
+              disabled={isProcessing || !customerEmail || totalAmount <= 0 || !deliveryDetails}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isProcessing ? 'Initializing...' : 'Pay Now'}
