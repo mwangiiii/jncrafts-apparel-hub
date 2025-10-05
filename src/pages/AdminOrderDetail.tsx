@@ -146,7 +146,7 @@ const AdminOrderDetail = () => {
         description: error.message || "Failed to fetch order details",
         variant: "destructive",
       });
-      navigate('/admin/dashboard'); // Redirect to dashboard if not found
+      navigate('/admin'); // Redirect to dashboard if not found
     } finally {
       setLoading(false);
     }
@@ -444,7 +444,7 @@ const updateOrderStatusWithRLS = async (newStatusId: string) => {
       <div className="min-h-screen bg-background p-6 flex items-center justify-center">
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-bold text-destructive">Order Not Found</h1>
-          <Button onClick={() => navigate('/admin/dashboard')} variant="outline">
+          <Button onClick={() => navigate('/admin')} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
@@ -461,7 +461,7 @@ const updateOrderStatusWithRLS = async (newStatusId: string) => {
           <Breadcrumb className="lg:w-auto">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/admin/dashboard">Dashboard</BreadcrumbLink> {/* Aligned with dashboard */}
+                <BreadcrumbLink href="/admin">Dashboard</BreadcrumbLink> {/* Aligned with dashboard */}
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -472,7 +472,7 @@ const updateOrderStatusWithRLS = async (newStatusId: string) => {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              onClick={() => navigate('/admin/dashboard')}
+              onClick={() => navigate('/admin')}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
