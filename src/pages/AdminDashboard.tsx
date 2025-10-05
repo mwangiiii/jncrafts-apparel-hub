@@ -510,10 +510,10 @@ const AdminDashboard = () => {
         <Tabs defaultValue="orders" className="space-y-6">
           <TabsList className="grid grid-cols-5 w-full h-12">
             <TabsTrigger value="orders" className="data-[state=active]:shadow-md">Orders</TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:shadow-md">Products</TabsTrigger>
+            {/* <TabsTrigger value="products" className="data-[state=active]:shadow-md">Products</TabsTrigger>
             <TabsTrigger value="new-arrivals" className="data-[state=active]:shadow-md">New Arrivals</TabsTrigger>
             <TabsTrigger value="featured" className="data-[state=active]:shadow-md">Featured</TabsTrigger>
-            <TabsTrigger value="offers" className="data-[state=active]:shadow-md">Special Offers</TabsTrigger>
+            <TabsTrigger value="offers" className="data-[state=active]:shadow-md">Special Offers</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
@@ -548,6 +548,22 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* <TabsContent value="products" className="space-y-6">
+            <OptimizedProductsSection onOpenProductDialog={() => {}} onEditProduct={() => {}} />
+          </TabsContent>
+
+          <TabsContent value="new-arrivals" className="space-y-6">
+            <NewArrivalsManager />
+          </TabsContent>
+
+          <TabsContent value="featured" className="space-y-6">
+            <FeaturedProductsManager />
+          </TabsContent>
+
+          <TabsContent value="offers" className="space-y-6">
+            <SpecialOffersManager />
+          </TabsContent> */}
         </Tabs>
       </div>
     </div>
