@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add useNavigate import
+import { useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import DeliveryMethodSelector from './DeliveryMethodSelector';
 import AddressAutocomplete from './AddressAutocomplete';
 import MpesaPaymentDialog from './MpesaPaymentDialog';
 import { CartThumbnail } from './CartThumbnail';
+import { Checkbox } from "@/components/ui/checkbox"; // Add Checkbox import
 
 import { CartItem } from "@/types/database";
 import { DeliveryMethod } from '@/components/DeliveryMethodSelector';
@@ -43,7 +44,7 @@ interface CartProps {
 }
 
 const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onClearCart, isLoading = false }: CartProps) => {
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
     email: "",
@@ -52,7 +53,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const [shippingAddress, setShippingAddress] = useState({
     address: '',
     city: '',
-    postalCode: '',
+    postalCode: '', // Postal code is now optional
     lat: undefined as number | undefined,
     lon: undefined as number | undefined,
     isCurrentLocation: false
@@ -68,6 +69,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const [showMpesaPayment, setShowMpesaPayment] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [deliveryDetails, setDeliveryDetails] = useState<DeliveryDetails | null>(null);
+  const [deliveryReviewed, setDeliveryReviewed] = useState(false); // Add state for delivery review checkbox
   const { user } = useAuth();
   const { formatPrice, selectedCurrency } = useCurrency();
   const { toast } = useToast();
@@ -83,7 +85,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
   useEffect(() => {
     if (user && isOpen) {
-      // Auto-fill user information
       setCustomerInfo(prev => ({
         ...prev,
         email: user.email || "",
@@ -100,7 +101,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
     setLoadingDiscount(true);
     try {
-      // Replace Supabase logic with a call to the new backend API
       const response = await fetch('/api/discounts/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,16 +158,16 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       toast({
         variant: "destructive",
         title: "Missing Information",
-        description: "Please fill in all customer information fields.",
+        description: "Please fill in all required customer information fields.",
       });
       return;
     }
 
-    if (!shippingAddress.address || !shippingAddress.city || !shippingAddress.postalCode) {
+    if (!shippingAddress.address || !shippingAddress.city) {
       toast({
         variant: "destructive",
         title: "Missing Address",
-        description: "Please provide a complete shipping address.",
+        description: "Please provide a complete shipping address (address and city are required).",
       });
       return;
     }
@@ -177,6 +177,15 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         variant: "destructive",
         title: "Delivery Method Required",
         description: "Please select a delivery method.",
+      });
+      return;
+    }
+
+    if (!deliveryReviewed) {
+      toast({
+        variant: "destructive",
+        title: "Review Required",
+        description: "Please confirm that you have reviewed the delivery method and cost.",
       });
       return;
     }
@@ -224,6 +233,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
       setDiscountCode("");
       setAppliedDiscount(null);
       setDeliveryDetails(null);
+      setDeliveryReviewed(false); // Reset delivery review checkbox
       setShowConfirmation(false);
       setShowMpesaPayment(false);
       onClose();
@@ -259,7 +269,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                 <div className="flex items-center gap-2 text-accent mb-2">
                   <User className="h-4 w-4" />
                   <Button
-                    onClick={() => navigate('/auth')} // Navigate to /auth
+                    onClick={() => navigate('/auth')}
                     className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition"
                   >
                     Login Required
@@ -344,7 +354,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
 
             {!isLoading && items.length > 0 && (
               <>
-                {/* Discount applied by manager will show here */}
                 {appliedDiscount && (
                   <div className="space-y-4 border-t pt-6">
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -359,7 +368,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                   </div>
                 )}
 
-                {/* Checkout Form */}
                 {user && (
                   <div className="space-y-6 border-t pt-6">
                     <h3 className="text-lg font-semibold">Customer Information</h3>
@@ -416,7 +424,6 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     
                     <Separator />
                     
-                    {/* Delivery Method Selection */}
                     <DeliveryMethodSelector
                       deliveryDetails={deliveryDetails}
                       onDeliveryChange={setDeliveryDetails}
@@ -426,6 +433,16 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     <Separator />
                     
                     <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="deliveryReview"
+                          checked={deliveryReviewed}
+                          onCheckedChange={(checked) => setDeliveryReviewed(!!checked)}
+                        />
+                        <Label htmlFor="deliveryReview">
+                          I have reviewed the delivery method and cost
+                        </Label>
+                      </div>
                       <div className="flex items-center justify-between">
                         <span className="text-base">Subtotal:</span>
                         <span className="text-base">{formatPrice(total)}</span>
@@ -453,7 +470,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                       onClick={handleCheckout} 
                       className="w-full" 
                       size="lg"
-                      disabled={!deliveryDetails}
+                      disabled={!deliveryDetails || !deliveryReviewed}
                     >
                       {deliveryDetails ? 'Place Order' : 'Select Delivery Method'}
                     </Button>
