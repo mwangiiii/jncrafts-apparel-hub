@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
+import AdminHeader from '@/components/AdminHeader';
 import {
   Select,
   SelectContent,
@@ -464,6 +465,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <AdminHeader />
       <div className="container mx-auto p-6 space-y-8 max-w-7xl">
         {/* Header with refresh */}
         <div className="flex items-center justify-between">
