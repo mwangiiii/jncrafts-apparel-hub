@@ -24,78 +24,10 @@ export const useWishlist = () => {
     
     setIsLoading(true);
     try {
-      // Get wishlist items with product IDs first
-      const { data: wishlistData, error: wishlistError } = await supabase
-        .from('wishlist_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .rpc('get_user_wishlist_complete', { p_user_id: user.id });
 
-      if (wishlistError) throw wishlistError;
-
-      // Get complete product details for each item
-      const wishlistItemsWithProducts = await Promise.all(
-        (wishlistData || []).map(async (item) => {
-          const { data: productData, error: productError } = await supabase
-            .rpc('get_product_complete', { p_product_id: item.product_id });
-
-          if (productError) {
-            console.error('Error fetching product details:', productError);
-            return { ...item, product: null };
-          }
-
-          if (!productData || typeof productData !== 'object') {
-            return { ...item, product: null };
-          }
-
-          const product = productData as any;
-          // Transform the product data to match expected format
-          const transformedProduct = {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            description: product.description,
-            category: product.category,
-            stock_quantity: product.stock_quantity,
-            is_active: product.is_active,
-            new_arrival_date: product.new_arrival_date,
-            thumbnail_index: product.thumbnail_index,
-            created_at: product.created_at,
-            updated_at: product.updated_at,
-            images: Array.isArray(product.images) 
-              ? product.images.map((img: any) => ({
-                  id: img.id || 'temp',
-                  image_url: img.url || img.image_url || img,
-                  is_primary: img.is_primary || false,
-                  display_order: img.order || img.display_order || 0,
-                  product_id: product.id,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                }))
-              : [],
-            colors: Array.isArray(product.colors) 
-              ? product.colors.map((color: any) => ({
-                  id: color.id,
-                  name: color.name,
-                  hex: color.hex || color.hex_code,
-                  available: color.available !== false
-                }))
-              : [],
-            sizes: Array.isArray(product.sizes) 
-              ? product.sizes.map((size: any) => ({
-                  id: size.id,
-                  name: size.name,
-                  category: size.category,
-                  available: size.available !== false
-                }))
-              : []
-          };
-
-          return { ...item, product: transformedProduct };
-        })
-      );
-
-      const data = wishlistItemsWithProducts.filter(item => item.product !== null);
+      if (error) throw error;
 
       setWishlistItems(data || []);
     } catch (error) {
@@ -182,6 +114,8 @@ export const useWishlist = () => {
         description: "Failed to remove item from wishlist",
         variant: "destructive"
       });
+      // Revert optimistic update on error
+      await loadWishlist();
     }
   };
 
