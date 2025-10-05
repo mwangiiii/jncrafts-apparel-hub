@@ -28,6 +28,7 @@ interface PaymentDialogProps {
   shippingAddress: { address: string; city: string; postalCode: string };
   orderItems: OrderItem[] | null | undefined;
   discountAmount?: number;
+  deliveryDetails?: DeliveryDetails | null;  // ADD THIS LINE
 }
 
 interface PaymentStatus {
@@ -53,6 +54,7 @@ const PaymentDialog = ({
   shippingAddress,
   orderItems,
   discountAmount = 0,
+  deliveryDetails = null,  // ADD THIS LINE
 }: PaymentDialogProps) => {
   const [step, setStep] = useState<'payment' | 'verification' | 'success' | 'failed'>('payment');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -257,6 +259,7 @@ const PaymentDialog = ({
           shippingAddress,
           orderItems,
           discountAmount,
+          deliveryDetails,  // ADD THIS LINE
         }),
       });
 

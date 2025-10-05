@@ -474,6 +474,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
           imageUrl: item.product_image
         }))}
         discountAmount={discountAmount}
+        deliveryDetails={deliveryDetails}  // ADD THIS LINE
       />
     </div>
   );
