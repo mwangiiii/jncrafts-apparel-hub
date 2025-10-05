@@ -140,6 +140,31 @@ const PaymentDialog = ({
     };
   }, [step, checkoutRequestId, verificationAttempts, onPaymentConfirm, toast]);
 
+  // Add this useEffect in PaymentDialog component
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'payment_status' && event.data.reference === checkoutRequestId) {
+        if (event.data.status === 'success') {
+          setPaymentStatus({ status: 'success', transactionId: event.data.reference });
+          setStep('success');
+          setIsProcessing(false);
+          toast({
+            title: "Payment Successful!",
+            description: `Transaction ID: ${event.data.reference}`,
+          });
+          setTimeout(() => {
+            onPaymentConfirm(event.data.reference);
+          }, 2000);
+        } else if (event.data.status === 'pending') {
+          // Continue polling
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [checkoutRequestId, onPaymentConfirm, toast]);
+
   const handlePaystackPayment = async () => {
     // Validate inputs
     if (!customerInfo.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
@@ -172,13 +197,15 @@ const PaymentDialog = ({
     setIsProcessing(true);
 
     try {
-      // Generate a unique order number if needed (optional, depending on your backend)
-      const uniqueOrderNumber = `${orderNumber}-${Date.now()}`; // Ensure uniqueness
+      // Compute separate refs: original for DB order link, paymentRef for Paystack/checkout
+      const originalOrderNumber = orderNumber.trim();
+      const paymentReference = `${originalOrderNumber}-${Date.now()}`;
 
       console.log('Sending Paystack request:', {
         amount: totalAmount,
         email: customerInfo.email,
-        orderNumber: uniqueOrderNumber,
+        originalOrderNumber,
+        paymentReference,
       });
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-initialize`, {
@@ -190,7 +217,8 @@ const PaymentDialog = ({
         body: JSON.stringify({
           amount: totalAmount,
           email: customerInfo.email,
-          orderNumber: uniqueOrderNumber,
+          originalOrderNumber,
+          paymentReference,
         }),
       });
 
@@ -198,7 +226,7 @@ const PaymentDialog = ({
       console.log('Paystack response:', data);
 
       if (response.ok && data.success && data.authorizationUrl) {
-        setCheckoutRequestId(uniqueOrderNumber); // Use unique order number for verification
+        setCheckoutRequestId(paymentReference); // Use paymentReference for verification polling
         setVerificationAttempts(0);
         setStep('verification');
         setIsProcessing(false);
