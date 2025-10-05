@@ -302,7 +302,7 @@ const updateOrderStatusWithRLS = async (newStatusId: string) => {
     setUpdatingStatus(false);
   }
 };
-
+ 
   const getStatusColor = (statusName: string | undefined) => {
     switch (statusName) {
       case 'pending': return 'bg-amber-100 text-amber-800 border-amber-200';
