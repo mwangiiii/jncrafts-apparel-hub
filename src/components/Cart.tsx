@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -290,31 +290,23 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
               <div className="space-y-4">
                 {items.map((item) => (
                   <div key={item.id} className="flex items-center gap-4 border-b pb-4">
-                    <a 
-                      href={`/product/${item.product_id}`}
+                    <Link 
+                      to={`/product/${item.product_id}`}
                       className="flex-shrink-0 hover:opacity-80 transition-opacity"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.location.href = `/product/${item.product_id}`;
-                      }}
                     >
                       <CartThumbnail 
                         productId={item.product_id}
                         productImage={item.product_image}
                         productName={item.product_name}
                       />
-                    </a>
+                    </Link>
                     <div className="flex-1">
-                      <a 
-                        href={`/product/${item.product_id}`}
+                      <Link 
+                        to={`/product/${item.product_id}`}
                         className="hover:underline block"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          window.location.href = `/product/${item.product_id}`;
-                        }}
                       >
                         <h4 className="font-medium text-primary hover:text-primary/80">{item.product_name}</h4>
-                      </a>
+                      </Link>
                       <p className="text-sm text-muted-foreground">
                         {item.size_name} • {item.color_name}
                       </p>
