@@ -91,6 +91,7 @@ const PaymentDialog = ({
 
   const checkPaymentStatus = async (checkoutRequestId: string): Promise<PaymentStatus> => {
     try {
+      // Step 1: Check payment_records table for webhook updates
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/payment_records?checkout_request_id=eq.${checkoutRequestId}&order=created_at.desc&limit=1`,
         {
@@ -120,11 +121,98 @@ const PaymentDialog = ({
         };
       }
 
+      // Step 2: If no webhook record after 3 attempts, verify directly with Paystack
+      if (verificationAttempts >= 3) {
+        console.log('No webhook record found, verifying directly with Paystack...');
+        
+        try {
+          const verifyResponse = await fetch(
+            `${SUPABASE_URL}/functions/v1/paystack-verify`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ reference: checkoutRequestId }),
+            }
+          );
+
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            console.log('Paystack verification result:', verifyData);
+            
+            if (verifyData.success && verifyData.status === 'success') {
+              // Create payment record since webhook didn't
+              await createPaymentRecord(checkoutRequestId, verifyData);
+              
+              return {
+                status: 'success',
+                transactionId: verifyData.transactionId?.toString(),
+                receiptNumber: checkoutRequestId,
+                resultDesc: 'Payment verified directly',
+              };
+            } else if (verifyData.status === 'failed') {
+              return {
+                status: 'failed',
+                resultDesc: 'Payment failed on Paystack',
+              };
+            }
+          }
+        } catch (verifyError) {
+          console.log('Direct verification failed:', verifyError);
+        }
+      }
+
       console.log('No payment record found yet for:', checkoutRequestId);
       return { status: 'pending' };
     } catch (error) {
       console.error('Error checking payment status:', error);
       return { status: 'pending' };
+    }
+  };
+
+  const createPaymentRecord = async (reference: string, verifyData: any) => {
+    try {
+      // Get order ID
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('order_number', orderNumber)
+        .single();
+      
+      if (orders) {
+        const paymentRecord = {
+          order_id: orders.id,
+          transaction_id: verifyData.transactionId?.toString() || reference,
+          amount: verifyData.amount,
+          status: 'success',
+          checkout_request_id: reference,
+          receipt_number: reference,
+          result_desc: 'Payment verified via direct check',
+          raw: verifyData
+        };
+        
+        await supabase.from('payment_records').insert(paymentRecord);
+        
+        // Update order status
+        const { data: statusData } = await supabase
+          .from('order_status')
+          .select('id')
+          .eq('name', 'processing')
+          .single();
+        
+        if (statusData) {
+          await supabase
+            .from('orders')
+            .update({ status_id: statusData.id })
+            .eq('id', orders.id);
+        }
+        
+        console.log('Payment record and order status updated successfully');
+      }
+    } catch (error) {
+      console.error('Error creating payment record:', error);
     }
   };
 
@@ -198,7 +286,6 @@ const PaymentDialog = ({
   }, [checkoutRequestId, onPaymentConfirm, toast]);
 
   const handlePaystackPayment = async () => {
-    // Validate inputs
     if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       toast({
         variant: "destructive",
@@ -260,7 +347,6 @@ const PaymentDialog = ({
         deliveryDetails,
       });
 
-      // Initialize Paystack payment
       const response = await fetch(`${SUPABASE_URL}/functions/v1/paystack-initialize`, {
         method: 'POST',
         headers: {
@@ -426,8 +512,11 @@ const PaymentDialog = ({
             <div className="text-center">
               <Loader2 className="h-8 w-8 text-blue-600 mx-auto mb-2 animate-spin" />
               <h3 className="text-base font-semibold mb-1">Confirming Payment</h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mb-2">
                 Please complete the payment in the Paystack window.
+              </p>
+              <p className="text-xs text-gray-500">
+                Attempt {verificationAttempts + 1} of {MAX_VERIFICATION_ATTEMPTS}
               </p>
             </div>
           </div>

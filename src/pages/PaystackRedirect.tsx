@@ -1,19 +1,20 @@
-'use client';
 import { useEffect, useState } from 'react';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 
 const PaymentSuccessPage = () => {
   const [status, setStatus] = useState('verifying');
   const [orderReference, setOrderReference] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+
+  const SUPABASE_URL = 'https://ppljsayhwtlogficifar.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbGpzYXlod3Rsb2dmaWNpZmFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDkxMTUsImV4cCI6MjA2OTE4NTExNX0.4p82dukMJBFl1-EU9XOLmiHvBGfEQSFDVDOu9yilhUU';
 
   useEffect(() => {
-    // Get reference from URL parameters (handles duplicates like &trxref)
     const params = new URLSearchParams(window.location.search);
     const reference = params.get('reference');
     
     if (reference) {
       setOrderReference(reference);
-      // Verify payment with your backend
       verifyPayment(reference);
     } else {
       setStatus('error');
@@ -22,13 +23,11 @@ const PaymentSuccessPage = () => {
 
   const verifyPayment = async (reference: string) => {
     try {
-      // Wait a bit for webhook to process
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for webhook to potentially process
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const SUPABASE_URL = 'https://ppljsayhwtlogficifar.supabase.co';
-      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbGpzYXlod3Rsb2dmaWNpZmFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDkxMTUsImV4cCI6MjA2OTE4NTExNX0.4p82dukMJBFl1-EU9XOLmiHvBGfEQSFDVDOu9yilhUU';
-      
-      const response = await fetch(
+      // Step 1: Check if webhook already created a record
+      const recordResponse = await fetch(
         `${SUPABASE_URL}/rest/v1/payment_records?checkout_request_id=eq.${reference}&order=created_at.desc&limit=1`,
         {
           headers: {
@@ -39,28 +38,159 @@ const PaymentSuccessPage = () => {
         }
       );
 
-      const records = await response.json();
+      const records = await recordResponse.json();
       
-      if (records && records.length > 0 && records[0].status === 'success') {
+      if (records && records.length > 0) {
+        if (records[0].status === 'success') {
+          setStatus('success');
+          notifyOpener('success', reference);
+          return;
+        } else if (records[0].status === 'failed') {
+          setStatus('error');
+          notifyOpener('failed', reference);
+          return;
+        }
+      }
+
+      // Step 2: If no webhook record, verify directly with Paystack
+      console.log('No webhook record found, verifying directly with Paystack...');
+      
+      const verifyResponse = await fetch(
+        `${SUPABASE_URL}/functions/v1/paystack-verify`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ reference }),
+        }
+      );
+
+      if (!verifyResponse.ok) {
+        throw new Error('Verification request failed');
+      }
+
+      const verifyData = await verifyResponse.json();
+      console.log('Paystack verification result:', verifyData);
+
+      if (verifyData.success && verifyData.status === 'success') {
+        // Payment is successful, create record manually
+        await createPaymentRecord(reference, verifyData);
         setStatus('success');
+        notifyOpener('success', reference);
+      } else if (verifyData.status === 'failed') {
+        setStatus('error');
+        notifyOpener('failed', reference);
       } else {
+        // Still pending on Paystack side
         setStatus('pending');
       }
 
-      // Notify opener (e.g., dialog) via postMessage
-      if (window.opener) {
-        window.opener.postMessage(
-          { type: 'payment_status', status: records && records.length > 0 && records[0].status === 'success' ? 'success' : 'pending', reference },
-          '*'
-        );
-      }
     } catch (error) {
       console.error('Verification error:', error);
-      setStatus('error');
+      
+      // Retry up to 3 times
+      if (retryCount < 3) {
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => verifyPayment(reference), 3000);
+      } else {
+        setStatus('error');
+      }
     }
   };
 
-  // Auto-close popup on success (Paystack redirect)
+  const createPaymentRecord = async (reference: string, verifyData: any) => {
+    try {
+      // Extract order number from reference (format: ORD-xxxxx-timestamp)
+      const orderNumber = reference.split('-').slice(0, -1).join('-');
+      
+      // Get order ID
+      const orderResponse = await fetch(
+        `${SUPABASE_URL}/rest/v1/orders?order_number=eq.${orderNumber}&select=id`,
+        {
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+        }
+      );
+      
+      const orders = await orderResponse.json();
+      
+      if (orders && orders.length > 0) {
+        const orderId = orders[0].id;
+        
+        // Create payment record
+        const paymentRecord = {
+          order_id: orderId,
+          transaction_id: verifyData.transactionId?.toString() || reference,
+          amount: verifyData.amount,
+          status: 'success',
+          checkout_request_id: reference,
+          receipt_number: reference,
+          result_desc: 'Payment verified via direct check',
+          raw: verifyData
+        };
+        
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/payment_records`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'apikey': SUPABASE_ANON_KEY,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(paymentRecord)
+          }
+        );
+        
+        // Update order status
+        const statusResponse = await fetch(
+          `${SUPABASE_URL}/rest/v1/order_status?name=eq.processing&select=id`,
+          {
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'apikey': SUPABASE_ANON_KEY,
+            },
+          }
+        );
+        
+        const statuses = await statusResponse.json();
+        
+        if (statuses && statuses.length > 0) {
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'apikey': SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ status_id: statuses[0].id })
+            }
+          );
+        }
+        
+        console.log('Payment record and order status updated successfully');
+      }
+    } catch (error) {
+      console.error('Error creating payment record:', error);
+    }
+  };
+
+  const notifyOpener = (status: string, reference: string) => {
+    if (window.opener) {
+      window.opener.postMessage(
+        { type: 'payment_status', status, reference },
+        '*'
+      );
+    }
+  };
+
   useEffect(() => {
     if (status === 'success') {
       setTimeout(() => {
@@ -79,6 +209,12 @@ const PaymentSuccessPage = () => {
     window.location.href = '/orders';
   };
 
+  const handleRetry = () => {
+    setStatus('verifying');
+    setRetryCount(0);
+    verifyPayment(orderReference);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
@@ -88,12 +224,17 @@ const PaymentSuccessPage = () => {
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
               Verifying Payment...
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-2">
               Please wait while we confirm your transaction
             </p>
+            {retryCount > 0 && (
+              <p className="text-sm text-gray-500">
+                Attempt {retryCount + 1} of 4
+              </p>
+            )}
             {orderReference && (
-              <p className="text-sm text-gray-500 mt-4">
-                Reference: {orderReference}
+              <p className="text-sm text-gray-500 mt-4 font-mono">
+                {orderReference}
               </p>
             )}
           </div>
@@ -114,7 +255,7 @@ const PaymentSuccessPage = () => {
             {orderReference && (
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <p className="text-sm text-gray-500 mb-1">Order Reference</p>
-                <p className="text-lg font-mono font-semibold text-gray-800">
+                <p className="text-lg font-mono font-semibold text-gray-800 break-all">
                   {orderReference}
                 </p>
               </div>
@@ -146,7 +287,7 @@ const PaymentSuccessPage = () => {
               Your payment is being processed. This may take a few moments.
             </p>
             <button
-              onClick={() => verifyPayment(orderReference)}
+              onClick={handleRetry}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
               Check Again
@@ -166,10 +307,24 @@ const PaymentSuccessPage = () => {
               We couldn't verify your payment. If money was deducted, 
               please contact support with your transaction reference.
             </p>
+            {orderReference && (
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <p className="text-sm text-gray-500 mb-1">Reference</p>
+                <p className="text-sm font-mono font-semibold text-gray-800 break-all">
+                  {orderReference}
+                </p>
+              </div>
+            )}
             <div className="space-y-3">
               <button
+                onClick={handleRetry}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              >
+                Try Again
+              </button>
+              <button
                 onClick={goToHome}
-                className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 Return to Home
               </button>
