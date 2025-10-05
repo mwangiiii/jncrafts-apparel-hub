@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingBag, Plus, Minus, Trash2, User, MapPin } from "lucide-react";
+import { ShoppingBag, Plus, Minus, Trash2, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,7 @@ import DeliveryMethodSelector from './DeliveryMethodSelector';
 import AddressAutocomplete from './AddressAutocomplete';
 import PaymentDialog from './MpesaPaymentDialog';
 import { CartThumbnail } from './CartThumbnail';
-import { Checkbox } from "@/components/ui/checkbox"; // Add Checkbox import
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { CartItem } from "@/types/database";
 import { DeliveryMethod } from '@/components/DeliveryMethodSelector';
@@ -53,7 +53,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const [shippingAddress, setShippingAddress] = useState({
     address: '',
     city: '',
-    postalCode: '', // Postal code is now optional
+    postalCode: '',
     lat: undefined as number | undefined,
     lon: undefined as number | undefined,
     isCurrentLocation: false
@@ -68,10 +68,10 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [deliveryDetails, setDeliveryDetails] = useState<DeliveryDetails | null>(null);
-  const [deliveryReviewed, setDeliveryReviewed] = useState(false); // Add state for delivery review checkbox
+  const [deliveryReviewed, setDeliveryReviewed] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
   const { user } = useAuth();
-  const { formatPrice, selectedCurrency } = useCurrency();
+  const { formatPrice } = useCurrency();
   const { toast } = useToast();
 
   const total = (items || []).reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -211,7 +211,7 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
     setDiscountCode("");
     setAppliedDiscount(null);
     setDeliveryDetails(null);
-    setDeliveryReviewed(false); // Reset delivery review checkbox
+    setDeliveryReviewed(false);
     setShowConfirmation(false);
     setShowPayment(false);
     onClose();
@@ -392,37 +392,41 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                     
                     <Separator />
                     
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-2">
                         <Checkbox
                           id="deliveryReview"
                           checked={deliveryReviewed}
                           onCheckedChange={(checked) => setDeliveryReviewed(!!checked)}
+                          className="mt-1"
                         />
-                        <Label htmlFor="deliveryReview">
+                        <Label htmlFor="deliveryReview" className="cursor-pointer">
                           I have reviewed the delivery method and cost
                         </Label>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-base">Subtotal:</span>
-                        <span className="text-base">{formatPrice(total)}</span>
-                      </div>
-                      {appliedDiscount && discountAmount > 0 && (
-                        <div className="flex items-center justify-between text-green-600">
-                          <span className="text-base">Discount ({appliedDiscount.code}):</span>
-                          <span className="text-base">-{formatPrice(discountAmount)}</span>
-                        </div>
-                      )}
-                      {deliveryDetails && (
+                      
+                      <div className="space-y-2 pt-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-base">Delivery ({deliveryDetails.method.replace('_', ' ')}):</span>
-                          <span className="text-base">{formatPrice(deliveryCost)}</span>
+                          <span className="text-base">Subtotal:</span>
+                          <span className="text-base">{formatPrice(total)}</span>
                         </div>
-                      )}
-                      <Separator />
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold">Total:</span>
-                        <span className="text-lg font-bold">{formatPrice(finalTotal)}</span>
+                        {appliedDiscount && discountAmount > 0 && (
+                          <div className="flex items-center justify-between text-green-600">
+                            <span className="text-base">Discount ({appliedDiscount.code}):</span>
+                            <span className="text-base">-{formatPrice(discountAmount)}</span>
+                          </div>
+                        )}
+                        {deliveryDetails && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-base">Delivery ({deliveryDetails.method.replace('_', ' ')}):</span>
+                            <span className="text-base">{formatPrice(deliveryCost)}</span>
+                          </div>
+                        )}
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold">Total:</span>
+                          <span className="text-lg font-bold">{formatPrice(finalTotal)}</span>
+                        </div>
                       </div>
                     </div>
                     
@@ -468,13 +472,13 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
         shippingAddress={{ address: shippingAddress.address, city: shippingAddress.city, postalCode: shippingAddress.postalCode }}
         orderItems={items.map(item => ({
           productId: item.product_id,
-          variantId: item.variant_id || '', // Assuming CartItem has variant_id; adjust if necessary
+          variantId: item.variant_id || null,
           price: item.price,
           quantity: item.quantity,
           imageUrl: item.product_image
         }))}
         discountAmount={discountAmount}
-        deliveryDetails={deliveryDetails}  // ADD THIS LINE
+        deliveryDetails={deliveryDetails}
       />
     </div>
   );
