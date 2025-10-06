@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast'; // Aligned with dashboard import
+import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   ArrowLeft, 
@@ -86,7 +86,7 @@ interface Order {
 }
 
 const AdminOrderDetail = () => {
-  const { id } = useParams<{ id: string }>(); // Changed to 'id' to match dashboard link: /admin/orders/${order.id}
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
@@ -106,36 +106,78 @@ const AdminOrderDetail = () => {
   const fetchOrder = async () => {
     try {
       setLoading(true);
+      
+      // Fetch order with proper joins for sizes and colors
       const { data: orderData, error: orderError } = await supabase
-        .rpc('get_order_details', { order_id_param: id }); // Use 'id' param
+        .from('orders')
+        .select(`
+          *,
+          order_status!orders_status_id_fkey (
+            name,
+            display_name
+          ),
+          order_items (
+            id,
+            product_id,
+            variant_id,
+            price,
+            quantity,
+            image_url,
+            products!inner (
+              name
+            ),
+            product_variants!inner (
+              id,
+              sizes (
+                name
+              ),
+              colors (
+                name
+              )
+            )
+          ),
+          discounts (
+            name,
+            code
+          )
+        `)
+        .eq('id', id)
+        .single();
 
-      if (orderError || !orderData || orderData.length === 0) {
+      if (orderError || !orderData) {
         console.error('Error fetching order:', orderError);
         throw orderError || new Error('Order not found');
       }
 
-      const rawOrder = orderData[0]; // Single row from RPC
-      // Handle order_items as array of objects (from jsonb_agg in RPC)
-      const orderItems: OrderItem[] = Array.isArray(rawOrder.order_items) ? rawOrder.order_items : [];
-
+      // Map the data to match our Order interface
       const mappedOrder: Order = {
-        id: rawOrder.id,
-        order_number: rawOrder.order_number,
-        status_id: rawOrder.status_id,
-        total_amount: Number(rawOrder.total_amount),
-        discount_amount: Number(rawOrder.discount_amount),
-        discount_id: rawOrder.discount_id,
-        shipping_address: rawOrder.shipping_address,
-        customer_info: rawOrder.customer_info,
-        created_at: rawOrder.created_at,
-        updated_at: rawOrder.updated_at,
-        delivery_details: rawOrder.delivery_details,
-        transaction_code: rawOrder.transaction_code,
-        status_name: rawOrder.status_name,
-        status_display_name: rawOrder.status_display_name,
-        discount_name: rawOrder.discount_name,
-        discount_code: rawOrder.discount_code,
-        order_items: orderItems
+        id: orderData.id,
+        order_number: orderData.order_number,
+        status_id: orderData.status_id,
+        total_amount: Number(orderData.total_amount),
+        discount_amount: Number(orderData.discount_amount),
+        discount_id: orderData.discount_id,
+        shipping_address: orderData.shipping_address,
+        customer_info: orderData.customer_info,
+        created_at: orderData.created_at,
+        updated_at: orderData.updated_at,
+        delivery_details: orderData.delivery_details,
+        transaction_code: orderData.transaction_code,
+        status_name: orderData.order_status?.name || '',
+        status_display_name: orderData.order_status?.display_name || '',
+        discount_name: orderData.discounts?.name,
+        discount_code: orderData.discounts?.code,
+        order_items: orderData.order_items.map((item: any) => ({
+          id: item.id,
+          product_id: item.product_id,
+          product_name: item.products?.name || 'Unknown Product',
+          variant_id: item.variant_id,
+          color_name: item.product_variants?.colors?.name || 'N/A',
+          size_name: item.product_variants?.sizes?.name || 'N/A',
+          price: Number(item.price),
+          quantity: item.quantity,
+          image_url: item.image_url
+        }))
       };
 
       setOrder(mappedOrder);
@@ -146,7 +188,7 @@ const AdminOrderDetail = () => {
         description: error.message || "Failed to fetch order details",
         variant: "destructive",
       });
-      navigate('/admin'); // Redirect to dashboard if not found
+      navigate('/admin');
     } finally {
       setLoading(false);
     }
@@ -393,7 +435,7 @@ const AdminOrderDetail = () => {
           <Breadcrumb className="lg:w-auto">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/admin">Dashboard</BreadcrumbLink> {/* Aligned with dashboard */}
+                <BreadcrumbLink href="/admin">Dashboard</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -503,11 +545,11 @@ const AdminOrderDetail = () => {
                       </div>
                       <div className="text-center flex-shrink-0">
                         <div className="font-medium text-sm">x{item.quantity}</div>
-                        <div className="text-xs text-muted-foreground">{formatCurrency(item.price)} ea.</div> {/* Use formatCurrency */}
+                        <div className="text-xs text-muted-foreground">{formatCurrency(item.price)} ea.</div>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className="font-bold text-sm">
-                          {formatCurrency(item.price * item.quantity)} {/* Use formatCurrency */}
+                          {formatCurrency(item.price * item.quantity)}
                         </div>
                       </div>
                     </div>
@@ -568,7 +610,7 @@ const AdminOrderDetail = () => {
                     <div>
                       <span className="font-medium">Discount Applied:</span>
                       <Badge variant="secondary" className="ml-2 text-xs">{order.discount_name} ({order.discount_code})</Badge>
-                      <div className="text-sm text-muted-foreground mt-1">{formatCurrency(-order.discount_amount)}</div> {/* Use formatCurrency with negative */}
+                      <div className="text-sm text-muted-foreground mt-1">{formatCurrency(-order.discount_amount)}</div>
                     </div>
                   )}
                   {order.customer_info?.notes && (
@@ -602,7 +644,7 @@ const AdminOrderDetail = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Date:</span>
-                    <span>{new Date(order.created_at).toLocaleDateString('en-KE')}</span> {/* Consistent locale */}
+                    <span>{new Date(order.created_at).toLocaleDateString('en-KE')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Payment:</span>
@@ -615,17 +657,17 @@ const AdminOrderDetail = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(order.total_amount + order.discount_amount)}</span> {/* Use formatCurrency */}
+                    <span>{formatCurrency(order.total_amount + order.discount_amount)}</span>
                   </div>
                   {order.discount_amount > 0 && (
                     <div className="flex justify-between text-emerald-600">
                       <span>Discount:</span>
-                      <span>{formatCurrency(-order.discount_amount)}</span> {/* Use formatCurrency */}
+                      <span>{formatCurrency(-order.discount_amount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total:</span>
-                    <span>{formatCurrency(order.total_amount)}</span> {/* Use formatCurrency */}
+                    <span>{formatCurrency(order.total_amount)}</span>
                   </div>
                 </div>
               </CardContent>

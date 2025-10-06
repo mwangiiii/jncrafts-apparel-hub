@@ -245,91 +245,130 @@ const AdminDashboard = () => {
   };
 
   const updateOrderStatus = async (orderId: string, newStatusId: string) => {
-    try {
-      console.log('Attempting to update order', orderId, 'to status_id', newStatusId);
+  try {
+    // First, update the order status in the database
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({ status_id: newStatusId })
+      .eq('id', orderId);
 
-      // Validate newStatusId is provided
-      if (!newStatusId) {
-        throw new Error('No status selected');
-      }
+    if (updateError) {
+      console.error('Update error details:', updateError);
+      throw updateError;
+    }
 
-      // Get the status details for the new status
-      const { data: statusData, error: statusError } = await supabase
-        .from('order_status')
-        .select('id, name, display_name')
-        .eq('id', newStatusId)
-        .single();
+    // Fetch the complete order details with related data
 
-      if (statusError || !statusData) {
-        console.error('Status fetch error:', statusError);
-        throw new Error(`Invalid status: ${statusError?.message || 'Status not found'}`);
-      }
+    const { data: orderData, error: fetchError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          id,
+          product_id,
+          variant_id,
+          price,
+          quantity,
+          image_url,
+          products (
+            name
+          ),
+          product_variants (
+            id,
+            sizes (
+              name
+            ),
+            colors (
+              name
+            )
+          )
+        ),
+        order_status!orders_status_id_fkey (
+          name,
+          display_name
+        )
+      `)
+      .eq('id', orderId)
+      .single();
 
-      console.log('Status found:', statusData);
+    if (fetchError || !orderData) {
+      console.error('Fetch error:', fetchError);
+      throw fetchError || new Error('Order not found');
+    }
 
-      // Update the order
-      const { error } = await supabase
-        .from('orders')
-        .update({ status_id: newStatusId })
-        .eq('id', orderId);
+    // Parse customer info and shipping address
+    const customerInfo = orderData.customer_info as { name: string; email: string; phone: string };
+    const shippingAddress = orderData.shipping_address as {
+      address: string;
+      city: string;
+      postalCode: string;
+      country?: string;
+    };
 
-      if (error) {
-        console.error('Update error details:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-        throw error;
-      }
+    // Format items for the email
+    const formattedItems = orderData.order_items.map((item: any) => ({
+      product_name: item.products?.name || 'Unknown Product',
+      size: item.product_variants?.size || 'N/A',
+      color: item.product_variants?.color || 'N/A',
+      quantity: item.quantity,
+      price: parseFloat(item.price)
+    }));
 
-      console.log('Order updated successfully');
-
-      // Send email notification (aligns with revamped schema)
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        const orderData = {
-          order_number: order.order_number,
-          status: statusData.name,
-          customer_email: (order.customer_info as any)?.email,
-          total_amount: order.total_amount,
-          discount_amount: order.discount_amount // Include discount from schema
-        };
-
-        try {
-          await supabase.functions.invoke('send-order-status-update', {
-            body: { orderData }
-          });
-        } catch (emailError) {
-          console.error('Error sending email:', emailError);
-          // Don't throw error for email failures
+    // Send the order status update email
+    const { data: emailData, error: emailError } = await supabase.functions.invoke(
+      'send-order-status-update',
+      {
+        body: {
+          customerEmail: customerInfo.email,
+          adminEmail: 'craftsjn@gmail.com',
+          orderNumber: orderData.order_number,
+          customerName: customerInfo.name,
+          orderStatus: orderData.order_status.name,
+          items: formattedItems,
+          totalAmount: parseFloat(orderData.total_amount),
+          discountAmount: parseFloat(orderData.discount_amount || '0'),
+          shippingAddress: {
+            address: shippingAddress.address,
+            city: shippingAddress.city,
+            postalCode: shippingAddress.postalCode,
+            country: shippingAddress.country || 'Kenya'
+          },
+          currency: {
+            code: 'KES',
+            symbol: 'KSh'
+          }
         }
       }
+    );
 
-      setOrders(orders.map(order => 
-        order.id === orderId ? { 
-          ...order, 
-          status_id: newStatusId,
-          order_status: statusData 
-        } : order
-      ));
-
+    if (emailError) {
+      console.error('Email error:', emailError);
       toast({
-        title: "Order Updated",
-        description: `Order status changed to ${statusData.display_name}. Customer notified via email.`,
+        title: 'Status Updated',
+        description: 'Order status updated but email notification failed to send.',
+        variant: 'default'
       });
-
-      fetchStats(); // Refresh stats
-    } catch (error) {
-      console.error('Full error in updateOrderStatus:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update order status';
+    } else {
+      console.log('Email sent successfully:', emailData);
       toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
+        title: 'Success',
+        description: 'Order status updated and notification sent.',
+        variant: 'default'
       });
     }
-  };
+
+    // Refresh the orders list
+    await fetchOrders();
+
+  } catch (error: any) {
+    console.error('Full error in updateOrderStatus:', error);
+    toast({
+      title: 'Error',
+      description: error.message || 'Failed to update order status',
+      variant: 'destructive'
+    });
+  }
+};
 
   const handleRefresh = async () => {
     setRefreshing(true);
