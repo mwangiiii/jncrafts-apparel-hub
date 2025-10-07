@@ -24,6 +24,20 @@ import SpecialOffersManager from '@/components/admin/SpecialOffersManager';
 import FeaturedProductsManager from '@/components/admin/FeaturedProductsManager';
 import type { Json } from '@/integrations/supabase/types';
 import { cn } from "@/lib/utils"; // Assuming Shadcn utils for classNames
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Updated interfaces to align with revamped DB schema
 interface OrderItem {
@@ -54,6 +68,25 @@ interface Order {
   order_status: OrderStatus | null;
 }
 
+interface Payment {
+  id: number;
+  order_id: string | null;
+  transaction_id: string | null;
+  amount: number | null;
+  status: string | null;
+  created_at: string;
+  checkout_request_id: string | null;
+  receipt_number: string | null;
+  result_desc: string | null;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
 interface Stats {
   totalOrders: number;
   totalRevenue: number;
@@ -78,6 +111,8 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   
   const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -86,7 +121,14 @@ const AdminDashboard = () => {
   });
   const [loadingData, setLoadingData] = useState(true);
   const [statusOptions, setStatusOptions] = useState<OrderStatus[]>([]);
+  const [paymentStatuses, setPaymentStatuses] = useState<string[]>([]);
+  const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOrdersModalOpen, setIsOrdersModalOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [isPaymentsModalOpen, setIsPaymentsModalOpen] = useState(false);
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string | null>(null);
+  const [isCustomersModalOpen, setIsCustomersModalOpen] = useState(false);
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -99,6 +141,9 @@ const AdminDashboard = () => {
     await Promise.all([
       fetchStatusOptions(),
       fetchOrders(),
+      fetchPayments(),
+      fetchPaymentStatuses(),
+      fetchCustomers(),
       fetchStats(),
     ]);
     setLoadingData(false);
@@ -115,26 +160,31 @@ const AdminDashboard = () => {
   const fetchOrders = async () => {
     try {
       const { data: ordersData, error: ordersError } = await supabase
-        .rpc('get_recent_orders', { limit_count: 10 });
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          status_id,
+          created_at,
+          customer_info,
+          discount_amount,
+          order_status (
+            id,
+            name,
+            display_name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
         throw ordersError;
       }
 
-      // Map flat RPC response to include nested order_status
-      const mappedOrders = (ordersData || []).map((order: any) => ({
-        ...order,
-        order_status: {
-          id: order.status_id,
-          name: order.status_name,
-          display_name: order.status_display_name
-        }
-      }));
-
       // Fetch order items for each order (optimized: batch if possible, but sequential for simplicity)
       const ordersWithItems = await Promise.all(
-        mappedOrders.map(async (order) => {
+        (ordersData || []).map(async (order: any) => {
           const { data: itemsData, error: itemsError } = await supabase
             .from('order_items')
             .select(`
@@ -173,28 +223,67 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchPayments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_records')
+        .select('id, order_id, transaction_id, amount, status, created_at, checkout_request_id, receipt_number, result_desc')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPayments(data || []);
+    } catch (error) {
+      console.error('Failed to fetch payments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch payments data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, email, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error('Failed to fetch customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch customers data",
+        variant: "destructive",
+      });
+    }
+  };
+
   const fetchStats = async () => {
     try {
-      // Total customers first (always fetch)
+      // Total customers
       const { count: customersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      // Total orders and revenue
+      // Total orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('total_amount, status_id')
-        .limit(1000); // Cap if dataset is large
+        .select('total_amount, status_id');
 
       if (ordersError) {
         console.error('Error fetching orders for stats:', ordersError);
-        setStats({
-          totalOrders: 0,
-          totalRevenue: 0,
-          pendingOrders: 0,
-          totalCustomers: customersCount || 0
-        });
-        return;
+      }
+
+      // Payments for revenue
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payment_records')
+        .select('amount, status');
+
+      if (paymentsError) {
+        console.error('Error fetching payments for stats:', paymentsError);
       }
 
       // Get pending status id
@@ -210,11 +299,11 @@ const AdminDashboard = () => {
 
       const pendingStatusId = pendingStatusData?.id || null;
       
-      const totalOrders = ordersData.length;
-      const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+      const totalOrders = ordersData?.length || 0;
+      const totalRevenue = paymentsData?.reduce((sum, p) => (p.status === 'Completed' ? sum + Number(p.amount || 0) : sum), 0) || 0;
       
       const pendingOrders = pendingStatusId 
-        ? ordersData.filter(order => order.status_id === pendingStatusId).length 
+        ? ordersData?.filter(order => order.status_id === pendingStatusId).length || 0
         : 0;
 
       setStats({
@@ -239,8 +328,23 @@ const AdminDashboard = () => {
 
       if (error) throw error;
       setStatusOptions(data || []);
+      setPendingStatusId(data?.find(s => s.name.toLowerCase() === 'pending')?.id ?? null);
     } catch (error) {
       console.error('Error fetching status options:', error);
+    }
+  };
+
+  const fetchPaymentStatuses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_records')
+        .select('distinct status');
+
+      if (error) throw error;
+      const statuses = data?.map(d => d.status).filter(Boolean) || [];
+      setPaymentStatuses(statuses);
+    } catch (error) {
+      console.error('Error fetching payment statuses:', error);
     }
   };
 
@@ -393,7 +497,10 @@ const AdminDashboard = () => {
       change: "+12%", // Placeholder; fetch real if needed
       icon: ShoppingCart,
       color: "text-blue-600 bg-blue-50",
-      href: "/admin/orders"
+      onClick: () => {
+        setSelectedStatus(null);
+        setIsOrdersModalOpen(true);
+      }
     },
     {
       title: "Total Revenue",
@@ -401,7 +508,10 @@ const AdminDashboard = () => {
       change: "+8%",
       icon: DollarSign,
       color: "text-green-600 bg-green-50",
-      href: "/admin/reports/revenue"
+      onClick: () => {
+        setSelectedPaymentStatus(null);
+        setIsPaymentsModalOpen(true);
+      }
     },
     {
       title: "Pending Orders",
@@ -409,7 +519,10 @@ const AdminDashboard = () => {
       change: "-2%",
       icon: Package,
       color: "text-orange-600 bg-orange-50",
-      href: "/admin/orders?status=pending"
+      onClick: () => {
+        if (pendingStatusId) setSelectedStatus(pendingStatusId);
+        setIsOrdersModalOpen(true);
+      }
     },
     {
       title: "Total Customers",
@@ -417,7 +530,7 @@ const AdminDashboard = () => {
       change: "+15%",
       icon: Users,
       color: "text-purple-600 bg-purple-50",
-      href: "/admin/customers"
+      onClick: () => setIsCustomersModalOpen(true)
     }
   ];
 
@@ -479,7 +592,6 @@ const AdminDashboard = () => {
           </div>
           
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>Customer: {(order.customer_info as any)?.fullName || 'N/A'}</p>
             <p>Items: {order.order_items.length}</p>
             {order.discount_amount > 0 && (
               <p>Discount: {formatCurrency(Number(order.discount_amount))}</p>
@@ -501,6 +613,9 @@ const AdminDashboard = () => {
       </div>
     );
   }
+
+  const displayedOrders = orders.filter((order) => !selectedStatus || order.status_id === selectedStatus);
+  const displayedPayments = payments.filter((payment) => !selectedPaymentStatus || payment.status === selectedPaymentStatus);
 
   return (
     <div className="min-h-screen bg-background">
@@ -526,21 +641,28 @@ const AdminDashboard = () => {
         {/* Stats Cards - Responsive grid with hover effects */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((stat, index) => (
-            <Card key={index} className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <a href={stat.href} className="block p-6 space-y-3">
+            <Card 
+              key={index} 
+              className={cn(
+                "hover:shadow-lg transition-all duration-200",
+                stat.onClick ? "cursor-pointer" : ""
+              )}
+              onClick={stat.onClick}
+            >
+              <div className="p-6 space-y-3 relative">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     {stat.title}
                   </CardTitle>
                   <stat.icon className={`h-5 w-5 ${stat.color}`} />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                   <div className="space-y-1">
                     <div className="text-2xl font-bold text-foreground">{stat.value}</div>
                     <p className="text-xs text-muted-foreground">Change: <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>{stat.change}</span></p>
                   </div>
                 </CardContent>
-              </a>
+              </div>
             </Card>
           ))}
         </div>
@@ -579,7 +701,7 @@ const AdminDashboard = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {orders.map((order) => (
+                    {orders.slice(0, 10).map((order) => (
                       <OrderCard key={order.id} order={order} />
                     ))}
                   </div>
@@ -605,6 +727,206 @@ const AdminDashboard = () => {
           </TabsContent> */}
         </Tabs>
       </div>
+
+      {/* Orders Modal */}
+      <Dialog open={isOrdersModalOpen} onOpenChange={setIsOrdersModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Orders</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {displayedOrders.length} orders
+              </p>
+              <Select
+                value={selectedStatus ?? 'all'}
+                onValueChange={(value) => setSelectedStatus(value === 'all' ? null : value)}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status.id} value={status.id}>
+                      {status.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {displayedOrders.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No orders match the selected filter</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayedOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">#{order.order_number}</TableCell>
+                      <TableCell>{format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                      <TableCell>{formatCurrency(Number(order.total_amount))}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(order.order_status?.name)}>
+                          {order.order_status?.display_name || 'Unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                        >
+                          <a href={`/admin/orders/${order.id}`} target="_blank" rel="noopener noreferrer">
+                            <Eye className="h-4 w-4" />
+                          </a>
+                        </Button>
+                        <Select
+                          value={order.status_id}
+                          onValueChange={(newStatusId) => updateOrderStatus(order.id, newStatusId)}
+                        >
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map((status) => (
+                              <SelectItem key={status.id} value={status.id}>
+                                {status.display_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payments Modal */}
+      <Dialog open={isPaymentsModalOpen} onOpenChange={setIsPaymentsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Payment Records</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {displayedPayments.length} payments
+              </p>
+              <Select
+                value={selectedPaymentStatus ?? 'all'}
+                onValueChange={(value) => setSelectedPaymentStatus(value === 'all' ? null : value)}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {paymentStatuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {displayedPayments.length === 0 ? (
+              <div className="text-center py-12">
+                <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No payments match the selected filter</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Transaction ID</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created At</TableHead>
+                    <TableHead>Checkout Request ID</TableHead>
+                    <TableHead>Receipt Number</TableHead>
+                    <TableHead>Result Desc</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayedPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>{payment.id}</TableCell>
+                      <TableCell>{payment.order_id || 'N/A'}</TableCell>
+                      <TableCell>{payment.transaction_id || 'N/A'}</TableCell>
+                      <TableCell>{payment.amount ? formatCurrency(payment.amount) : 'N/A'}</TableCell>
+                      <TableCell>{payment.status || 'Unknown'}</TableCell>
+                      <TableCell>{format(new Date(payment.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                      <TableCell>{payment.checkout_request_id || 'N/A'}</TableCell>
+                      <TableCell>{payment.receipt_number || 'N/A'}</TableCell>
+                      <TableCell>{payment.result_desc || 'N/A'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customers Modal */}
+      <Dialog open={isCustomersModalOpen} onOpenChange={setIsCustomersModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Customers</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {customers.length} customers
+            </p>
+            {customers.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No customers found</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Created At</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell>{customer.id}</TableCell>
+                      <TableCell>{customer.name || 'N/A'}</TableCell>
+                      <TableCell>{customer.email || 'N/A'}</TableCell>
+                      <TableCell>{format(new Date(customer.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
