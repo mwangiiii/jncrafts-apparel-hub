@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLazyCart } from '@/hooks/useLazyCart';
 import { Product } from '@/types/database';
+import ContactDeveloperButton from "@/components/ContactDeveloperButton";
 
 const Index = () => {
   const { toast } = useToast();
@@ -94,6 +95,8 @@ const Index = () => {
         onClearCart={clearCart}
         isLoading={cartLoading}
       />
+      
+      <ContactDeveloperButton />
     </div>
   );
 };

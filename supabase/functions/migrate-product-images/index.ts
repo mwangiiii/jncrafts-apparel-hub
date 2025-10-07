@@ -88,6 +88,9 @@ Deno.serve(async (req) => {
           }
         }
         
+        let uint8Array: Uint8Array
+        let contentType = 'image/jpeg'
+        
         if (shouldDownload) {
 
           // Download the image
@@ -99,6 +102,7 @@ Deno.serve(async (req) => {
           }
 
           const blob = await response.blob()
+          contentType = blob.type || 'image/jpeg'
           const arrayBuffer = await blob.arrayBuffer()
           uint8Array = new Uint8Array(arrayBuffer)
         }
@@ -117,7 +121,7 @@ Deno.serve(async (req) => {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('images')
           .upload(filePath, uint8Array, {
-            contentType: blob.type || 'image/jpeg',
+            contentType: contentType,
             upsert: true
           })
 
@@ -147,7 +151,7 @@ Deno.serve(async (req) => {
 
       } catch (error) {
         console.error(`Error processing image ${image.id}:`, error)
-        errors.push(`Image ${image.id}: ${error.message}`)
+        errors.push(`Image ${image.id}: ${error instanceof Error ? error.message : 'Unknown error'}`)
         errorCount++
       }
     }
@@ -172,7 +176,7 @@ Deno.serve(async (req) => {
     console.error('Migration function error:', error)
     return new Response(JSON.stringify({
       error: 'Migration failed',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

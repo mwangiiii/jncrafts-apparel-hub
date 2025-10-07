@@ -79,7 +79,7 @@ async function getAccessToken(): Promise<string> {
     return data.access_token;
   } catch (error) {
     console.error('Error getting access token:', error);
-    throw new Error(`Failed to get access token: ${error.message}`);
+    throw new Error(`Failed to get access token: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -149,7 +149,7 @@ async function initiateSTKPush(accessToken: string, stkRequest: STKPushRequest):
     return data;
   } catch (error) {
     console.error('Error initiating STK Push:', error);
-    throw new Error(`Failed to initiate STK Push: ${error.message}`);
+    throw new Error(`Failed to initiate STK Push: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -188,7 +188,7 @@ serve(async (req) => {
     } catch (error) {
       return new Response(JSON.stringify({
         error: 'Environment check failed',
-        message: error.message,
+        message: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       }, null, 2), {
         status: 500,
@@ -254,7 +254,7 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       }), {
         status: 500,

@@ -91,6 +91,37 @@ const Footer = () => {
           </div>
         </div>
 
+        {/* Developer Contact Section */}
+        <div className="border-t border-background/20 mt-8 pt-8">
+          <div className="bg-background/5 rounded-lg p-6 text-center">
+            <p className="text-background/90 mb-4">
+              ✨ <span className="font-semibold">Interested in a similar system?</span>
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a
+                href="mailto:mwangiwanjiku033@gmail.com"
+                className="flex items-center gap-2 text-background/80 hover:text-brand-beige transition-colors group"
+              >
+                <Mail className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                <span>mwangiwanjiku033@gmail.com</span>
+              </a>
+              <span className="hidden sm:inline text-background/40">|</span>
+              <a
+                href="https://wa.me/254743614394"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-background/80 hover:text-[#25D366] transition-colors group"
+              >
+                <Phone className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                <span>WhatsApp: +254 743 614 394</span>
+              </a>
+            </div>
+            <p className="text-background/60 text-sm mt-3">
+              Custom web solutions tailored to your business needs
+            </p>
+          </div>
+        </div>
+
         {/* Copyright */}
         <div className="border-t border-background/20 mt-8 pt-8 text-center text-background/60">
           <p>&copy; 2024 JNCRAFTS. All rights reserved. | <a href="#" className="hover:text-brand-beige transition-colors">Privacy Policy</a> | <a href="#" className="hover:text-brand-beige transition-colors">Terms of Service</a></p>
