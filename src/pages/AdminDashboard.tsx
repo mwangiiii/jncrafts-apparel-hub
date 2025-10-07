@@ -17,13 +17,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShoppingCart, Users, DollarSign, Package, Eye, RefreshCw, ChevronRight } from 'lucide-react';
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { OptimizedProductsSection } from '@/components/admin/OptimizedProductsSection';
 import NewArrivalsManager from '@/components/admin/NewArrivalsManager';
 import SpecialOffersManager from '@/components/admin/SpecialOffersManager';
 import FeaturedProductsManager from '@/components/admin/FeaturedProductsManager';
 import type { Json } from '@/integrations/supabase/types';
-import { cn } from "@/lib/utils"; // Assuming Shadcn utils for classNames
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Updated interfaces to align with revamped DB schema
+// Interfaces
 interface OrderItem {
   id: string;
   product_id: string;
@@ -82,8 +82,8 @@ interface Payment {
 
 interface Customer {
   id: string;
-  name: string;
-  email: string;
+  full_name: string | null;
+  email: string | null;
   created_at: string;
 }
 
@@ -94,9 +94,25 @@ interface Stats {
   totalCustomers: number;
 }
 
+// Helper function to safely format dates
+const formatSafeDate = (dateValue: any, formatString: string = 'MMM dd, yyyy HH:mm'): string => {
+  if (!dateValue) return 'N/A';
+  
+  try {
+    const date = new Date(dateValue);
+    if (isValid(date)) {
+      return format(date, formatString);
+    }
+  } catch (e) {
+    console.error('Error formatting date:', dateValue, e);
+  }
+  
+  return 'N/A';
+};
+
 // Status badge variants mapping for better UX
 const getStatusVariant = (statusName: string | undefined): "default" | "secondary" | "outline" | "destructive" => {
-  switch (statusName) {
+  switch (statusName?.toLowerCase()) {
     case 'delivered': return 'default';
     case 'shipped': return 'secondary';
     case 'processing': return 'outline';
@@ -138,15 +154,25 @@ const AdminDashboard = () => {
 
   const loadData = async () => {
     setLoadingData(true);
-    await Promise.all([
-      fetchStatusOptions(),
-      fetchOrders(),
-      fetchPayments(),
-      fetchPaymentStatuses(),
-      fetchCustomers(),
-      fetchStats(),
-    ]);
-    setLoadingData(false);
+    try {
+      await Promise.all([
+        fetchStatusOptions(),
+        fetchOrders(),
+        fetchPayments(),
+        fetchPaymentStatuses(),
+        fetchCustomers(),
+        fetchStats(),
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingData(false);
+    }
   };
 
   if (loading) {
@@ -177,12 +203,8 @@ const AdminDashboard = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (ordersError) {
-        console.error('Error fetching orders:', ordersError);
-        throw ordersError;
-      }
+      if (ordersError) throw ordersError;
 
-      // Fetch order items for each order (optimized: batch if possible, but sequential for simplicity)
       const ordersWithItems = await Promise.all(
         (ordersData || []).map(async (order: any) => {
           const { data: itemsData, error: itemsError } = await supabase
@@ -204,7 +226,6 @@ const AdminDashboard = () => {
             return { ...order, order_items: [] as OrderItem[] };
           }
 
-          // Type assertion for items with joined data
           return { 
             ...order, 
             order_items: itemsData || [] 
@@ -245,17 +266,23 @@ const AdminDashboard = () => {
   const fetchCustomers = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, email, created_at')
-        .order('created_at', { ascending: false });
+        .rpc('get_profiles_with_email');
 
       if (error) throw error;
-      setCustomers(data || []);
-    } catch (error) {
+
+      const formattedCustomers = data.map((profile: any) => ({
+        id: profile.id,
+        full_name: profile.full_name || 'N/A',
+        email: profile.email || 'N/A',
+        created_at: profile.created_at,
+      }));
+
+      setCustomers(formattedCustomers);
+    } catch (error: any) {
       console.error('Failed to fetch customers:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch customers data",
+        description: "Failed to load customers",
         variant: "destructive",
       });
     }
@@ -263,30 +290,22 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      // Total customers
       const { count: customersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      // Total orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('total_amount, status_id');
 
-      if (ordersError) {
-        console.error('Error fetching orders for stats:', ordersError);
-      }
+      if (ordersError) throw ordersError;
 
-      // Payments for revenue
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payment_records')
         .select('amount, status');
 
-      if (paymentsError) {
-        console.error('Error fetching payments for stats:', paymentsError);
-      }
+      if (paymentsError) throw paymentsError;
 
-      // Get pending status id
       const { data: pendingStatusData, error: pendingStatusError } = await supabase
         .from('order_status')
         .select('id')
@@ -294,14 +313,13 @@ const AdminDashboard = () => {
         .single();
 
       if (pendingStatusError && pendingStatusError.code !== 'PGRST116') {
-        console.error('Error fetching pending status:', pendingStatusError);
+        throw pendingStatusError;
       }
 
       const pendingStatusId = pendingStatusData?.id || null;
       
       const totalOrders = ordersData?.length || 0;
       const totalRevenue = paymentsData?.reduce((sum, p) => (p.status === 'Completed' ? sum + Number(p.amount || 0) : sum), 0) || 0;
-      
       const pendingOrders = pendingStatusId 
         ? ordersData?.filter(order => order.status_id === pendingStatusId).length || 0
         : 0;
@@ -314,7 +332,11 @@ const AdminDashboard = () => {
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
-      // Optionally toast here if critical
+      toast({
+        title: "Error",
+        description: "Failed to fetch stats data",
+        variant: "destructive",
+      });
     }
   };
 
@@ -331,6 +353,11 @@ const AdminDashboard = () => {
       setPendingStatusId(data?.find(s => s.name.toLowerCase() === 'pending')?.id ?? null);
     } catch (error) {
       console.error('Error fetching status options:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch status options",
+        variant: "destructive",
+      });
     }
   };
 
@@ -338,141 +365,137 @@ const AdminDashboard = () => {
     try {
       const { data, error } = await supabase
         .from('payment_records')
-        .select('distinct status');
+        .select('status')
+        .not('status', 'is', null);
 
       if (error) throw error;
-      const statuses = data?.map(d => d.status).filter(Boolean) || [];
-      setPaymentStatuses(statuses);
+      
+      // Get unique statuses manually
+      const uniqueStatuses = [...new Set(data?.map(d => d.status).filter(Boolean) || [])];
+      setPaymentStatuses(uniqueStatuses);
     } catch (error) {
       console.error('Error fetching payment statuses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch payment statuses",
+        variant: "destructive",
+      });
     }
   };
 
   const updateOrderStatus = async (orderId: string, newStatusId: string) => {
-  try {
-    // First, update the order status in the database
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ status_id: newStatusId })
-      .eq('id', orderId);
+    try {
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status_id: newStatusId })
+        .eq('id', orderId);
 
-    if (updateError) {
-      console.error('Update error details:', updateError);
-      throw updateError;
-    }
+      if (updateError) throw updateError;
 
-    // Fetch the complete order details with related data
-
-    const { data: orderData, error: fetchError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items (
-          id,
-          product_id,
-          variant_id,
-          price,
-          quantity,
-          image_url,
-          products (
-            name
-          ),
-          product_variants (
+      const { data: orderData, error: fetchError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
             id,
-            sizes (
+            product_id,
+            variant_id,
+            price,
+            quantity,
+            image_url,
+            products (
               name
             ),
-            colors (
-              name
+            product_variants (
+              id,
+              sizes (
+                name
+              ),
+              colors (
+                name
+              )
             )
+          ),
+          order_status!orders_status_id_fkey (
+            name,
+            display_name
           )
-        ),
-        order_status!orders_status_id_fkey (
-          name,
-          display_name
-        )
-      `)
-      .eq('id', orderId)
-      .single();
+        `)
+        .eq('id', orderId)
+        .single();
 
-    if (fetchError || !orderData) {
-      console.error('Fetch error:', fetchError);
-      throw fetchError || new Error('Order not found');
-    }
+      if (fetchError || !orderData) {
+        throw fetchError || new Error('Order not found');
+      }
 
-    // Parse customer info and shipping address
-    const customerInfo = orderData.customer_info as { name: string; email: string; phone: string };
-    const shippingAddress = orderData.shipping_address as {
-      address: string;
-      city: string;
-      postalCode: string;
-      country?: string;
-    };
+      const customerInfo = orderData.customer_info as { name: string; email: string; phone: string };
+      const shippingAddress = orderData.shipping_address as {
+        address: string;
+        city: string;
+        postalCode: string;
+        country?: string;
+      };
 
-    // Format items for the email
-    const formattedItems = orderData.order_items.map((item: any) => ({
-      product_name: item.products?.name || 'Unknown Product',
-      size: item.product_variants?.size || 'N/A',
-      color: item.product_variants?.color || 'N/A',
-      quantity: item.quantity,
-      price: parseFloat(item.price)
-    }));
+      const formattedItems = orderData.order_items.map((item: any) => ({
+        product_name: item.products?.name || 'Unknown Product',
+        size: item.product_variants?.size || 'N/A',
+        color: item.product_variants?.color || 'N/A',
+        quantity: item.quantity,
+        price: parseFloat(item.price)
+      }));
 
-    // Send the order status update email
-    const { data: emailData, error: emailError } = await supabase.functions.invoke(
-      'send-order-status-update',
-      {
-        body: {
-          customerEmail: customerInfo.email,
-          adminEmail: 'craftsjn@gmail.com',
-          orderNumber: orderData.order_number,
-          customerName: customerInfo.name,
-          orderStatus: orderData.order_status.name,
-          items: formattedItems,
-          totalAmount: parseFloat(orderData.total_amount),
-          discountAmount: parseFloat(orderData.discount_amount || '0'),
-          shippingAddress: {
-            address: shippingAddress.address,
-            city: shippingAddress.city,
-            postalCode: shippingAddress.postalCode,
-            country: shippingAddress.country || 'Kenya'
-          },
-          currency: {
-            code: 'KES',
-            symbol: 'KSh'
+      const { data: emailData, error: emailError } = await supabase.functions.invoke(
+        'send-order-status-update',
+        {
+          body: {
+            customerEmail: customerInfo.email,
+            adminEmail: 'craftsjn@gmail.com',
+            orderNumber: orderData.order_number,
+            customerName: customerInfo.name,
+            orderStatus: orderData.order_status.name,
+            items: formattedItems,
+            totalAmount: parseFloat(orderData.total_amount),
+            discountAmount: parseFloat(orderData.discount_amount || '0'),
+            shippingAddress: {
+              address: shippingAddress.address,
+              city: shippingAddress.city,
+              postalCode: shippingAddress.postalCode,
+              country: shippingAddress.country || 'Kenya'
+            },
+            currency: {
+              code: 'KES',
+              symbol: 'KSh'
+            }
           }
         }
-      }
-    );
+      );
 
-    if (emailError) {
-      console.error('Email error:', emailError);
+      if (emailError) {
+        console.error('Email error:', emailError);
+        toast({
+          title: 'Status Updated',
+          description: 'Order status updated but email notification failed to send.',
+          variant: 'default'
+        });
+      } else {
+        console.log('Email sent successfully:', emailData);
+        toast({
+          title: 'Success',
+          description: 'Order status updated and notification sent.',
+          variant: 'default'
+        });
+      }
+
+      await fetchOrders();
+    } catch (error: any) {
+      console.error('Full error in updateOrderStatus:', error);
       toast({
-        title: 'Status Updated',
-        description: 'Order status updated but email notification failed to send.',
-        variant: 'default'
-      });
-    } else {
-      console.log('Email sent successfully:', emailData);
-      toast({
-        title: 'Success',
-        description: 'Order status updated and notification sent.',
-        variant: 'default'
+        title: 'Error',
+        description: error.message || 'Failed to update order status',
+        variant: 'destructive'
       });
     }
-
-    // Refresh the orders list
-    await fetchOrders();
-
-  } catch (error: any) {
-    console.error('Full error in updateOrderStatus:', error);
-    toast({
-      title: 'Error',
-      description: error.message || 'Failed to update order status',
-      variant: 'destructive'
-    });
-  }
-};
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -489,12 +512,11 @@ const AdminDashboard = () => {
     }).format(amount);
   };
 
-  // Stats cards with icons and colors for visual hierarchy
   const statsCards = [
     {
       title: "Total Orders",
       value: stats.totalOrders.toString(),
-      change: "+12%", // Placeholder; fetch real if needed
+      change: "+12%",
       icon: ShoppingCart,
       color: "text-blue-600 bg-blue-50",
       onClick: () => {
@@ -534,7 +556,6 @@ const AdminDashboard = () => {
     }
   ];
 
-  // Loading skeleton for stats
   const StatsSkeleton = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[...Array(4)].map((_, i) => (
@@ -543,7 +564,6 @@ const AdminDashboard = () => {
     </div>
   );
 
-  // Order card component for better reusability
   const OrderCard = ({ order }: { order: Order }) => (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4 space-y-3">
@@ -562,7 +582,7 @@ const AdminDashboard = () => {
         
         <div className="space-y-2 text-sm">
           <p className="text-muted-foreground">
-            {format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}
+            {formatSafeDate(order.created_at)}
           </p>
           <p className="font-semibold text-base">{formatCurrency(Number(order.total_amount))}</p>
           
@@ -621,7 +641,6 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-background">
       <AdminHeader />
       <div className="container mx-auto p-6 space-y-8 max-w-7xl">
-        {/* Header with refresh */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
@@ -638,7 +657,6 @@ const AdminDashboard = () => {
           </Button>
         </div>
 
-        {/* Stats Cards - Responsive grid with hover effects */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((stat, index) => (
             <Card 
@@ -667,14 +685,9 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Main Content Tabs - Improved spacing and focus */}
         <Tabs defaultValue="orders" className="space-y-6">
           <TabsList className="grid grid-cols-5 w-full h-12">
             <TabsTrigger value="orders" className="data-[state=active]:shadow-md">Orders</TabsTrigger>
-            {/* <TabsTrigger value="products" className="data-[state=active]:shadow-md">Products</TabsTrigger>
-            <TabsTrigger value="new-arrivals" className="data-[state=active]:shadow-md">New Arrivals</TabsTrigger>
-            <TabsTrigger value="featured" className="data-[state=active]:shadow-md">Featured</TabsTrigger>
-            <TabsTrigger value="offers" className="data-[state=active]:shadow-md">Special Offers</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
@@ -709,26 +722,9 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* <TabsContent value="products" className="space-y-6">
-            <OptimizedProductsSection onOpenProductDialog={() => {}} onEditProduct={() => {}} />
-          </TabsContent>
-
-          <TabsContent value="new-arrivals" className="space-y-6">
-            <NewArrivalsManager />
-          </TabsContent>
-
-          <TabsContent value="featured" className="space-y-6">
-            <FeaturedProductsManager />
-          </TabsContent>
-
-          <TabsContent value="offers" className="space-y-6">
-            <SpecialOffersManager />
-          </TabsContent> */}
         </Tabs>
       </div>
 
-      {/* Orders Modal */}
       <Dialog open={isOrdersModalOpen} onOpenChange={setIsOrdersModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -776,7 +772,7 @@ const AdminDashboard = () => {
                   {displayedOrders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">#{order.order_number}</TableCell>
-                      <TableCell>{format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                      <TableCell>{formatSafeDate(order.created_at)}</TableCell>
                       <TableCell>{formatCurrency(Number(order.total_amount))}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(order.order_status?.name)}>
@@ -818,7 +814,6 @@ const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Payments Modal */}
       <Dialog open={isPaymentsModalOpen} onOpenChange={setIsPaymentsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -874,7 +869,7 @@ const AdminDashboard = () => {
                       <TableCell>{payment.transaction_id || 'N/A'}</TableCell>
                       <TableCell>{payment.amount ? formatCurrency(payment.amount) : 'N/A'}</TableCell>
                       <TableCell>{payment.status || 'Unknown'}</TableCell>
-                      <TableCell>{format(new Date(payment.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                      <TableCell>{formatSafeDate(payment.created_at)}</TableCell>
                       <TableCell>{payment.checkout_request_id || 'N/A'}</TableCell>
                       <TableCell>{payment.receipt_number || 'N/A'}</TableCell>
                       <TableCell>{payment.result_desc || 'N/A'}</TableCell>
@@ -887,7 +882,6 @@ const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Customers Modal */}
       <Dialog open={isCustomersModalOpen} onOpenChange={setIsCustomersModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -906,8 +900,8 @@ const AdminDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
+                    {/* <TableHead>ID</TableHead> */}
+                    <TableHead>Full Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Created At</TableHead>
                   </TableRow>
@@ -915,10 +909,10 @@ const AdminDashboard = () => {
                 <TableBody>
                   {customers.map((customer) => (
                     <TableRow key={customer.id}>
-                      <TableCell>{customer.id}</TableCell>
-                      <TableCell>{customer.name || 'N/A'}</TableCell>
+                      {/* <TableCell>{customer.id}</TableCell> */}
+                      <TableCell>{customer.full_name || 'N/A'}</TableCell>
                       <TableCell>{customer.email || 'N/A'}</TableCell>
-                      <TableCell>{format(new Date(customer.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                      <TableCell>{formatSafeDate(customer.created_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
