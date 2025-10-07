@@ -61,7 +61,7 @@ const ContactDeveloperButton = () => {
             size="sm"
             className="text-xs text-muted-foreground border-muted hover:bg-muted/50 transition-colors shadow-sm"
           >
-            Need a similar site?
+            Get a Similar Website?
           </Button>
         </PopoverTrigger>
         <PopoverContent 
