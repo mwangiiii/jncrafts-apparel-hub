@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,38 @@ import {
 } from "@/components/ui/popover";
 
 const ContactDeveloperButton = () => {
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Only apply on smaller screens (md and below)
+      if (window.innerWidth <= 768) {
+        setIsScrolling(true);
+        
+        // Clear existing timeout
+        if (scrollTimeout) {
+          clearTimeout(scrollTimeout);
+        }
+        
+        // Set new timeout to fade back in after scrolling stops
+        const timeout = setTimeout(() => {
+          setIsScrolling(false);
+        }, 150);
+        
+        setScrollTimeout(timeout);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+    };
+  }, [scrollTimeout]);
   const handleEmailClick = () => {
     window.location.href = "mailto:mwangiwanjiku033@gmail.com";
   };
@@ -17,7 +49,11 @@ const ContactDeveloperButton = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40">
+    <div 
+      className={`fixed bottom-6 right-6 z-40 transition-all duration-300 ${
+        isScrolling ? 'md:opacity-30 md:blur-[2px]' : 'opacity-100 blur-0'
+      }`}
+    >
       <Popover>
         <PopoverTrigger asChild>
           <Button
