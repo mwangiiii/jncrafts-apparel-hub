@@ -505,18 +505,14 @@ const AdminDashboard = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-    }).format(amount);
+    return `Ksh ${Math.round(amount).toLocaleString('en-KE')}`;
   };
 
   const statsCards = [
     {
       title: "Total Orders",
       value: stats.totalOrders.toString(),
-      change: "+12%",
+      
       icon: ShoppingCart,
       color: "text-blue-600 bg-blue-50",
       onClick: () => {
@@ -526,8 +522,7 @@ const AdminDashboard = () => {
     },
     {
       title: "Total Revenue",
-      value: formatCurrency(stats.totalRevenue),
-      change: "+8%",
+      // value: formatCurrency(stats.totalRevenue),     
       icon: DollarSign,
       color: "text-green-600 bg-green-50",
       onClick: () => {
@@ -538,7 +533,7 @@ const AdminDashboard = () => {
     {
       title: "Pending Orders",
       value: stats.pendingOrders.toString(),
-      change: "-2%",
+      
       icon: Package,
       color: "text-orange-600 bg-orange-50",
       onClick: () => {
@@ -547,9 +542,9 @@ const AdminDashboard = () => {
       }
     },
     {
-      title: "Total Customers",
+      title: "Customers",
       value: stats.totalCustomers.toString(),
-      change: "+15%",
+      
       icon: Users,
       color: "text-purple-600 bg-purple-50",
       onClick: () => setIsCustomersModalOpen(true)
@@ -677,7 +672,7 @@ const AdminDashboard = () => {
                 <CardContent className="p-0">
                   <div className="space-y-1">
                     <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground">Change: <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>{stat.change}</span></p>
+                    
                   </div>
                 </CardContent>
               </div>
@@ -817,9 +812,12 @@ const AdminDashboard = () => {
       <Dialog open={isPaymentsModalOpen} onOpenChange={setIsPaymentsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Payment Records</DialogTitle>
+            <DialogTitle>Total Revenue</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="p-4 border-b bg-muted/50 rounded-md">
+              
+            </div>
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
                 Showing {displayedPayments.length} payments
@@ -885,9 +883,15 @@ const AdminDashboard = () => {
       <Dialog open={isCustomersModalOpen} onOpenChange={setIsCustomersModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Customers</DialogTitle>
+            <DialogTitle>Total Customers</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="p-4 border-b bg-muted/50 rounded-md">
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-foreground">{stats.totalCustomers}</div>
+                <p className="text-xs text-muted-foreground">Change: <span className="text-green-600">+15%</span></p>
+              </div>
+            </div>
             <p className="text-sm text-muted-foreground">
               Showing {customers.length} customers
             </p>
