@@ -346,22 +346,24 @@ const DeliveryMethodSelector = ({
                     )}
                     
                     {option.id === 'international_delivery' && (
-                      <div className="space-y-3">
-                        <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                            📧 Contact Required for International Orders
-                          </h4>
-                          <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-                            Please contact us via WhatsApp for international shipping quotes and delivery arrangements.
-                          </p>
-                          <div className="text-sm text-muted-foreground">
-                            <strong>Note:</strong> You can proceed with placing your order. After confirmation, 
-                            we'll automatically send your order details to our admin team via WhatsApp for 
-                            international shipping coordination.
-                          </div>
-                        </div>
-                      </div>
-                    )}
+  <div className="space-y-3">
+    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+      <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+         International Delivery Information
+      </h4>
+      <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+        International shipping fees are not included in the checkout total. 
+        Please contact us via WhatsApp before completing your order to receive 
+        an accurate delivery quote and available shipping options.
+      </p>
+      <div className="text-sm text-muted-foreground">
+        <strong>Note:</strong> Orders placed without prior confirmation will only be processed 
+        once shipping arrangements and payment for delivery have been agreed upon.
+      </div>
+    </div>
+  </div>
+)}
+
                     
                     {option.id === 'customer_logistics' && (
                       <div className="space-y-3">
@@ -448,21 +450,7 @@ const DeliveryMethodSelector = ({
           ))}
         </RadioGroup>
         
-        {deliveryDetails && (
-          <div className="flex items-center space-x-2 pt-4 border-t">
-            <Checkbox
-              id="reviewDelivery"
-              checked={hasReviewedDelivery}
-              onCheckedChange={(checked) => setHasReviewedDelivery(checked as boolean)}
-            />
-            <label
-              htmlFor="reviewDelivery"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              I have reviewed the delivery method and cost
-            </label>
-          </div>
-        )}
+        
       </CardContent>
     </Card>
   );

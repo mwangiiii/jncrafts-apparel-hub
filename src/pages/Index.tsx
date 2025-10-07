@@ -55,7 +55,7 @@ const Index = () => {
       
       
       {/* Prominent Conversations Access */}
-      {user && (
+      {/* {user && (
         <div className="container mx-auto px-4 py-6">
           <div className="bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20 rounded-xl p-6">
             <div className="flex items-center justify-between">
@@ -79,7 +79,7 @@ const Index = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
       <DiscountsSection />
       <ProductsSection onAddToCart={handleAddToCart} />
       <DynamicAboutSection />

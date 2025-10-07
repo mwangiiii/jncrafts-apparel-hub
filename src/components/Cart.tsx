@@ -390,6 +390,24 @@ const Cart = ({ isOpen, onClose, items = [], onUpdateQuantity, onRemoveItem, onC
                       shippingAddress={shippingAddress}
                     />
                     
+                    {deliveryDetails?.method === 'international_delivery' && (
+                      <div className="mt-4">
+                        <p className="text-sm text-muted-foreground">
+  For international delivery inquiries, contact us on{' '}
+  <a
+    href="https://wa.me/254710573084"
+    className="text-primary underline hover:text-primary-dark"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    WhatsApp
+  </a>{' '}
+  for delivery pricing and arrangements.
+</p>
+
+                      </div>
+                    )}
+                    
                     <Separator />
                     
                     <div className="space-y-4">
