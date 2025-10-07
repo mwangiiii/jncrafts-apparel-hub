@@ -11,12 +11,44 @@ export interface InvoiceData {
     total_amount: number;
     discount_amount: number;
     discount_code: string | null;
-    customer_info: any;
-    shipping_address: any;
-    delivery_details: any;
+    discount_name: string | null;
+    customer_info: {
+      fullName: string;
+      email: string;
+      phone: string;
+    };
+    shipping_address: {
+      street?: string;
+      city?: string;
+      postalCode?: string;
+      country?: string;
+    } | null;
+    delivery_details: {
+      cost: number;
+      method: string;
+      location: string;
+      courierDetails?: {
+        name: string;
+        phone: string;
+        company: string;
+        pickupWindow: string;
+      };
+      distanceFromCBD?: number;
+    } | null;
     status: string;
-    order_items: any[];
-    transaction_code?: string | null;
+    status_display_name: string;
+    order_items: Array<{
+      id: string;
+      product_id: string;
+      product_name: string;
+      variant_id: string;
+      color_name: string;
+      size_name: string;
+      quantity: number;
+      price: number;
+      image_url: string | null;
+    }>;
+    transaction_code: string | null;
   };
   companyInfo: {
     name: string;
@@ -32,26 +64,34 @@ export const generateDocumentNumber = async (type: 'invoice' | 'receipt'): Promi
   const year = new Date().getFullYear();
   const prefix = type === 'invoice' ? 'INV' : 'REC';
   
-  // Get the latest document number for this year and type
-  const { data, error } = await supabase
-    .from('invoice_receipts')
-    .select('document_number')
-    .like('document_number', `${prefix}-${year}-%`)
-    .eq('document_type', type)
-    .order('created_at', { ascending: false })
-    .limit(1);
+  try {
+    const { data, error } = await supabase
+      .from('invoice_receipts')
+      .select('document_number')
+      .like('document_number', `${prefix}-${year}-%`)
+      .eq('document_type', type)
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-  if (error) {
-    console.error('Error fetching latest document number:', error);
+    if (error) {
+      if (error.code === '42P01') {
+        console.warn('invoice_receipts table does not exist. Please run the migration. Using fallback numbering.');
+      } else {
+        console.error('Error fetching latest document number:', error);
+      }
+    }
+
+    let nextNumber = 1;
+    if (data && data.length > 0) {
+      const lastNumber = data[0].document_number.split('-')[2];
+      nextNumber = parseInt(lastNumber) + 1;
+    }
+
+    return `${prefix}-${year}-${nextNumber.toString().padStart(5, '0')}`;
+  } catch (error) {
+    console.error('Error in generateDocumentNumber:', error);
+    return `${prefix}-${year}-${Date.now().toString().slice(-5)}`;
   }
-
-  let nextNumber = 1;
-  if (data && data.length > 0) {
-    const lastNumber = data[0].document_number.split('-')[2];
-    nextNumber = parseInt(lastNumber) + 1;
-  }
-
-  return `${prefix}-${year}-${nextNumber.toString().padStart(5, '0')}`;
 };
 
 // Save document metadata
@@ -61,24 +101,32 @@ export const saveDocumentMetadata = async (
   documentNumber: string,
   generatedBy: string
 ) => {
-  const { error } = await supabase
-    .from('invoice_receipts')
-    .insert({
-      order_id: orderId,
-      document_type: documentType,
-      document_number: documentNumber,
-      generated_by: generatedBy
-    });
+  try {
+    const { error } = await supabase
+      .from('invoice_receipts')
+      .insert({
+        order_id: orderId,
+        document_type: documentType,
+        document_number: documentNumber,
+        generated_by: generatedBy
+      });
 
-  if (error) {
-    console.error('Error saving document metadata:', error);
-    throw error;
+    if (error) {
+      if (error.code === '42P01') {
+        console.warn('invoice_receipts table does not exist. Metadata not saved. Please run the migration.');
+        return;
+      }
+      console.error('Error saving document metadata:', error);
+    }
+  } catch (error) {
+    console.error('Error in saveDocumentMetadata:', error);
   }
 };
 
 // Create the HTML content for an invoice
 export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): string => {
   const currentDate = new Date().toLocaleDateString();
+  const deliveryCost = data.order.delivery_details?.cost ?? 0;
   
   return `
     <!DOCTYPE html>
@@ -369,7 +417,6 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
           color: #4a5568;
         }
         
-        
         .transaction-code {
           font-family: 'Courier New', monospace;
           background: linear-gradient(145deg, #c6f6d5 0%, #48bb78 100%);
@@ -392,9 +439,9 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
             </div>
             <div class="company-tagline">Premium Streetwear & Fashion</div>
             <div class="company-details">
-              Nairobi CBD, Kenya 00100<br>
-              Email: craftsjn@gmail.com<br>
-              Phone: +254710573084<br>
+              ${escapeHtml(data.companyInfo.address)}<br>
+              Email: ${escapeHtml(data.companyInfo.email)}<br>
+              Phone: ${escapeHtml(data.companyInfo.phone)}<br>
               Web: www.jncrafts.com
             </div>
           </div>
@@ -402,7 +449,7 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
             <div class="invoice-title">INVOICE</div>
             <div class="invoice-number">#${escapeHtml(invoiceNumber)}</div>
             <p><strong>Date:</strong> ${escapeHtml(currentDate)}</p>
-            <div class="status-badge">${escapeHtml(data.order.status.toUpperCase())}</div>
+            <div class="status-badge">${escapeHtml(data.order.status_display_name.toUpperCase())}</div>
           </div>
         </div>
 
@@ -418,7 +465,7 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
               <p><strong>Order #:</strong> ${escapeHtml(data.order.order_number)}</p>
               <p><strong>Order Date:</strong> ${escapeHtml(new Date(data.order.created_at).toLocaleDateString())}</p>
               ${data.order.transaction_code ? `<p><strong>M-Pesa Code:</strong> <span class="transaction-code">${escapeHtml(data.order.transaction_code)}</span></p>` : ''}
-              <p><strong>Payment Status:</strong> <span class="brand-gradient">Paid</span></p>
+              <p><strong>Payment Status:</strong> <span style="color: #48bb78; font-weight: 600;">Paid</span></p>
             </div>
           </div>
         </div>
@@ -426,9 +473,9 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
         ${data.order.shipping_address ? `
         <div class="delivery-section">
           <div class="section-title">Shipping Address</div>
-          <p><strong>${escapeHtml(data.order.shipping_address.address)}</strong></p>
-          <p>${escapeHtml(data.order.shipping_address.city)}, ${escapeHtml(data.order.shipping_address.county)}</p>
-          <p>${escapeHtml(data.order.shipping_address.country)}</p>
+          <p><strong>${escapeHtml(data.order.shipping_address.street || '')}</strong></p>
+          <p>${escapeHtml(data.order.shipping_address.city || '')}${data.order.shipping_address.postalCode ? `, ${escapeHtml(data.order.shipping_address.postalCode)}` : ''}</p>
+          <p>${escapeHtml(data.order.shipping_address.country || '')}</p>
         </div>
         ` : ''}
 
@@ -444,23 +491,27 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
             </tr>
           </thead>
           <tbody>
-            ${data.order.order_items.map((item: any) => `
+            ${data.order.order_items.length > 0 ? data.order.order_items.map((item) => `
               <tr>
                 <td class="font-medium">${escapeHtml(item.product_name)}</td>
-                <td><span class="font-medium">${escapeHtml(item.size)}</span></td>
-                <td><span class="font-medium">${escapeHtml(item.color)}</span></td>
+                <td><span class="font-medium">${escapeHtml(item.size_name)}</span></td>
+                <td><span class="font-medium">${escapeHtml(item.color_name)}</span></td>
                 <td class="text-right font-medium">${escapeHtml(String(item.quantity))}</td>
                 <td class="text-right">KSh ${escapeHtml(Number(item.price).toFixed(2))}</td>
                 <td class="text-right font-medium">KSh ${escapeHtml((Number(item.price) * item.quantity).toFixed(2))}</td>
               </tr>
-            `).join('')}
+            `).join('') : `
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 20px;">No items in this order</td>
+              </tr>
+            `}
           </tbody>
         </table>
 
         <div class="totals-section">
           <div class="totals-row">
             <span><strong>Subtotal:</strong></span>
-            <span><strong>KSh ${(Number(data.order.total_amount) - Number(data.order.discount_amount || 0)).toFixed(2)}</strong></span>
+            <span><strong>KSh ${(Number(data.order.total_amount) - Number(deliveryCost) + Number(data.order.discount_amount || 0)).toFixed(2)}</strong></span>
           </div>
           ${data.order.discount_amount > 0 ? `
           <div class="totals-row">
@@ -470,11 +521,11 @@ export const createInvoiceHTML = (data: InvoiceData, invoiceNumber: string): str
           ` : ''}
           <div class="totals-row">
             <span>Delivery Fee:</span>
-            <span>KSh 0.00</span>
+            <span>KSh ${escapeHtml(Number(deliveryCost).toFixed(2))}</span>
           </div>
           <div class="totals-row grand-total">
             <span>TOTAL AMOUNT:</span>
-            <span>KSh ${Number(data.order.total_amount).toFixed(2)}</span>
+            <span>KSh ${escapeHtml(Number(data.order.total_amount).toFixed(2))}</span>
           </div>
         </div>
 
@@ -746,27 +797,29 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
         <div class="receipt-details">
           <div class="detail-row">
             <span><strong>Receipt Number:</strong></span>
-            <span class="transaction-id">#${receiptNumber}</span>
+            <span class="transaction-id">#${escapeHtml(receiptNumber)}</span>
           </div>
           <div class="detail-row">
             <span><strong>Order ID:</strong></span>
-            <span><strong>${data.order.order_number}</strong></span>
+            <span><strong>${escapeHtml(data.order.order_number)}</strong></span>
           </div>
           <div class="detail-row">
             <span><strong>Date & Time:</strong></span>
-            <span>${currentDate} at ${currentTime}</span>
+            <span>${escapeHtml(currentDate)} at ${escapeHtml(currentTime)}</span>
           </div>
           <div class="detail-row">
             <span><strong>Payment Method:</strong></span>
             <span>${data.order.transaction_code ? 'M-Pesa Payment' : 'Online Payment'}</span>
           </div>
+          ${data.order.transaction_code ? `
           <div class="detail-row">
             <span><strong>Transaction ID:</strong></span>
-            <span class="transaction-id">${data.order.transaction_code || `TXN${Date.now().toString().slice(-8)}`}</span>
+            <span class="transaction-id">${escapeHtml(data.order.transaction_code)}</span>
           </div>
+          ` : ''}
           <div class="detail-row">
             <span><strong>Order Status:</strong></span>
-            <span style="color: #48bb78; font-weight: 600;">${data.order.status.toUpperCase()}</span>
+            <span style="color: #48bb78; font-weight: 600;">${escapeHtml(data.order.status_display_name.toUpperCase())}</span>
           </div>
         </div>
 
@@ -774,15 +827,15 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
           <div class="section-title">Customer Details</div>
           <div class="detail-row">
             <span><strong>Name:</strong></span>
-            <span>${data.order.customer_info.fullName}</span>
+            <span>${escapeHtml(data.order.customer_info.fullName)}</span>
           </div>
           <div class="detail-row">
             <span><strong>Phone:</strong></span>
-            <span>${data.order.customer_info.phone}</span>
+            <span>${escapeHtml(data.order.customer_info.phone)}</span>
           </div>
           <div class="detail-row">
             <span><strong>Email:</strong></span>
-            <span>${data.order.customer_info.email}</span>
+            <span>${escapeHtml(data.order.customer_info.email)}</span>
           </div>
         </div>
 
@@ -803,9 +856,9 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
             Your payment has been successfully processed and your order is being prepared.<br>
             You will receive order updates via email and SMS.<br><br>
             <strong>JNCRAFTS Premium Streetwear</strong><br>
-            Email: <strong>craftsjn@gmail.com</strong> | Phone: <strong>+254710573084</strong><br>
+            Email: <strong>${escapeHtml(data.companyInfo.email)}</strong> | Phone: <strong>${escapeHtml(data.companyInfo.phone)}</strong><br>
             Visit: <strong>www.jncrafts.com</strong> | Follow: <strong>@jncrafts</strong><br><br>
-            <em>Receipt generated on ${currentDate} at ${currentTime}</em>
+            <em>Receipt generated on ${escapeHtml(currentDate)} at ${escapeHtml(currentTime)}</em>
           </div>
         </div>
       </div>
@@ -814,15 +867,69 @@ export const createReceiptHTML = (data: InvoiceData, receiptNumber: string): str
   `;
 };
 
-// Print invoice in new window
-export const printInvoice = async (data: InvoiceData, userId: string) => {
+// Fetch order data from Supabase
+export const fetchOrderData = async (orderId: string): Promise<InvoiceData['order']> => {
   try {
+    // Validate UUID format
+    if (!orderId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+      throw new Error('Invalid order ID format');
+    }
+
+    const { data, error } = await supabase
+      .rpc('get_order_details', { order_id_param: orderId });
+
+    if (error) {
+      console.error('Error fetching order data:', error);
+      throw new Error(`Failed to fetch order data: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('Order not found');
+    }
+
+    const order = data[0];
+    return {
+      id: order.id,
+      order_number: order.order_number,
+      created_at: order.created_at,
+      total_amount: Number(order.total_amount),
+      discount_amount: Number(order.discount_amount),
+      discount_code: order.discount_code,
+      discount_name: order.discount_name,
+      customer_info: order.customer_info,
+      shipping_address: order.shipping_address,
+      delivery_details: order.delivery_details,
+      status: order.status_name,
+      status_display_name: order.status_display_name,
+      order_items: order.order_items,
+      transaction_code: order.transaction_code
+    };
+  } catch (error) {
+    console.error('Error in fetchOrderData:', error);
+    throw new Error(`Failed to fetch order data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// Print invoice in new window
+export const printInvoice = async (orderId: string, userId: string): Promise<string> => {
+  try {
+    console.log('Attempting to print invoice for orderId:', orderId);
+    const orderData = await fetchOrderData(orderId);
+    
+    if (orderData.status === 'cancelled') {
+      throw new Error('Cannot generate invoice for a cancelled order');
+    }
+    
+    const companyInfo = await getCompanyInfo();
+    const invoiceData: InvoiceData = { order: orderData, companyInfo };
     const invoiceNumber = await generateDocumentNumber('invoice');
-    const html = createInvoiceHTML(data, invoiceNumber);
+    const html = createInvoiceHTML(invoiceData, invoiceNumber);
     
-    // Save metadata
-    await saveDocumentMetadata(data.order.id, 'invoice', invoiceNumber, userId);
-    
+    // Save metadata (non-blocking)
+    saveDocumentMetadata(orderData.id, 'invoice', invoiceNumber, userId).catch((error) => {
+      console.warn('Failed to save invoice metadata:', error);
+    });
+
     // Open in new window and print
     const printWindow = window.open('', '_blank');
     if (printWindow) {
@@ -836,23 +943,33 @@ export const printInvoice = async (data: InvoiceData, userId: string) => {
           printWindow.print();
         }, 250);
       };
+    } else {
+      throw new Error('Unable to open print window. Please check your popup blocker settings.');
     }
-    
+
     return invoiceNumber;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error printing invoice:', error);
-    throw error;
+    throw new Error(error.message || 'Failed to print invoice');
   }
 };
 
 // Export invoice as PDF
-export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
+export const exportInvoicePDF = async (orderId: string, userId: string): Promise<string> => {
   try {
+    console.log('Attempting to export invoice PDF for orderId:', orderId);
+    const orderData = await fetchOrderData(orderId);
+    
+    if (orderData.status === 'cancelled') {
+      throw new Error('Cannot generate invoice for a cancelled order');
+    }
+    
+    const companyInfo = await getCompanyInfo();
+    const invoiceData: InvoiceData = { order: orderData, companyInfo };
     const invoiceNumber = await generateDocumentNumber('invoice');
-    const html = createInvoiceHTML(data, invoiceNumber);
-    
-    console.log('Generating invoice PDF...', { invoiceNumber, orderId: data.order.id });
-    
+    const html = createInvoiceHTML(invoiceData, invoiceNumber);
+    console.log('Generating invoice PDF...', { invoiceNumber, orderId: orderData.id });
+
     // Create temporary container with better visibility for html2canvas
     const container = document.createElement('div');
     container.innerHTML = html;
@@ -873,9 +990,9 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
       box-sizing: border-box;
       pointer-events: none;
     `;
-    
+
     document.body.appendChild(container);
-    
+
     // Wait for DOM to update and fonts to load
     await new Promise(resolve => {
       if (document.fonts && document.fonts.ready) {
@@ -884,7 +1001,7 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
         setTimeout(resolve, 500);
       }
     });
-    
+
     // Use ResizeObserver to avoid forced reflow
     const actualHeight = await new Promise<number>(resolve => {
       const resizeObserver = new ResizeObserver(entries => {
@@ -903,20 +1020,20 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
         resolve(1200);
       }, 100);
     });
-    
+
     console.log('Container dimensions:', { 
       scrollHeight: container.scrollHeight,
       offsetHeight: container.offsetHeight,
       actualHeight
     });
-    
+
     // Convert to canvas with proper settings
     const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
-      logging: true,
+      logging: false,
       width: 800,
       height: actualHeight,
       windowWidth: 800,
@@ -929,49 +1046,49 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
         }
       }
     });
-    
+
     console.log('Canvas generated:', { 
       width: canvas.width, 
       height: canvas.height,
       hasContent: canvas.width > 0 && canvas.height > 0
     });
-    
+
     // Clean up container
     if (container.parentNode) {
       document.body.removeChild(container);
     }
-    
+
     // Validate canvas
     if (canvas.width === 0 || canvas.height === 0) {
       throw new Error('Canvas is empty - failed to render content');
     }
-    
+
     // Create PDF
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
-    
+
     // Calculate dimensions
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
     const margin = 15;
     const availableWidth = pdfWidth - (2 * margin);
     const availableHeight = pdfHeight - (2 * margin);
-    
+
     const imgWidth = availableWidth;
     const imgHeight = (canvas.height * availableWidth) / canvas.width;
-    
+
     // Convert canvas to image data
     const imgData = canvas.toDataURL('image/png', 1.0);
-    
+
     console.log('PDF dimensions:', { 
       pdfWidth, pdfHeight, 
       imgWidth, imgHeight,
       willFitOnOnePage: imgHeight <= availableHeight
     });
-    
+
     // Add content to PDF
     if (imgHeight <= availableHeight) {
       // Single page
@@ -1019,34 +1136,35 @@ export const exportInvoicePDF = async (data: InvoiceData, userId: string) => {
         pageNumber++;
       }
     }
-    
-    // Save metadata
-    try {
-      await saveDocumentMetadata(data.order.id, 'invoice', invoiceNumber, userId);
-    } catch (metadataError) {
-      console.warn('Failed to save metadata, but PDF was generated successfully:', metadataError);
-    }
-    
+
+    // Save metadata (non-blocking)
+    saveDocumentMetadata(orderData.id, 'invoice', invoiceNumber, userId).catch((error) => {
+      console.warn('Failed to save invoice metadata:', error);
+    });
+
     // Download PDF
     pdf.save(`JNCRAFTS-Invoice-${invoiceNumber}.pdf`);
-    
+
     console.log('Invoice PDF generated successfully:', invoiceNumber);
     return invoiceNumber;
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error exporting invoice PDF:', error);
     throw new Error(`Failed to generate invoice PDF: ${error.message}`);
   }
 };
 
 // Export receipt as PDF
-export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
+export const exportReceiptPDF = async (orderId: string, userId: string): Promise<string> => {
   try {
+    console.log('Attempting to export receipt PDF for orderId:', orderId);
+    const orderData = await fetchOrderData(orderId);
+    
+    const companyInfo = await getCompanyInfo();
+    const invoiceData: InvoiceData = { order: orderData, companyInfo };
     const receiptNumber = await generateDocumentNumber('receipt');
-    const html = createReceiptHTML(data, receiptNumber);
-    
-    console.log('Generating receipt PDF...', { receiptNumber, orderId: data.order.id });
-    
+    const html = createReceiptHTML(invoiceData, receiptNumber);
+    console.log('Generating receipt PDF...', { receiptNumber, orderId: orderData.id });
+
     // Create temporary container with better visibility for html2canvas
     const container = document.createElement('div');
     container.innerHTML = html;
@@ -1067,9 +1185,9 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
       box-sizing: border-box;
       pointer-events: none;
     `;
-    
+
     document.body.appendChild(container);
-    
+
     // Wait for DOM to update and fonts to load
     await new Promise(resolve => {
       if (document.fonts && document.fonts.ready) {
@@ -1078,7 +1196,7 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
         setTimeout(resolve, 500);
       }
     });
-    
+
     // Use ResizeObserver to avoid forced reflow
     const actualHeight = await new Promise<number>(resolve => {
       const resizeObserver = new ResizeObserver(entries => {
@@ -1097,20 +1215,20 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
         resolve(800);
       }, 100);
     });
-    
+
     console.log('Container dimensions:', { 
       scrollHeight: container.scrollHeight,
       offsetHeight: container.offsetHeight,
       actualHeight
     });
-    
+
     // Convert to canvas with proper settings
     const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
-      logging: true,
+      logging: false,
       width: 600,
       height: actualHeight,
       windowWidth: 600,
@@ -1123,53 +1241,53 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
         }
       }
     });
-    
+
     console.log('Canvas generated:', { 
       width: canvas.width, 
       height: canvas.height,
       hasContent: canvas.width > 0 && canvas.height > 0
     });
-    
+
     // Clean up container
     if (container.parentNode) {
       document.body.removeChild(container);
     }
-    
+
     // Validate canvas
     if (canvas.width === 0 || canvas.height === 0) {
       throw new Error('Canvas is empty - failed to render content');
     }
-    
+
     // Create PDF
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
-    
+
     // Calculate dimensions for receipt (centered and properly sized)
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
     const margin = 20;
     const availableWidth = pdfWidth - (2 * margin);
     const availableHeight = pdfHeight - (2 * margin);
-    
+
     // Make receipt 70% of available width for better proportions
     const imgWidth = availableWidth * 0.7;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
+
     // Center the receipt
     const xPosition = (pdfWidth - imgWidth) / 2;
-    
+
     // Convert canvas to image data
     const imgData = canvas.toDataURL('image/png', 1.0);
-    
+
     console.log('PDF dimensions:', { 
       pdfWidth, pdfHeight, 
       imgWidth, imgHeight,
       willFitOnOnePage: imgHeight <= availableHeight
     });
-    
+
     // Add content to PDF - optimized for single page
     if (imgHeight <= availableHeight) {
       // Content fits on one page - center it vertically too
@@ -1184,34 +1302,30 @@ export const exportReceiptPDF = async (data: InvoiceData, userId: string) => {
       
       pdf.addImage(imgData, 'PNG', scaledXPosition, scaledYPosition, scaledWidth, scaledHeight);
     }
-    
-    // Save metadata
-    try {
-      await saveDocumentMetadata(data.order.id, 'receipt', receiptNumber, userId);
-    } catch (metadataError) {
-      console.warn('Failed to save metadata, but PDF was generated successfully:', metadataError);
-    }
-    
+
+    // Save metadata (non-blocking)
+    saveDocumentMetadata(orderData.id, 'receipt', receiptNumber, userId).catch((error) => {
+      console.warn('Failed to save receipt metadata:', error);
+    });
+
     // Download PDF
     pdf.save(`JNCRAFTS-Receipt-${receiptNumber}.pdf`);
-    
+
     console.log('Receipt PDF generated successfully:', receiptNumber);
     return receiptNumber;
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error exporting receipt PDF:', error);
     throw new Error(`Failed to generate receipt PDF: ${error.message}`);
   }
 };
 
-// Get company info from settings (placeholder - implement based on your settings structure)
+// Get company info from settings
 export const getCompanyInfo = async () => {
-  // This should fetch from your settings table
   return {
-    name: 'JN Crafts',
+    name: 'JNCRAFTS',
     address: 'Nairobi CBD, Kenya 00100',
     phone: '+254710573084',
     email: 'craftsjn@gmail.com',
-    logo: '/lovable-uploads/company-logo.png' // You can add this to your uploads
+    logo: '/lovable-uploads/company-logo.png'
   };
 };

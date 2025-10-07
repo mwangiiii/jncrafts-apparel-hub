@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -72,11 +72,32 @@ interface Order {
   total_amount: number;
   discount_amount: number;
   discount_id: string | null;
-  shipping_address: any;
-  customer_info: any;
+  shipping_address: {
+    street?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
+  } | null;
+  customer_info: {
+    fullName: string;
+    email: string;
+    phone: string;
+    notes?: string;
+  };
   created_at: string;
   updated_at: string;
-  delivery_details: any;
+  delivery_details: {
+    cost: number;
+    method: string;
+    location: string;
+    courierDetails?: {
+      name: string;
+      phone: string;
+      company: string;
+      pickupWindow: string;
+    };
+    distanceFromCBD?: number;
+  } | null;
   transaction_code?: string | null;
   status_name: string;
   status_display_name: string;
@@ -107,7 +128,6 @@ const AdminOrderDetail = () => {
     try {
       setLoading(true);
       
-      // Fetch order with proper joins for sizes and colors
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -149,7 +169,6 @@ const AdminOrderDetail = () => {
         throw orderError || new Error('Order not found');
       }
 
-      // Map the data to match our Order interface
       const mappedOrder: Order = {
         id: orderData.id,
         order_number: orderData.order_number,
@@ -214,7 +233,6 @@ const AdminOrderDetail = () => {
     
     setUpdatingStatus(true);
     try {
-      // Get new status details first
       const { data: newStatus, error: statusError } = await supabase
         .from('order_status')
         .select('name, display_name')
@@ -222,34 +240,49 @@ const AdminOrderDetail = () => {
         .single();
 
       if (statusError || !newStatus) {
-        console.error('Error fetching new status:', statusError);
         throw new Error('Failed to fetch status details');
       }
 
-      console.log('Attempting status update via Edge Function:', { orderId: order.id, newStatusId, statusName: newStatus?.name });
-
-      const { data: functionResult, error: functionError } = await supabase.functions.invoke('update-order-status', {
-        body: {
-          orderId: order.id,
-          statusId: newStatusId,
-          statusName: newStatus.name,
-          statusDisplayName: newStatus.display_name,
-          customerEmail: order.customer_info?.email,
-          orderNumber: order.order_number,
-          customerName: order.customer_info?.fullName,
-          orderItems: order.order_items.map((item) => ({
-            product_name: item.product_name,
-            quantity: item.quantity,
-            size: item.size_name,
-            color: item.color_name,
-            price: item.price
-          })),
-          totalAmount: order.total_amount,
-          discountAmount: order.discount_amount,
-          discountName: order.discount_name,
-          shippingAddress: order.shipping_address
-        }
+      console.log('Updating order status via Edge Function:', { 
+        orderId: order.id, 
+        newStatusId, 
+        statusName: newStatus?.name 
       });
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('No valid session found');
+      }
+
+      const { data: functionResult, error: functionError } = await supabase.functions.invoke(
+        'update-order-status',
+        {
+          body: {
+            orderId: order.id,
+            statusId: newStatusId,
+            statusName: newStatus.name,
+            statusDisplayName: newStatus.display_name,
+            customerEmail: order.customer_info?.email,
+            orderNumber: order.order_number,
+            customerName: order.customer_info?.fullName,
+            orderItems: order.order_items.map((item) => ({
+              product_name: item.product_name,
+              quantity: item.quantity,
+              size: item.size_name,
+              color: item.color_name,
+              price: item.price
+            })),
+            totalAmount: order.total_amount,
+            discountAmount: order.discount_amount,
+            discountName: order.discount_name,
+            shippingAddress: order.shipping_address
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      );
 
       if (functionError) {
         console.error('Edge Function failed:', functionError);
@@ -258,7 +291,6 @@ const AdminOrderDetail = () => {
 
       console.log('Edge Function result:', functionResult);
 
-      // Refresh order data
       await fetchOrder();
       
       toast({
@@ -302,17 +334,11 @@ const AdminOrderDetail = () => {
     
     setProcessingDocument('print');
     try {
-      const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { 
-        order: { 
-          ...order, 
-          status: order.status_name || 'unknown',
-          discount: { name: order.discount_name, code: order.discount_code }
-        }, 
-        companyInfo 
-      };
-      
-      const invoiceNumber = await printInvoice(invoiceData, user.id);
+      const orderId = order.id;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+        throw new Error('Invalid order ID');
+      }
+      const invoiceNumber = await printInvoice(orderId, user.id);
       toast({
         title: "Invoice Printed",
         description: `Invoice ${invoiceNumber} ready for printing`,
@@ -322,7 +348,7 @@ const AdminOrderDetail = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to print invoice"
+        description: error.message || "Failed to print invoice"
       });
     } finally {
       setProcessingDocument(null);
@@ -334,17 +360,11 @@ const AdminOrderDetail = () => {
     
     setProcessingDocument('invoice');
     try {
-      const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { 
-        order: { 
-          ...order, 
-          status: order.status_name || 'unknown',
-          discount: { name: order.discount_name, code: order.discount_code }
-        }, 
-        companyInfo 
-      };
-      
-      const invoiceNumber = await exportInvoicePDF(invoiceData, user.id);
+      const orderId = order.id;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+        throw new Error('Invalid order ID');
+      }
+      const invoiceNumber = await exportInvoicePDF(orderId, user.id);
       toast({
         title: "Invoice Exported",
         description: `Invoice ${invoiceNumber} downloaded`,
@@ -354,7 +374,7 @@ const AdminOrderDetail = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to export invoice"
+        description: error.message || "Failed to export invoice"
       });
     } finally {
       setProcessingDocument(null);
@@ -366,17 +386,11 @@ const AdminOrderDetail = () => {
     
     setProcessingDocument('receipt');
     try {
-      const companyInfo = await getCompanyInfo();
-      const invoiceData: InvoiceData = { 
-        order: { 
-          ...order, 
-          status: order.status_name || 'unknown',
-          discount: { name: order.discount_name, code: order.discount_code }
-        }, 
-        companyInfo 
-      };
-      
-      const receiptNumber = await exportReceiptPDF(invoiceData, user.id);
+      const orderId = order.id;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+        throw new Error('Invalid order ID');
+      }
+      const receiptNumber = await exportReceiptPDF(orderId, user.id);
       toast({
         title: "Receipt Exported",
         description: `Receipt ${receiptNumber} downloaded`,
@@ -386,7 +400,7 @@ const AdminOrderDetail = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to export receipt"
+        description: error.message || "Failed to export receipt"
       });
     } finally {
       setProcessingDocument(null);
@@ -505,8 +519,13 @@ const AdminOrderDetail = () => {
                     </h4>
                     <div className="text-sm space-y-1 pl-6">
                       {order.shipping_address?.street && <div>{order.shipping_address.street}</div>}
-                      {order.shipping_address?.city && <div>{order.shipping_address.city}, {order.shipping_address.country}</div>}
-                      {order.shipping_address?.zip && <div>{order.shipping_address.zip}</div>}
+                      {order.shipping_address?.city && (
+                        <div>
+                          {order.shipping_address.city}
+                          {order.shipping_address.postalCode && `, ${order.shipping_address.postalCode}`}
+                        </div>
+                      )}
+                      {order.shipping_address?.country && <div>{order.shipping_address.country}</div>}
                     </div>
                   </div>
                 </div>
@@ -564,34 +583,64 @@ const AdminOrderDetail = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Truck className="h-5 w-5" />
-                    Delivery Info
+                    Delivery Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  {order.delivery_details.tracking_number && (
-                    <div>
-                      <span className="font-medium">Tracking:</span>
-                      <div className="text-muted-foreground mt-1">{order.delivery_details.tracking_number}</div>
-                    </div>
-                  )}
-                  {order.delivery_details.carrier && (
-                    <div>
-                      <span className="font-medium">Carrier:</span>
-                      <div className="text-muted-foreground mt-1">{order.delivery_details.carrier}</div>
-                    </div>
-                  )}
-                  {order.delivery_details.delivery_date && (
-                    <div>
-                      <span className="font-medium">Delivered:</span>
-                      <div className="text-muted-foreground mt-1">{order.delivery_details.delivery_date}</div>
-                    </div>
-                  )}
-                  {order.delivery_details.signature && (
-                    <div className="md:col-span-2">
-                      <span className="font-medium">Signature:</span>
-                      <div className="text-muted-foreground mt-1">{order.delivery_details.signature}</div>
-                    </div>
-                  )}
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    {order.delivery_details.method && (
+                      <div>
+                        <span className="font-medium text-muted-foreground">Delivery Method:</span>
+                        <div className="mt-1 font-medium">{order.delivery_details.method}</div>
+                      </div>
+                    )}
+                    {order.delivery_details.cost !== undefined && (
+                      <div>
+                        <span className="font-medium text-muted-foreground">Delivery Fee:</span>
+                        <div className="mt-1 font-medium">{formatCurrency(order.delivery_details.cost)}</div>
+                      </div>
+                    )}
+                    {order.delivery_details.courierDetails && (
+                      <>
+                        {order.delivery_details.courierDetails.company && (
+                          <div>
+                            <span className="font-medium text-muted-foreground">Courier Company:</span>
+                            <div className="mt-1 font-medium">{order.delivery_details.courierDetails.company}</div>
+                          </div>
+                        )}
+                        {order.delivery_details.courierDetails.name && (
+                          <div>
+                            <span className="font-medium text-muted-foreground">Courier Name:</span>
+                            <div className="mt-1 font-medium">{order.delivery_details.courierDetails.name}</div>
+                          </div>
+                        )}
+                        {order.delivery_details.courierDetails.phone && (
+                          <div>
+                            <span className="font-medium text-muted-foreground">Courier Phone:</span>
+                            <div className="mt-1 font-medium">{order.delivery_details.courierDetails.phone}</div>
+                          </div>
+                        )}
+                        {order.delivery_details.courierDetails.pickupWindow && (
+                          <div>
+                            <span className="font-medium text-muted-foreground">Pickup Window:</span>
+                            <div className="mt-1 font-medium">{order.delivery_details.courierDetails.pickupWindow}</div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {order.delivery_details.location && (
+                      <div>
+                        <span className="font-medium text-muted-foreground">Location:</span>
+                        <div className="mt-1 font-medium">{order.delivery_details.location}</div>
+                      </div>
+                    )}
+                    {order.delivery_details.distanceFromCBD !== undefined && (
+                      <div>
+                        <span className="font-medium text-muted-foreground">Distance from CBD:</span>
+                        <div className="mt-1 font-medium">{order.delivery_details.distanceFromCBD} km</div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -663,6 +712,12 @@ const AdminOrderDetail = () => {
                     <div className="flex justify-between text-emerald-600">
                       <span>Discount:</span>
                       <span>{formatCurrency(-order.discount_amount)}</span>
+                    </div>
+                  )}
+                  {order.delivery_details?.cost !== undefined && (
+                    <div className="flex justify-between">
+                      <span>Delivery Fee:</span>
+                      <span>{formatCurrency(order.delivery_details.cost)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
