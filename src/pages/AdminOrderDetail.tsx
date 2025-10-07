@@ -233,76 +233,115 @@ const AdminOrderDetail = () => {
     
     setUpdatingStatus(true);
     try {
-      const { data: newStatus, error: statusError } = await supabase
-        .from('order_status')
-        .select('name, display_name')
-        .eq('id', newStatusId)
-        .single();
-
-      if (statusError || !newStatus) {
-        throw new Error('Failed to fetch status details');
-      }
-
-      console.log('Updating order status via Edge Function:', { 
+      console.log('Updating order status via database update:', { 
         orderId: order.id, 
-        newStatusId, 
-        statusName: newStatus?.name 
+        newStatusId 
       });
 
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
-        throw new Error('No valid session found');
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status_id: newStatusId })
+        .eq('id', order.id);
+
+      if (updateError) throw updateError;
+
+      // Fetch updated order data for email
+      const { data: updatedOrderData, error: fetchError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            variant_id,
+            price,
+            quantity,
+            image_url,
+            products (
+              name
+            ),
+            product_variants (
+              id,
+              sizes (
+                name
+              ),
+              colors (
+                name
+              )
+            )
+          ),
+          order_status!orders_status_id_fkey (
+            name,
+            display_name
+          )
+        `)
+        .eq('id', order.id)
+        .single();
+
+      if (fetchError || !updatedOrderData) {
+        throw fetchError || new Error('Order not found after update');
       }
 
-      const { data: functionResult, error: functionError } = await supabase.functions.invoke(
-        'update-order-status',
+      const customerInfo = updatedOrderData.customer_info as { fullName: string; email: string; phone: string };
+      const shippingAddress = {
+        address: (updatedOrderData.shipping_address as any)?.street || (updatedOrderData.shipping_address as any)?.address || '',
+        city: (updatedOrderData.shipping_address as any)?.city || '',
+        postalCode: (updatedOrderData.shipping_address as any)?.postalCode || '',
+        country: (updatedOrderData.shipping_address as any)?.country || 'Kenya'
+      };
+
+      const formattedItems = updatedOrderData.order_items.map((item: any) => ({
+        product_name: item.products?.name || 'Unknown Product',
+        size: item.product_variants?.sizes?.name || 'N/A',
+        color: item.product_variants?.colors?.name || 'N/A',
+        quantity: item.quantity,
+        price: parseFloat(item.price)
+      }));
+
+      const { data: emailData, error: emailError } = await supabase.functions.invoke(
+        'send-order-status-update',
         {
           body: {
-            orderId: order.id,
-            statusId: newStatusId,
-            statusName: newStatus.name,
-            statusDisplayName: newStatus.display_name,
-            customerEmail: order.customer_info?.email,
-            orderNumber: order.order_number,
-            customerName: order.customer_info?.fullName,
-            orderItems: order.order_items.map((item) => ({
-              product_name: item.product_name,
-              quantity: item.quantity,
-              size: item.size_name,
-              color: item.color_name,
-              price: item.price
-            })),
-            totalAmount: order.total_amount,
-            discountAmount: order.discount_amount,
-            discountName: order.discount_name,
-            shippingAddress: order.shipping_address
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`
+            customerEmail: customerInfo.email,
+            adminEmail: 'craftsjn@gmail.com',
+            orderNumber: updatedOrderData.order_number,
+            customerName: customerInfo.fullName,
+            orderStatus: updatedOrderData.order_status.name,
+            items: formattedItems,
+            totalAmount: parseFloat(updatedOrderData.total_amount),
+            discountAmount: parseFloat(updatedOrderData.discount_amount || '0'),
+            shippingAddress: shippingAddress,
+            currency: {
+              code: 'KES',
+              symbol: 'KSh'
+            }
           }
         }
       );
 
-      if (functionError) {
-        console.error('Edge Function failed:', functionError);
-        throw new Error(functionError.message || 'Failed to update via Edge Function');
+      if (emailError) {
+        console.error('Email error:', emailError);
+        toast({
+          title: 'Status Updated',
+          description: 'Order status updated but email notification failed to send.',
+          variant: 'default'
+        });
+      } else {
+        console.log('Email sent successfully:', emailData);
+        toast({
+          title: 'Success',
+          description: 'Order status updated and notification sent.',
+          variant: 'default'
+        });
       }
 
-      console.log('Edge Function result:', functionResult);
-
       await fetchOrder();
-      
-      toast({
-        title: "Order Updated",
-        description: `Status changed to ${newStatus?.display_name}`,
-      });
     } catch (error: any) {
-      console.error('Error updating order:', error);
+      console.error('Full error in updateOrderStatus:', error);
       toast({
-        variant: "destructive",
-        title: "Update Failed",
-        description: error.message || "Failed to update order status"
+        title: 'Error',
+        description: error.message || 'Failed to update order status',
+        variant: 'destructive'
       });
     } finally {
       setUpdatingStatus(false);
@@ -317,6 +356,7 @@ const AdminOrderDetail = () => {
       case 'shipped': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'delivered': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
+      case 'paid': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };

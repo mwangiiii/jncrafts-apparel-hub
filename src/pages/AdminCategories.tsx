@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Save, X, RefreshCw, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, RefreshCw, ChevronDown, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +44,8 @@ const AdminCategories = () => {
     display_order: 0,
     is_active: true,
   });
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
@@ -103,8 +104,7 @@ const AdminCategories = () => {
         const { error } = await supabase
           .from("categories")
           .update(formData)
-          .eq("id", editingId)
-          .select(); // Return updated row for refresh
+          .eq("id", editingId);
 
         if (error) throw error;
         toast({
@@ -151,6 +151,27 @@ const AdminCategories = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      // Check if there are products in this category
+      const { count, error: countError } = await supabase
+        .from("products")
+        .select("*", { count: "exact", head: true })
+        .eq("category", id);
+
+      if (countError) {
+        console.error("Error checking products count:", countError);
+        throw countError;
+      }
+
+      if (count && count > 0) {
+        toast({
+          title: "Cannot Delete",
+          description: `This category contains ${count} product(s). Please reassign or delete the products first before deleting the category.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Proceed to delete
       const { error } = await supabase
         .from("categories")
         .delete()
@@ -181,7 +202,6 @@ const AdminCategories = () => {
       is_active: true,
     });
     setEditingId(null);
-    setShowForm(false);
   };
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
@@ -214,6 +234,19 @@ const AdminCategories = () => {
       title: "Refreshed",
       description: "Categories updated",
     });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (categoryToDelete) {
+      await handleDelete(categoryToDelete.id);
+      setShowDeleteDialog(false);
+      setCategoryToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteDialog(false);
+    setCategoryToDelete(null);
   };
 
   if (loading) {
@@ -266,7 +299,7 @@ const AdminCategories = () => {
                 <RefreshCw className={cn("h-4 w-4 mr-2", refreshing && "animate-spin")} />
                 Refresh
               </Button>
-              <Dialog open={showForm} onOpenChange={setShowForm}>
+              <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
                 <DialogTrigger asChild>
                   <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-lg">
                     <Plus className="h-4 w-4 mr-2" />
@@ -332,7 +365,7 @@ const AdminCategories = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={resetForm}
+                        onClick={() => setShowForm(false)}
                         aria-label="Cancel category form"
                       >
                         <X className="h-4 w-4 mr-2" />
@@ -406,28 +439,20 @@ const AdminCategories = () => {
                             </span>
                           </div>
                           <div className="flex gap-2">
-                            <Dialog open={showForm && editingId === category.id} onOpenChange={(open) => {
-                              if (!open) resetForm();
-                            }}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEdit(category)}
-                                  aria-label={`Edit ${category.name}`}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                            </Dialog>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(category)}
+                              aria-label={`Edit ${category.name}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setDeletingId(category.id);
-                                if (confirm(`Delete "${category.name}"? This cannot be undone.`)) {
-                                  handleDelete(category.id);
-                                }
+                                setCategoryToDelete(category);
+                                setShowDeleteDialog(true);
                               }}
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
                               aria-label={`Delete ${category.name}`}
@@ -486,28 +511,20 @@ const AdminCategories = () => {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-1 justify-end">
-                              <Dialog open={showForm && editingId === category.id} onOpenChange={(open) => {
-                                if (!open) resetForm();
-                              }}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEdit(category)}
-                                    aria-label={`Edit ${category.name}`}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                              </Dialog>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(category)}
+                                aria-label={`Edit ${category.name}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  setDeletingId(category.id);
-                                  if (confirm(`Delete "${category.name}"? This cannot be undone.`)) {
-                                    handleDelete(category.id);
-                                  }
+                                  setCategoryToDelete(category);
+                                  setShowDeleteDialog(true);
                                 }}
                                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                 aria-label={`Delete ${category.name}`}
@@ -525,6 +542,36 @@ const AdminCategories = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Category</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete <strong>{categoryToDelete?.name}</strong>? This action cannot be undone and will permanently remove the category from your store.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelDelete}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleConfirmDelete}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Category
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
