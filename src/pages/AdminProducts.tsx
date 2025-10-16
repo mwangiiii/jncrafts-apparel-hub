@@ -20,7 +20,6 @@ import AdminProductImageManager from '@/components/admin/AdminProductImageManage
 import AdminProductsErrorBoundary from '@/components/admin/AdminProductsErrorBoundary';
 import AdminProductsLoadingFallback from '@/components/admin/AdminProductsLoadingFallback';
 import OptimizedAdminImage from '@/components/admin/OptimizedAdminImage';
-import debounce from 'lodash/debounce';
 
 interface Category {
   id: string;
@@ -40,7 +39,8 @@ const AdminProducts = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useAdminProducts({ enabled: !!user && isAdmin });
   const { refreshProducts } = useRefreshAdminProducts();
   const { createCompleteProduct, updateCompleteProduct, isCreating, isUpdating } = useCompleteProductManagement();
@@ -288,18 +288,8 @@ const AdminProducts = () => {
   };
 
   const toggleProductStatus = async (product: any) => {
-    if (!data?.pages) return;
-
     const originalStatus = product.is_active;
     const newStatus = !originalStatus;
-
-    // Optimistic update
-    data.pages = data.pages.map((page: any) => ({
-      ...page,
-      products: page.products.map((p: any) =>
-        p.id === product.id ? { ...p, is_active: newStatus } : p
-      ),
-    }));
 
     try {
       const { error } = await supabase
@@ -314,13 +304,6 @@ const AdminProducts = () => {
         description: `Product "${product.name}" ${originalStatus ? 'hidden' : 'activated'}`,
       });
     } catch (error: any) {
-      // Revert optimistic update
-      data.pages = data.pages.map((page: any) => ({
-        ...page,
-        products: page.products.map((p: any) =>
-          p.id === product.id ? { ...p, is_active: originalStatus } : p
-        ),
-      }));
       console.error('Error toggling product status:', error);
       toast({
         title: "Error",
@@ -330,89 +313,74 @@ const AdminProducts = () => {
     }
   };
 
-  const deleteProduct = useCallback(
-    debounce(async (productId: string, productName: string) => {
-      setDeletingProductId(productId);
-      if (!data?.pages) {
-        setDeletingProductId(null);
-        setDeleteDialogOpen(false);
-        return;
+  const deleteProduct = useCallback(async (productId: string, productName: string) => {
+    try {
+      // Verify admin role
+      const { data: { user } } = await supabase.auth.getUser();
+      const isAdminUser = user?.app_metadata?.role === 'admin';
+      if (!isAdminUser) {
+        throw new Error('Unauthorized: Admin access required');
       }
 
-      let pageIndex = -1;
-      let originalPageProducts: any[] = [];
+      // Get images before delete for storage cleanup
+      const { data: images } = await supabase
+        .from('product_images')
+        .select('image_url')
+        .eq('product_id', productId);
 
-      try {
-        // Find the page containing the product
-        pageIndex = data.pages.findIndex((page: any) => page.products.some((p: any) => p.id === productId));
-        if (pageIndex === -1) {
-          throw new Error('Product not found in current data');
-        }
-
-        // Store original products for this page for revert
-        originalPageProducts = [...data.pages[pageIndex].products];
-
-        // Verify admin role
-        const { data: { user } } = await supabase.auth.getUser();
-        const isAdminUser = user?.app_metadata?.role === 'admin';
-        if (!isAdminUser) {
-          throw new Error('Unauthorized: Admin access required');
-        }
-
-        // Get images before delete for storage cleanup
-        const { data: images } = await supabase
-          .from('product_images')
-          .select('image_url')
-          .eq('product_id', productId);
-
-        // Optimistic update: Remove product from UI
-        data.pages[pageIndex].products = originalPageProducts.filter((p: any) => p.id !== productId);
-
-        // Delete product (cascades to product_images and product_variants due to ON DELETE CASCADE)
-        const { error } = await supabase.from('products').delete().eq('id', productId);
-        if (error) throw error;
-
-        // Clean up storage
-        if (images?.length) {
-          const fileNames = images
-            .map((img: any) => {
-              const name = img.image_url.split('/').pop();
-              return name && !name.includes('default.jpg') ? name : null;
-            })
-            .filter((name): name is string => !!name);
-          if (fileNames.length) {
-            const { error: storageError } = await supabase.storage
-              .from('images')
-              .remove(fileNames.map((name: string) => `thumbnails/${name}`));
-            if (storageError) {
-              console.error('Storage cleanup error:', storageError);
-            }
+      // Clean up storage
+      if (images?.length) {
+        const fileNames = images
+          .map((img: any) => {
+            const name = img.image_url.split('/').pop();
+            return name && !name.includes('default.jpg') ? name : null;
+          })
+          .filter((name): name is string => !!name);
+        if (fileNames.length) {
+          const { error: storageError } = await supabase.storage
+            .from('images')
+            .remove(fileNames.map((name: string) => `thumbnails/${name}`));
+          if (storageError) {
+            console.error('Storage cleanup error:', storageError);
           }
         }
-
-        refreshProducts();
-        toast({
-          title: "Success",
-          description: `Product "${productName}" deleted successfully`,
-        });
-      } catch (error: any) {
-        console.error('Error deleting product:', error);
-        // Revert optimistic update: restore original products array for the page
-        if (pageIndex !== -1 && data.pages && data.pages[pageIndex]) {
-          data.pages[pageIndex].products = originalPageProducts;
-        }
-        toast({
-          title: "Error",
-          description: error.message || `Failed to delete product "${productName}"`,
-          variant: "destructive",
-        });
-      } finally {
-        setDeletingProductId(null);
-        setDeleteDialogOpen(false);
       }
-    }, 300),
-    [data, refreshProducts, toast]
-  );
+
+      // Delete related records first (variants, images) to avoid foreign key constraints
+      const { error: variantError } = await supabase
+        .from('product_variants')
+        .delete()
+        .eq('product_id', productId);
+      if (variantError) throw variantError;
+
+      const { error: imageError } = await supabase
+        .from('product_images')
+        .delete()
+        .eq('product_id', productId);
+      if (imageError) throw imageError;
+
+      // Delete product
+      const { error } = await supabase.from('products').delete().eq('id', productId);
+      if (error) throw error;
+
+      refreshProducts();
+      toast({
+        title: "Success",
+        description: `Product "${productName}" deleted successfully`,
+      });
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Error",
+        description: error.message || `Failed to delete product "${productName}"`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteTargetId(null);
+      setDeleteDialogOpen(false);
+    }
+  }, [refreshProducts, toast]);
 
   const addSize = (size: string) => {
     if (!formData.sizes.includes(size)) {
@@ -521,7 +489,7 @@ const AdminProducts = () => {
               variant="outline"
               className="p-2 bg-background/80 backdrop-blur-sm hover:bg-background"
               onClick={() => openEditDialog(product)}
-              disabled={deletingProductId === product.id}
+              disabled={isDeleting}
               aria-label={`Edit product ${product.name}`}
             >
               <Edit2 className="h-4 w-4" />
@@ -531,13 +499,16 @@ const AdminProducts = () => {
               variant="outline"
               className="p-2 bg-background/80 backdrop-blur-sm hover:bg-background"
               onClick={() => toggleProductStatus(product)}
-              disabled={deletingProductId === product.id}
+              disabled={isDeleting}
               aria-label={`${product.is_active ? 'Hide' : 'Show'} product ${product.name}`}
             >
               {product.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
-            <Dialog open={deleteDialogOpen && deletingProductId === product.id} onOpenChange={(open) => {
-              if (!open) setDeleteDialogOpen(false);
+            <Dialog open={deleteDialogOpen && deleteTargetId === product.id} onOpenChange={(open) => {
+              if (!open) {
+                setDeleteDialogOpen(false);
+                setDeleteTargetId(null);
+              }
             }}>
               <DialogTrigger asChild>
                 <Button
@@ -545,10 +516,10 @@ const AdminProducts = () => {
                   variant="destructive"
                   className="p-2 bg-background/80 backdrop-blur-sm hover:bg-red-600"
                   onClick={() => {
-                    setDeletingProductId(product.id);
+                    setDeleteTargetId(product.id);
                     setDeleteDialogOpen(true);
                   }}
-                  disabled={deletingProductId !== null}
+                  disabled={isDeleting}
                   aria-label={`Delete product ${product.name}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -564,17 +535,23 @@ const AdminProducts = () => {
                 <DialogFooter className="mt-4">
                   <Button
                     variant="outline"
-                    onClick={() => setDeleteDialogOpen(false)}
-                    disabled={deletingProductId === product.id}
+                    onClick={() => {
+                      setDeleteDialogOpen(false);
+                      setDeleteTargetId(null);
+                    }}
+                    disabled={isDeleting}
                   >
                     Cancel
                   </Button>
                   <Button
                     variant="destructive"
-                    onClick={() => deleteProduct(product.id, product.name)}
-                    disabled={deletingProductId === product.id}
+                    onClick={() => {
+                      setIsDeleting(true);
+                      deleteProduct(product.id, product.name);
+                    }}
+                    disabled={isDeleting}
                   >
-                    {deletingProductId === product.id ? (
+                    {isDeleting ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Deleting...

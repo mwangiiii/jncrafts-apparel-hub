@@ -1,7 +1,6 @@
 // useCompleteProductManagement.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
 interface Variant {
   color: string | null;
@@ -127,8 +126,31 @@ export const useCompleteProductManagement = () => {
 
         let productId = product.id;
 
-        // Rollback helper
+        // Rollback helper with storage cleanup
         const rollback = async () => {
+          // Cleanup images from storage
+          const { data: insertedImages } = await supabase
+            .from('product_images')
+            .select('image_url')
+            .eq('product_id', productId);
+
+          if (insertedImages?.length) {
+            const fileNames = insertedImages
+              .map((img: any) => {
+                const name = img.image_url.split('/').pop();
+                return name && !name.includes('default.jpg') ? name : null;
+              })
+              .filter((name): name is string => !!name);
+            if (fileNames.length) {
+              const { error: storageError } = await supabase.storage
+                .from('images')
+                .remove(fileNames.map((name: string) => `thumbnails/${name}`));
+              if (storageError) {
+                console.error('Storage cleanup error during rollback:', storageError);
+              }
+            }
+          }
+
           await supabase.from('product_images').delete().eq('product_id', productId);
           await supabase.from('product_variants').delete().eq('product_id', productId);
           await supabase.from('products').delete().eq('id', productId);
@@ -193,19 +215,9 @@ export const useCompleteProductManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products-ultra-fast'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      
-      toast({
-        title: "Success",
-        description: "Product created successfully with all details",
-      });
     },
     onError: (error: any) => {
       console.error('❌ Product creation mutation failed:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create product",
-        variant: "destructive"
-      });
     }
   });
 
@@ -266,9 +278,12 @@ export const useCompleteProductManagement = () => {
             .map(url => url.split('/').pop())
             .filter(name => name && !name.includes('default.jpg'));
           if (fileNames.length > 0) {
-            await supabase.storage
+            const { error: storageError } = await supabase.storage
               .from('images')
               .remove(fileNames.map(name => `thumbnails/${name}`));
+            if (storageError) {
+              console.error('Storage cleanup error during update:', storageError);
+            }
           }
           await supabase
             .from('product_images')
@@ -352,19 +367,9 @@ export const useCompleteProductManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products-ultra-fast'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      
-      toast({
-        title: "Success",
-        description: "Product updated successfully with all details",
-      });
     },
     onError: (error: any) => {
       console.error('❌ Product update mutation failed:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update product",
-        variant: "destructive"
-      });
     }
   });
 
