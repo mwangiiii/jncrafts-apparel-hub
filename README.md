@@ -30,7 +30,8 @@ npm install
 bun install
    ```
 3. Start the development server:
-   ```sh
+   ``` npm run dev
+
 npm run dev
    # or
 bun run dev
