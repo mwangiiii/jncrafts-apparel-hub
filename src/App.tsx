@@ -23,7 +23,7 @@ import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 import SizeChart from "./pages/SizeChart";
 import PaymentSuccessPage from "./pages/PaystackRedirect";
-import ResetPassword from "./pages/resetpassword"; // Corrected path casing
+import ResetPassword from "./pages/ResetPassword"; // Corrected path casing
 
 
 const App = () => {
