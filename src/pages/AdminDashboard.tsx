@@ -146,6 +146,65 @@ const AdminDashboard = () => {
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string | null>(null);
   const [isCustomersModalOpen, setIsCustomersModalOpen] = useState(false);
 
+  // Site lock state
+  const [siteLock, setSiteLock] = useState<{ status: boolean; unlock_at: string | null }>({ status: false, unlock_at: null });
+  const [lockLoading, setLockLoading] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
+  const [unlockInput, setUnlockInput] = useState<string>("");
+
+  // Fetch current lock state
+  useEffect(() => {
+    const fetchLock = async () => {
+      setLockLoading(true);
+      setLockError(null);
+      const { data, error } = await supabase
+        .from("system_status")
+        .select("status, unlock_at")
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
+      if (!error && data) {
+        setSiteLock({ status: data.status, unlock_at: data.unlock_at });
+        setUnlockInput(data.unlock_at ? data.unlock_at.slice(0, 16) : "");
+      } else {
+        setSiteLock({ status: false, unlock_at: null });
+        setUnlockInput("");
+      }
+      setLockLoading(false);
+    };
+    fetchLock();
+  }, []);
+
+  // Admin action: lock/unlock site
+  const handleLockChange = async (lock: boolean) => {
+    setLockLoading(true);
+    setLockError(null);
+    const { error } = await supabase.from("system_status").insert({ status: lock, unlock_at: lock ? (unlockInput ? new Date(unlockInput).toISOString() : null) : null });
+    if (error) {
+      setLockError("Failed to update lock status");
+    } else {
+      setSiteLock({ status: lock, unlock_at: lock ? (unlockInput ? new Date(unlockInput).toISOString() : null) : null });
+    }
+    setLockLoading(false);
+  };
+
+  // Admin action: set unlock time
+  const handleUnlockTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUnlockInput(e.target.value);
+  };
+
+  const handleSaveUnlockTime = async () => {
+    setLockLoading(true);
+    setLockError(null);
+    const { error } = await supabase.from("system_status").insert({ status: true, unlock_at: unlockInput ? new Date(unlockInput).toISOString() : null });
+    if (error) {
+      setLockError("Failed to set unlock time");
+    } else {
+      setSiteLock({ status: true, unlock_at: unlockInput ? new Date(unlockInput).toISOString() : null });
+    }
+    setLockLoading(false);
+  };
+
   useEffect(() => {
     if (user && isAdmin) {
       loadData();
@@ -512,7 +571,6 @@ const AdminDashboard = () => {
     {
       title: "Total Orders",
       value: stats.totalOrders.toString(),
-      
       icon: ShoppingCart,
       color: "text-blue-600 bg-blue-50",
       onClick: () => {
@@ -522,7 +580,7 @@ const AdminDashboard = () => {
     },
     {
       title: "Total Revenue",
-      // value: formatCurrency(stats.totalRevenue),     
+      value: formatCurrency(stats.totalRevenue),
       icon: DollarSign,
       color: "text-green-600 bg-green-50",
       onClick: () => {
@@ -533,7 +591,6 @@ const AdminDashboard = () => {
     {
       title: "Pending Orders",
       value: stats.pendingOrders.toString(),
-      
       icon: Package,
       color: "text-orange-600 bg-orange-50",
       onClick: () => {
@@ -544,7 +601,6 @@ const AdminDashboard = () => {
     {
       title: "Customers",
       value: stats.totalCustomers.toString(),
-      
       icon: Users,
       color: "text-purple-600 bg-purple-50",
       onClick: () => setIsCustomersModalOpen(true)
@@ -652,6 +708,38 @@ const AdminDashboard = () => {
           </Button>
         </div>
 
+        {/* Site Lock Controls */}
+        <div className="my-6 p-4 border rounded bg-muted/30 max-w-xl">
+          <h2 className="text-lg font-semibold mb-2">Site Lock Controls</h2>
+          {lockError && <div className="text-red-600 mb-2">{lockError}</div>}
+          <div className="flex items-center gap-4 mb-2">
+            <span className="font-medium">Status:</span>
+            <span className={siteLock.status ? "text-red-600" : "text-green-600"}>
+              {siteLock.status ? "Locked" : "Unlocked"}
+            </span>
+            <Button size="sm" variant={siteLock.status ? "default" : "destructive"} onClick={() => handleLockChange(!siteLock.status)} disabled={lockLoading}>
+              {siteLock.status ? "Unlock Now" : "Lock Now"}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <label htmlFor="unlockAt" className="font-medium">Unlock At:</label>
+            <input
+              id="unlockAt"
+              type="datetime-local"
+              value={unlockInput}
+              onChange={handleUnlockTimeChange}
+              className="border rounded px-2 py-1"
+              disabled={!siteLock.status || lockLoading}
+            />
+            <Button size="sm" onClick={handleSaveUnlockTime} disabled={!siteLock.status || lockLoading}>
+              Save
+            </Button>
+          </div>
+          {siteLock.unlock_at && (
+            <div className="text-xs text-muted-foreground">Scheduled unlock: {formatSafeDate(siteLock.unlock_at)}</div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((stat, index) => (
             <Card 
@@ -672,7 +760,6 @@ const AdminDashboard = () => {
                 <CardContent className="p-0">
                   <div className="space-y-1">
                     <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                    
                   </div>
                 </CardContent>
               </div>
@@ -683,6 +770,10 @@ const AdminDashboard = () => {
         <Tabs defaultValue="orders" className="space-y-6">
           <TabsList className="grid grid-cols-5 w-full h-12">
             <TabsTrigger value="orders" className="data-[state=active]:shadow-md">Orders</TabsTrigger>
+            <TabsTrigger value="products" className="data-[state=active]:shadow-md">Products</TabsTrigger>
+            <TabsTrigger value="featured" className="data-[state=active]:shadow-md">Featured</TabsTrigger>
+            <TabsTrigger value="new-arrivals" className="data-[state=active]:shadow-md">New Arrivals</TabsTrigger>
+            <TabsTrigger value="special-offers" className="data-[state=active]:shadow-md">Special Offers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
@@ -716,6 +807,22 @@ const AdminDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="products" className="space-y-6">
+            <OptimizedProductsSection />
+          </TabsContent>
+
+          <TabsContent value="featured" className="space-y-6">
+            <FeaturedProductsManager />
+          </TabsContent>
+
+          <TabsContent value="new-arrivals" className="space-y-6">
+            <NewArrivalsManager />
+          </TabsContent>
+
+          <TabsContent value="special-offers" className="space-y-6">
+            <SpecialOffersManager />
           </TabsContent>
         </Tabs>
       </div>
@@ -816,7 +923,10 @@ const AdminDashboard = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 border-b bg-muted/50 rounded-md">
-              
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalRevenue)}</div>
+                <p className="text-xs text-muted-foreground">Total completed payments</p>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
@@ -889,7 +999,7 @@ const AdminDashboard = () => {
             <div className="p-4 border-b bg-muted/50 rounded-md">
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-foreground">{stats.totalCustomers}</div>
-                <p className="text-xs text-muted-foreground">Change: <span className="text-green-600">+15%</span></p>
+                <p className="text-xs text-muted-foreground">Registered users</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -904,7 +1014,6 @@ const AdminDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {/* <TableHead>ID</TableHead> */}
                     <TableHead>Full Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Created At</TableHead>
@@ -913,7 +1022,6 @@ const AdminDashboard = () => {
                 <TableBody>
                   {customers.map((customer) => (
                     <TableRow key={customer.id}>
-                      {/* <TableCell>{customer.id}</TableCell> */}
                       <TableCell>{customer.full_name || 'N/A'}</TableCell>
                       <TableCell>{customer.email || 'N/A'}</TableCell>
                       <TableCell>{formatSafeDate(customer.created_at)}</TableCell>

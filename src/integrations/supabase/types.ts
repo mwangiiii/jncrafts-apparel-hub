@@ -1,3 +1,21 @@
+      system_status: {
+        Row: {
+          id: number;
+          status: boolean;
+          unlock_at: string | null;
+        };
+        Insert: {
+          id?: number;
+          status: boolean;
+          unlock_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          status?: boolean;
+          unlock_at?: string | null;
+        };
+        Relationships: [];
+      };
 export type Json =
   | string
   | number
@@ -14,6 +32,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      system_status: {
+        Row: {
+          id: number;
+          status: boolean;
+          unlock_at: string | null;
+        };
+        Insert: {
+          id?: number;
+          status: boolean;
+          unlock_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          status?: boolean;
+          unlock_at?: string | null;
+        };
+        Relationships: [];
+      };
       about_media: {
         Row: {
           created_at: string
