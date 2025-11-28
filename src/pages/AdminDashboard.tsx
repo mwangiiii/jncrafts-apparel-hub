@@ -175,33 +175,93 @@ const AdminDashboard = () => {
     fetchLock();
   }, []);
 
-  // Admin action: lock/unlock site
+  // Admin action: immediate lock/unlock site (no scheduled unlock)
   const handleLockChange = async (lock: boolean) => {
     setLockLoading(true);
     setLockError(null);
-    const { error } = await supabase.from("system_status").insert({ status: lock, unlock_at: lock ? (unlockInput ? new Date(unlockInput).toISOString() : null) : null });
+    
+    const { error } = await supabase
+      .from("system_status")
+      .insert({ 
+        status: lock, 
+        unlock_at: null // No scheduled unlock for immediate lock/unlock
+      });
+      
     if (error) {
       setLockError("Failed to update lock status");
+      toast({
+        title: "Error",
+        description: "Failed to update site lock status",
+        variant: "destructive",
+      });
     } else {
-      setSiteLock({ status: lock, unlock_at: lock ? (unlockInput ? new Date(unlockInput).toISOString() : null) : null });
+      setSiteLock({ status: lock, unlock_at: null });
+      toast({
+        title: lock ? "Site Locked" : "Site Unlocked",
+        description: lock 
+          ? "Site is now locked for non-admin users" 
+          : "Site is now accessible to all users",
+      });
+      
+      // Clear the unlock input when manually toggling
+      if (!lock) {
+        setUnlockInput("");
+      }
     }
+    
     setLockLoading(false);
   };
 
-  // Admin action: set unlock time
+  // Admin action: set unlock time input change
   const handleUnlockTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUnlockInput(e.target.value);
   };
 
-  const handleSaveUnlockTime = async () => {
+  // Admin action: scheduled lock with auto-unlock
+  const handleScheduledLock = async () => {
+    if (!unlockInput) {
+      setLockError("Please select a future date and time");
+      return;
+    }
+
+    const unlockTime = new Date(unlockInput + ':00'); // Ensure seconds are 00
+    const now = new Date();
+
+    if (unlockTime <= now) {
+      setLockError("Unlock time must be in the future!");
+      toast({
+        title: "Invalid Time",
+        description: "Please select a future date and time for auto-unlock",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLockLoading(true);
     setLockError(null);
-    const { error } = await supabase.from("system_status").insert({ status: true, unlock_at: unlockInput ? new Date(unlockInput).toISOString() : null });
+    
+    const { error } = await supabase
+      .from("system_status")
+      .insert({ 
+        status: true, // Lock the site
+        unlock_at: unlockTime.toISOString() 
+      });
+      
     if (error) {
-      setLockError("Failed to set unlock time");
+      setLockError("Failed to set scheduled unlock");
+      toast({
+        title: "Error",
+        description: "Failed to schedule auto-unlock",
+        variant: "destructive",
+      });
     } else {
-      setSiteLock({ status: true, unlock_at: unlockInput ? new Date(unlockInput).toISOString() : null });
+      setSiteLock({ status: true, unlock_at: unlockTime.toISOString() });
+      toast({
+        title: "Site Locked",
+        description: `Site will automatically unlock at ${formatSafeDate(unlockTime.toISOString())}`,
+      });
     }
+    
     setLockLoading(false);
   };
 
@@ -709,35 +769,83 @@ const AdminDashboard = () => {
         </div>
 
         {/* Site Lock Controls */}
-        <div className="my-6 p-4 border rounded bg-muted/30 max-w-xl">
+        <div className="my-6 p-4 border rounded bg-muted/30 max-w-xl space-y-4">
           <h2 className="text-lg font-semibold mb-2">Site Lock Controls</h2>
-          {lockError && <div className="text-red-600 mb-2">{lockError}</div>}
-          <div className="flex items-center gap-4 mb-2">
-            <span className="font-medium">Status:</span>
-            <span className={siteLock.status ? "text-red-600" : "text-green-600"}>
-              {siteLock.status ? "Locked" : "Unlocked"}
-            </span>
-            <Button size="sm" variant={siteLock.status ? "default" : "destructive"} onClick={() => handleLockChange(!siteLock.status)} disabled={lockLoading}>
-              {siteLock.status ? "Unlock Now" : "Lock Now"}
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 mb-2">
-            <label htmlFor="unlockAt" className="font-medium">Unlock At:</label>
-            <input
-              id="unlockAt"
-              type="datetime-local"
-              value={unlockInput}
-              onChange={handleUnlockTimeChange}
-              className="border rounded px-2 py-1"
-              disabled={!siteLock.status || lockLoading}
-            />
-            <Button size="sm" onClick={handleSaveUnlockTime} disabled={!siteLock.status || lockLoading}>
-              Save
-            </Button>
-          </div>
-          {siteLock.unlock_at && (
-            <div className="text-xs text-muted-foreground">Scheduled unlock: {formatSafeDate(siteLock.unlock_at)}</div>
+          
+          {lockError && (
+            <div className="text-red-600 text-sm mb-2 p-2 bg-red-50 rounded">
+              {lockError}
+            </div>
           )}
+          
+          {/* Current Status Display */}
+          <div className="flex items-center gap-4 p-3 bg-background rounded border">
+            <span className="font-medium">Current Status:</span>
+            <span className={cn(
+              "font-bold text-lg",
+              siteLock.status ? "text-red-600" : "text-green-600"
+            )}>
+              {siteLock.status ? "🔒 LOCKED" : "🔓 UNLOCKED"}
+            </span>
+          </div>
+
+          {/* Immediate Lock/Unlock */}
+          <div className="space-y-2">
+            <h3 className="font-medium text-sm">Immediate Action:</h3>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant={siteLock.status ? "default" : "destructive"} 
+                onClick={() => handleLockChange(!siteLock.status)} 
+                disabled={lockLoading}
+                className="flex-1"
+              >
+                {lockLoading ? "Processing..." : siteLock.status ? "🔓 Unlock Site Now" : "🔒 Lock Site Now"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {siteLock.status 
+                ? "Click to immediately unlock the site for all users" 
+                : "Click to immediately lock the site (prevents non-admin access)"}
+            </p>
+          </div>
+
+          {/* Scheduled Auto-Unlock */}
+          <div className="space-y-2 pt-3 border-t">
+            <h3 className="font-medium text-sm">Schedule Auto-Unlock:</h3>
+            <div className="flex items-center gap-2">
+              <input
+                id="unlockAt"
+                type="datetime-local"
+                value={unlockInput}
+                onChange={handleUnlockTimeChange}
+                className="flex-1 border rounded px-3 py-2 text-sm"
+                disabled={lockLoading}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+              <Button 
+                size="sm" 
+                onClick={handleScheduledLock} 
+                disabled={lockLoading || !unlockInput}
+                variant="outline"
+              >
+                {lockLoading ? "..." : "Set & Lock"}
+              </Button>
+            </div>
+            {siteLock.unlock_at && (
+              <div className="text-xs text-muted-foreground p-2 bg-blue-50 rounded">
+                ⏰ Scheduled unlock: {formatSafeDate(siteLock.unlock_at)}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Set a future time for the site to automatically unlock. The site will be locked until then.
+            </p>
+          </div>
+
+          {/* Warning */}
+          <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+            ⚠️ <strong>Note:</strong> Admins can always access the site even when locked. Non-admin users will see a maintenance page.
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
