@@ -104,27 +104,18 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md space-y-6">
-        {/* Site Lock Warning */}
-        {isLocked && (
-          <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">
-            <Lock className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800 dark:text-orange-200">
-              <strong>Site is currently locked.</strong> Regular users cannot access the site.
-            </AlertDescription>
-          </Alert>
-        )}
 
         {/* Login Card */}
-        <Card className="shadow-2xl border-slate-700">
+        <Card className="shadow-xl border border-primary/20 bg-white/90 dark:bg-slate-900/90 rounded-2xl">
           <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/80 to-indigo-700/80 rounded-full flex items-center justify-center shadow-lg">
+              <Shield className="w-8 h-8 text-white drop-shadow-md" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold">Administrator Access</CardTitle>
-              <CardDescription className="text-base mt-2">
+              <CardTitle className="text-2xl font-bold text-primary drop-shadow-sm">Administrator Access</CardTitle>
+              <CardDescription className="text-base mt-2 text-gray-600 dark:text-gray-300">
                 Secure login for site administrators
               </CardDescription>
             </div>
@@ -140,7 +131,7 @@ const AdminLogin = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Admin Email</Label>
+                <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-200">Admin Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -149,12 +140,12 @@ const AdminLogin = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-11"
+                  className="h-11 bg-white/90 dark:bg-slate-800/80 border border-primary/20 focus:ring-2 focus:ring-primary focus:border-primary/40 placeholder:text-gray-400"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-200">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -163,13 +154,13 @@ const AdminLogin = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-11"
+                  className="h-11 bg-white/90 dark:bg-slate-800/80 border border-primary/20 focus:ring-2 focus:ring-primary focus:border-primary/40 placeholder:text-gray-400"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary/90 to-indigo-700/90 hover:from-indigo-700 hover:to-primary/90 rounded-lg shadow-md flex items-center justify-center gap-2 transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (
@@ -185,22 +176,22 @@ const AdminLogin = () => {
                 )}
               </Button>
 
-              <div className="pt-4 border-t">
-                <p className="text-xs text-center text-muted-foreground">
+              {/* <div className="pt-4 border-t border-primary/10">
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400">
                   This is a secure admin-only area. Unauthorized access attempts are logged.
                 </p>
-              </div>
+              </div> */}
             </form>
           </CardContent>
         </Card>
 
         {/* Help Text */}
         <div className="text-center">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-gray-400 dark:text-gray-300">
             Not an administrator?{' '}
             <button
               onClick={() => navigate('/')}
-              className="text-blue-400 hover:text-blue-300 underline"
+              className="text-primary hover:text-indigo-700 underline font-semibold transition-colors duration-200"
               disabled={isLocked}
             >
               {isLocked ? 'Site is locked' : 'Go to homepage'}
